@@ -1,5 +1,5 @@
 # MC656
-Repository for the MC656 - Software Engineer course project
+Repository for the MC656 - Software Engineering course project
 
 ## Members
 
