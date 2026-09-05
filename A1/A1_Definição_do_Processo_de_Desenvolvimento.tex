@@ -1,0 +1,87 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{cite}
+
+\geometry{a4paper, margin=2cm}
+
+\title{\textbf{Atividade 1 - Definição do Processo de Desenvolvimento}\\
+\large MC656: Engenharia de Software}
+\author{
+  Caio Lima Albuquerque - RA: 288808 \\
+  Integrante 2 - RA: XXXXXX \\
+  Integrante 3 - RA: XXXXXX \\
+  Integrante 4 - RA: XXXXXX \\
+  Integrante 5 - RA: XXXXXX 
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Produto e Contexto}
+% [P1] Descreva o produto, os 3 contextos (ex: CA, Condomínio, Conselho) e as premissas.
+% Insira aqui as 3 representações visuais.
+Aqui explicamos nossa plataforma genérica de votação e os três contextos suportados...
+
+\section{Processo de Desenvolvimento}
+% [P2] Explique como a equipe vai trabalhar. Fuja de jargões genéricos.
+% Como o Jira será usado? Como é feito o Code Review? Como BizDev e DevOps entram?
+Nosso processo será baseado no Scrum adaptado, utilizando o Jira para gestão...
+
+\section{Aplicação dos Conceitos de Processo de Software}
+% [P3] Preencha as tabelas aqui.
+
+\subsection*{Tabela 1: Caracterização das atividades}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\textbf{Atividade} & \textbf{Classificação} & \textbf{Objetivo} & \textbf{Quando/condição} \\ \hline
+Sprint Planning & Fundamental & Definir as tasks da sprint & Primeiro dia da sprint \\ \hline
+% Adicione mais linhas conforme necessário
+\end{tabularx}
+\end{table}
+
+\subsection*{Tabela 2: Execução das atividades}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|X|X|}
+\hline
+\textbf{Atividade} & \textbf{Participantes} & \textbf{Recursos} & \textbf{Entradas} & \textbf{Resultados} \\ \hline
+Sprint Planning & Toda a equipe & Jira, Miro & Backlog do Produto & Sprint Backlog \\ \hline
+% Adicione mais linhas
+\end{tabularx}
+\end{table}
+
+\subsection*{Tabela 3: Artefatos do processo}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\textbf{Artefato} & \textbf{Finalidade} & \textbf{Atividades (Criação/Uso)} \\ \hline
+Sprint Backlog & Guiar o trabalho da sprint & Criado na Sprint Planning, atualizado na Daily \\ \hline
+% Adicione mais linhas
+\end{tabularx}
+\end{table}
+
+\section{Representação Visual do Processo}
+% [P4] Insira o diagrama de fluxo do processo aqui.
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\textwidth]{diagrama_processo.png}
+    \caption{Fluxo do Processo de Desenvolvimento da Equipe.}
+\end{figure}
+
+\section{Referências}
+% [P5] Garanta que o .bib esteja correto e compilando.
+\bibliography{referencias}
+\bibliographystyle{plain}
+
+\end{document}
