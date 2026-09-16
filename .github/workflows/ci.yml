@@ -17,7 +17,7 @@ jobs:
       uses: astral-sh/setup-uv@v3
       with:
         enable-cache: true # Faz cache das dependências para rodar ainda mais rápido
-        cache-dependency-glob: "requirements.txt"
+        cache-dependency-glob: "A2/requirements.txt"
 
     - name: Configurar Python
       uses: actions/setup-python@v5
@@ -26,6 +26,7 @@ jobs:
 
     - name: Build (Instalar dependências)
       run: |
+        cd A2
         uv venv .venv  # Cria o ambiente virtual na pasta .venv
         uv pip install -r requirements.txt # Instala as dependências lendo o requirements.txt usando o uv
 
@@ -39,13 +40,14 @@ jobs:
       uses: astral-sh/setup-uv@v3
       with:
         enable-cache: true
-        cache-dependency-glob: "requirements.txt"
+        cache-dependency-glob: "A2/requirements.txt"
     - name: Configurar Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     - name: Análise Estática com Ruff
       run: |
+        cd A2
         uv venv .venv
         uv pip install -r requirements.txt
         # Roda o ruff chamando direto da pasta do ambiente virtual
@@ -62,13 +64,14 @@ jobs:
       uses: astral-sh/setup-uv@v3
       with:
         enable-cache: true
-        cache-dependency-glob: "requirements.txt"
+        cache-dependency-glob: "A2/requirements.txt"
     - name: Configurar Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     - name: Testes Automatizados e Cobertura
       run: |
+        cd A2
         uv venv .venv
         uv pip install -r requirements.txt
         # Roda o pytest chamando direto da pasta do ambiente virtual
