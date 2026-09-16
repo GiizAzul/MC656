@@ -14,15 +14,26 @@ jobs:
     - name: Checkout do código
       uses: actions/checkout@v4
 
+    - name: Instalar o uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true # Faz cache das dependências para rodar ainda mais rápido
+
     - name: Configurar Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
-    - name: Instalar dependências (Build)
+    - name: Criar ambiente virtual e instalar dependências (Build)
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        # Cria o ambiente virtual na pasta .venv
+        uv venv .venv
+
+        # Instala as dependências lendo o requirements.txt usando o uv
+        uv pip install -r requirements.txt
+
+        # Adiciona o .venv ao PATH global do GitHub Actions
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
 
     - name: Análise Estática com Ruff (Lint)
       run: |
