@@ -1,0 +1,35 @@
+name: Integração Contínua (Build, Lint, Tests)
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+  pull_request:
+    branches: [ "develop", "main" ]
+
+jobs:
+  build-e-testes:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v4
+
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Instalar dependências (Build)
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Análise Estática com Ruff (Lint)
+      run: |
+        # Falha o pipeline se encontrar erros de sintaxe ou más práticas
+        ruff check src/ tests/
+
+    - name: Testes Automatizados e Cobertura
+      run: |
+        # Roda o pytest e exibe a porcentagem de código testado no log
+        pytest --cov=src --cov-report=term
