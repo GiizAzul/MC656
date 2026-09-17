@@ -1,12 +1,14 @@
 from typing import List, Dict, Optional
+import copy
+from src import SistemaEleitoral
 
-class EleicaoAustralia():
+class EleicaoAustralia(SistemaEleitoral):
     """"Classe para apuração utilizando voto único transferível."""
 
     def __init__(self, candidatos: List[str], cedulas: List[List[str]]):
         self.candidatos_oficiais = set(candidatos)
         self.candidatos = {nome: True for nome in candidatos}
-        self.cedulas = [cedula[:] for cedula in cedulas if cedula]  # Cópia para não alterar o original do frontend
+        self.cedulas = copy.deepcopy(cedulas)
 
     def _contar_primeiras_preferencias(self) -> Dict[str, int]:
         """Método privado para contabilizar os votos válidos da rodada atual."""
