@@ -1,11 +1,12 @@
-from typing import List, Dict, Optional
 import copy
-from src import SistemaEleitoral
+
+from .interfaces import SistemaEleitoral
+
 
 class EleicaoAustralia(SistemaEleitoral):
     """"Classe para apuração utilizando voto único transferível."""
 
-    def __init__(self, candidatos: List[str], cedulas: List[List[str]]):
+    def __init__(self, candidatos: list[str], cedulas: list[list[str]]):
         self.candidatos_oficiais = set(candidatos)
         self.candidatos = {nome: True for nome in candidatos}
         self.cedulas = copy.deepcopy(cedulas)
@@ -23,7 +24,7 @@ class EleicaoAustralia(SistemaEleitoral):
             
             self.cedulas.append(cedula[:])
 
-    def _contar_primeiras_preferencias(self) -> Dict[str, int]:
+    def _contar_primeiras_preferencias(self) -> dict[str, int]:
         """Método privado para contabilizar os votos válidos da rodada atual."""
         contagem = {nome: 0 for nome, ativo in self.candidatos.items() if ativo}
         
@@ -35,7 +36,7 @@ class EleicaoAustralia(SistemaEleitoral):
                     break  # Pula para o próximo eleitor
         return contagem
 
-    def apurar_vencedor(self) -> Optional[str]:
+    def apurar_vencedor(self) -> str | None:
         """Executa os turnos de eliminação até encontrar o vencedor."""
         if not self.candidatos or not self.cedulas: # Podia resumir o condicional mas assim fica mais legível
             return None
