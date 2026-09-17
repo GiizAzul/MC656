@@ -3,7 +3,6 @@ from typing import Dict
 
 class Usuario(ABC):
     """Classe base abstrata para todos os usuários do sistema."""
-
     def __init__(self, id: int, username:str, senha: str, nome_real: str):
         self.id = id
         self.username = username
@@ -27,7 +26,7 @@ class ServicoAutenticacao:
     def registrar(self, usuario: Usuario) -> None:
         if usuario.username in self._banco:
             raise ValueError(f"Erro: username {usuario.username} já existente.")
-        self._banco[usuario.username] = 
+        self._banco[usuario.username] = usuario
 
     def login(self, username: str, senha_tentativa: str) -> Usuario:
         usuario = self._banco.get(username)
