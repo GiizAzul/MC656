@@ -19,3 +19,33 @@ class EleicaoAustralia():
                     contagem[opcao] += 1
                     break  # Pula para o próximo eleitor
         return contagem
+
+    def apurar_vencedor(self) -> Optional[str]:
+        """Executa os turnos de eliminação até encontrar o vencedor."""
+        if not self.candidatos or not self.cedulas: # Podia resumir o condicional mas assim fica mais legível
+            return None
+
+        while True:
+            contagem = self._contar_primeiras_preferencias()
+            total_votos_validos = sum(contagem.values())
+
+            if total_votos_validos == 0:
+                return None
+
+            # Verifica se alguém atingiu maioria absoluta
+            for candidato, votos in contagem.items():
+                if votos > total_votos_validos / 2:
+                    return candidato
+
+            # Encontra o candidato com menos votos
+            candidato_menos_votado = min(contagem, key=contagem.get)
+            
+            # Elimina o candidato mudando o status para inativo
+            self.candidatos[candidato_menos_votado] = False
+
+            # Condição de parada (se sobrou apenas 1 ativo, ele vence)
+            ativos = [c for c, ativo in self.candidatos.items() if ativo]
+            if len(ativos) == 1:
+                return ativos[0]
+            elif len(ativos) == 0:
+                return None
