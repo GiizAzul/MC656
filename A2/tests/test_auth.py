@@ -10,7 +10,7 @@ from src.autenticacao import (
 def auth():
     return ServicoAutenticacao()
 
-def testa_login_varios_escopos(auth: ServicoAutenticacao):
+def testa_login_varios_escopos(auth: ServicoAutenticacao) -> None:
     """Cria usuários de todos os escopos e testa eles todos"""
 
     aluno = EstudanteCACo(0, "Gabriel Soares", "Gabriel Soares", "Gabriel Soares", 3)
@@ -28,3 +28,10 @@ def testa_login_varios_escopos(auth: ServicoAutenticacao):
 
     logado_jogador = auth.login("Leo_bct", "EuSouOLeo")
     assert logado_jogador.escopo == "BOTC_JOGADOR"
+
+def testa_bloqueia_username_duplicado(auth: ServicoAutenticacao) -> None:
+    """Um usuário não pode ter o mesmo login mesmo em escopos diferentes"""
+    auth.registrar(EstudanteCACo(0 , "samuel", "123", "Samuel", 5))
+
+    with pytest.raises(ValueError, match="já existe"):
+        auth.registrar(JogadorBOTC(0, "samuel", "213", "Samuel Impostor"))
