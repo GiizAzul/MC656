@@ -35,3 +35,12 @@ def testa_bloqueia_username_duplicado(auth: ServicoAutenticacao) -> None:
 
     with pytest.raises(ValueError, match="já existe"):
         auth.registrar(JogadorBOTC(0, "samuel", "213", "Samuel Impostor"))
+
+def testa_falha_de_seguranca(auth: ServicoAutenticacao) -> None:
+    auth.registrar(JogadorBOTC(5, "Tekpix", "senhasegura", "Yago"))
+
+    with pytest.raises(ValueError, match="Senha incorreta"):
+        auth.login("Tekpix", "senhainsegura")
+
+    with pytest.raises(ValueError, match="Usuário fantasma não encontrado"):
+        auth.login("fantasma", "123")
