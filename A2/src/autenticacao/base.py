@@ -27,4 +27,12 @@ class ServicoAutenticacao:
     def registrar(self, usuario: Usuario) -> None:
         if usuario.username in self._banco:
             raise ValueError(f"Erro: username {usuario.username} já existente.")
-        self._banco[usuario.username] = usuario
+        self._banco[usuario.username] = 
+
+    def login(self, username: str, senha_tentativa: str) -> Usuario:
+        usuario = self._banco.get(username)
+        if not usuario:
+            raise ValueError("Erro: Usuário não encontrado.")
+        if not usuario.validar_senha(senha_tentativa):
+            raise ValueError("Erro: Senha incorreta.")
+        return usuario
