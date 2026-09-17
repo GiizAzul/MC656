@@ -21,3 +21,10 @@ def test_vitoria_por_eliminacao_com_transferencia():
     ]
     eleicao = EleicaoAustralia(candidatos, cedulas)
     assert eleicao.apurar_vencedor() == 'Gi'
+
+def test_listas_vazias():
+    eleicao_sem_candidato = EleicaoAustralia([], [['Gi']])
+    assert eleicao_sem_candidato.apurar_vencedor() is None
+
+    eleicao_sem_voto = EleicaoAustralia(['Caio', 'Gi'], [])
+    assert eleicao_sem_voto.apurar_vencedor() is None
