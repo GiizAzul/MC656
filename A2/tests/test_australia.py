@@ -29,3 +29,12 @@ def test_listas_vazias():
 
     eleicao_sem_voto = EleicaoAustralia(['Caio', 'Gi'], [])
     assert eleicao_sem_voto.apurar_vencedor() is None
+
+def test_rejeita_cedula_incompleta():
+    candidatos = ['Caio', 'Gi', 'Juh']
+    # Faltou ranquear a Juh na primeira cédula
+    cedulas_erradas = [['Caio', 'Gi'], ['Juh', 'Caio', 'Gi']]
+    
+    # Verifica se o sistema levanta um ValueError adequadamente
+    with pytest.raises(ValueError, match="Você deve ranquear exatamente 3 candidatos"):
+        EleicaoAustralia(candidatos, cedulas_erradas)
