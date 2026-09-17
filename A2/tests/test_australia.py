@@ -1,3 +1,4 @@
+import pytest
 from src import EleicaoAustralia
 
 def test_vitoria_maioria_simples():
