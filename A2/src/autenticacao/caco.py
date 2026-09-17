@@ -9,3 +9,9 @@ class EstudanteCACo(Usuario):
     def escopo(self) -> str:
         return "CACO_ESTUDANTE"
 
+
+class GestaoCACo(Usuario):
+    """Membro com permissão para criar pautas e chamar uma assembléia"""
+    @property
+    def escopo(self):
+        return "CACO_GESTAO"
