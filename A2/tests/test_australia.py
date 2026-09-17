@@ -27,8 +27,9 @@ def test_listas_vazias():
     eleicao_sem_candidato = EleicaoAustralia([], [[]])
     assert eleicao_sem_candidato.apurar_vencedor() is None
 
-    eleicao_sem_voto = EleicaoAustralia(['Caio', 'Gi'], [])
-    assert eleicao_sem_voto.apurar_vencedor() is None
+def test_rejeita_cedula_incompativel_com_candidatos():
+    with pytest.raises(ValueError, match="Você deve ranquear exatamente todos os 0 candidatos."):
+        EleicaoAustralia([], [['Gi']])
 
 def test_rejeita_cedula_incompleta():
     candidatos = ['Caio', 'Gi', 'Juh']
