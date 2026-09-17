@@ -9,3 +9,15 @@ def test_vitoria_maioria_simples():
     ]
     eleicao = EleicaoAustralia(candidatos, cedulas)
     assert eleicao.apurar_vencedor() == 'Samuel'
+
+def test_vitoria_por_eliminacao_com_transferencia():
+    candidatos = ['Caio', 'Gi', 'Juh', 'Leo', 'Samuel']
+    cedulas = [
+        ['Caio', 'Juh', 'Gi', 'Samuel', 'Leo'],
+        ['Caio', 'Gi', 'Juh', 'Leo', 'Samuel'],
+        ['Samuel', 'Leo', 'Juh', 'Gi', 'Caio'],
+        ['Samuel', 'Gi', 'Juh', 'Caio', 'Leo'],
+        ['Gi', 'Samuel', 'Juh', 'Leo', 'Caio'],
+    ]
+    eleicao = EleicaoAustralia(candidatos, cedulas)
+    assert eleicao.apurar_vencedor() == 'Gi'
