@@ -1,4 +1,4 @@
-from .base import Usuario, ServicoAutenticacao
 from .australia import EleitorAustralia, CandidatoAustralia
-from .caco import EstudanteCACo, GestaoCACo
+from .base import Usuario, ServicoAutenticacao
 from .botc import JogadorBOTC, StoryTellerBOTC
+from .caco import EstudanteCACo, GestaoCACo
