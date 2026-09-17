@@ -36,5 +36,13 @@ def test_rejeita_cedula_incompleta():
     cedulas_erradas = [['Caio', 'Gi'], ['Juh', 'Caio', 'Gi']]
     
     # Verifica se o sistema levanta um ValueError adequadamente
-    with pytest.raises(ValueError, match="Você deve ranquear exatamente 3 candidatos"):
+    with pytest.raises(ValueError, match="Você deve ranquear exatamente todos os 3 candidatos"):
         EleicaoAustralia(candidatos, cedulas_erradas)
+
+def test_rejeita_cedula_com_candidato_falso_ou_duplicado():
+    candidatos = ['Samuel', 'Leo']
+    # Votou no Samuel duas vezes
+    cedulas_fraudadas = [['Samuel', 'Samuel']]
+    
+    with pytest.raises(ValueError, match="candidatos duplicados ou não registrados"):
+        EleicaoAustralia(candidatos, cedulas_fraudadas)
