@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+
 
 class Usuario(ABC):
     """Classe base abstrata para todos os usuários do sistema."""
@@ -13,7 +13,6 @@ class Usuario(ABC):
     @abstractmethod
     def escopo(self) -> str:
         """Identificar qual o contexto entre as possíveis eleições"""
-        pass
 
     def validar_senha(self, tentativa: str) -> bool:
         return self.senha == tentativa
@@ -21,7 +20,8 @@ class Usuario(ABC):
 class ServicoAutenticacao:
     """Gerencia o registro e login centralizado de todos os escopos."""
     def __init__(self):
-        self._banco: Dict[str, Usuario] = {}
+        # self._banco: Dict[str, Usuario] = {}
+        self._banco: dict[str, Usuario] = {}
 
     def registrar(self, usuario: Usuario) -> None:
         if usuario.username in self._banco:
