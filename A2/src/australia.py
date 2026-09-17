@@ -10,6 +10,19 @@ class EleicaoAustralia(SistemaEleitoral):
         self.candidatos = {nome: True for nome in candidatos}
         self.cedulas = copy.deepcopy(cedulas)
 
+        # Validação que os dados são íntegros com os candidatos registrados
+        num_candidatos = len(candidatos)
+        for i, cedula in enumerate(cedulas):
+            # Verifica se tem o tamanho exato com todos os candidatos escolhidos
+            if len(cedula) != num_candidatos:
+                raise ValueError(f"Erro de cédula {i+1} inválida: Você deve ranquear exatamente todos os {num_candidatos} candidatos.")
+            
+            # Verifica se não está colocando candidato que não existem, anular o voto ou repetindo ele
+            if set(cedula) != self.candidatos_oficiais:
+                raise ValueError(f"Erro de cédula {i+1} inválida: A cédula contém candidatos duplicados ou não registrados.")
+            
+            self.cedulas.append(cedula[:])
+
     def _contar_primeiras_preferencias(self) -> Dict[str, int]:
         """Método privado para contabilizar os votos válidos da rodada atual."""
         contagem = {nome: 0 for nome, ativo in self.candidatos.items() if ativo}
