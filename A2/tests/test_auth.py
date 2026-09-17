@@ -1,13 +1,16 @@
-import pytest 
+import pytest
+
 from src.autenticacao import (
-    ServicoAutenticacao, 
     CandidatoAustralia,
     EstudanteCACo,
-    GestaoCACo,
-    JogadorBOTC)
+    JogadorBOTC,
+    ServicoAutenticacao,
+)
+
 
 @pytest.fixture
 def auth():
+    """Fixture do pytest para criar um serviço limpo antes de cada teste."""
     return ServicoAutenticacao()
 
 def testa_login_varios_escopos(auth: ServicoAutenticacao) -> None:
@@ -23,7 +26,7 @@ def testa_login_varios_escopos(auth: ServicoAutenticacao) -> None:
 
     # Verifica se os escopos são mantidos no login
     logado_aluno = auth.login("Gabriel Soares", "Gabriel Soares")
-    assert logado_aluno.escopo == "CACO_GESTAO"
+    assert logado_aluno.escopo == "CACO_ESTUDANTE"
     assert hasattr(logado_aluno, "ra")
 
     logado_jogador = auth.login("Leo_bct", "EuSouOLeo")
