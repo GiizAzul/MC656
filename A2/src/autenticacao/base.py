@@ -31,7 +31,7 @@ class ServicoAutenticacao:
     def login(self, username: str, senha_tentativa: str) -> Usuario:
         usuario = self._banco.get(username)
         if not usuario:
-            raise ValueError("Erro: Usuário não encontrado.")
+            raise ValueError(f"Erro: Usuário {username} não encontrado.")
         if not usuario.validar_senha(senha_tentativa):
             raise ValueError("Erro: Senha incorreta.")
         return usuario
