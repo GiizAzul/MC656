@@ -1,6 +1,18 @@
-from typing import List
+from typing import List, Dict, Set, Optional
 from src import SistemaEleitoral
+from enum import Enum
 import math 
+
+# tipos válidos de voto
+class OpcaoVoto(Enum):
+    APROVAR = "APROVAR"
+    REJEITAR = "REJEITAR"
+    ABSTER = "ABSTER"
+
+class Estado(Enum):
+    AGUARDANDO = "AGUARDANDO"
+    VOTACAO = "VOTACAO"
+    ENCERRADA = "ENCERRADA"
 
 class EleicaoAssembleia(SistemaEleitoral):
     """"Classe para apuração utilizando modelo baseado nas assembleias do CACo."""
@@ -13,15 +25,14 @@ class EleicaoAssembleia(SistemaEleitoral):
         num_eleitores = len(eleitores)
 
         if num_eleitores < quorum:
-            raise ValueError(f"Quórum mínimo não foi satisfeito: "f"são necessários pelo menos {quorum:.0f} eleitores.")
+            raise RuntimeError(f"Quórum mínimo não foi satisfeito: "f"são necessários pelo menos {quorum:.0f} eleitores.") # runtime ou value?
         
-         # Verifica se todos os eleitores são alunos cadastrados
+        # verifica se todos os eleitores são alunos cadastrados
         alunos = set(alunos_cadastrados)
 
         for eleitor in eleitores:
             if eleitor not in alunos:
-                raise ValueError(
-                    f"O eleitor '{eleitor}' não está cadastrado como aluno.")
+                raise ValueError(f"O eleitor '{eleitor}' não está cadastrado como aluno.")
 
         if duracao_ciclo <= 0:
             raise ValueError("A duração do ciclo deve ser maior que zero.")
@@ -29,3 +40,34 @@ class EleicaoAssembleia(SistemaEleitoral):
         self.alunos_cadastrados = alunos
         self.eleitores = set(eleitores)
         self.duracao_ciclo = duracao_ciclo
+
+        # inicializa registro de quem já votou
+        self.votantes: Set[str] = set()
+
+        # inicializa contadores
+        self.contadores: Dict[OpcaoVoto, int] = {
+                OpcaoVoto.APROVAR: 0,
+                OpcaoVoto.REJEITAR: 0,
+                OpcaoVoto.ABSTER: 0
+        }
+        
+        # controle de estados
+        self.estado = Estado.AGUARDANDO
+
+    """Implementar temporizacao e mudanca de estados"""
+    
+    def registrar_voto (self, eleitor:str, opcao: OpcaoVoto) -> None:
+        """Registra o voto de um eleitor"""
+
+        # verifica se está em estado de votação
+        if self.estado != Estado.VOTACAO:
+            raise RuntimeError("Não existe um ciclo de votação ativo.")
+
+        # garante voto único
+        if eleitor in self.votantes:
+            raise ValueError("O eleitor já registrou um voto nesta votação.") # value error?
+
+        self.contadores[opcao] += 1
+        self.votantes.add(eleitor)
+                
+    """Implementar apuracao de vencedor"""
