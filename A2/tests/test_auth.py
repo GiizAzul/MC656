@@ -56,3 +56,21 @@ def testa_input_vazio(auth: ServicoAutenticacao) -> None:
     with pytest.raises(ValueError, match="não podem ser vazios"):
         auth.registrar(usuario_invalido)
 
+def testa_persistencia_banco(auth: ServicoAutenticacao) -> None:
+    """Simula o fluxo: 
+    Adm cria conta
+    Adm loga
+    Banco continua acessível para novos registros
+    """
+    admin = GestaoCACo(67, "Jucaco", "LeninRules", "Juca")
+    auth.registrar(admin)
+
+    # Valida o login do admin
+    usuario_ativo = auth.login("Jucaco", "LeninRules")
+    assert usuario_ativo.escopo == "CACO_GESTAO"
+
+    # O banco deve continuar operante para novos registros na mesma instância
+    aluno = EstudanteCACo(73, "caio_iris", "sla", "Caio", 8)
+    auth.registrar(aluno)
+
+    assert auth.login("caio_iris", "sla").nome_real == "Caio"
