@@ -3,6 +3,7 @@ import pytest
 from src.autenticacao import (
     CandidatoAustralia,
     EstudanteCACo,
+    GestaoCACo,
     JogadorBOTC,
     ServicoAutenticacao,
 )
@@ -47,3 +48,11 @@ def testa_falha_de_seguranca(auth: ServicoAutenticacao) -> None:
 
     with pytest.raises(ValueError, match="Usuário fantasma não encontrado"):
         auth.login("fantasma", "123")
+
+def testa_input_vazio(auth: ServicoAutenticacao) -> None:
+    """Verifica se a trava de segurança contra strings vazias está funcionando"""
+    usuario_invalido = JogadorBOTC(10, "", "    ", "Ninguém")
+
+    with pytest.raises(ValueError, match="não podem ser vazios"):
+        auth.registrar(usuario_invalido)
+
