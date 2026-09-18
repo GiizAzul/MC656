@@ -64,6 +64,6 @@ def test_empate_perfeito():
 def test_votos_zerados_no_meio_da_apuracao():
     """Força a condição de total_votos_validos == 0 burlando a inicialização
     para testar se a trava de segurança dentro do laço while True funciona."""
-    eleicao = EleicaoAustralia(['Caio', 'Gi'], [['Caio', 'Gi']])
+    eleicao = EleicaoAustralia(['Samuel', 'Juh'], [['Juh', 'Samuel']])
     eleicao.cedulas = [] # Esvazia as cédulas artificialmente após a validação
     assert eleicao.apurar_vencedor() is None
