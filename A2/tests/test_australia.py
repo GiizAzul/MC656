@@ -49,3 +49,14 @@ def test_rejeita_cedula_com_candidato_falso_ou_duplicado():
     
     with pytest.raises(ValueError, match="candidatos duplicados ou não registrados"):
         EleicaoAustralia(candidatos, cedulas_fraudadas)
+
+def test_empate_perfeito():
+    """Testa o comportamento do algoritmo caso não haja maioria absoluta"""
+    candidatos = ['Caio', 'Gi']
+    cedulas = [
+        ['Caio', 'Gi'],
+        ['Gi', 'Caio']
+    ]
+    eleicao = EleicaoAustralia(candidatos, cedulas)
+    vencedor = eleicao.apurar_vencedor()
+    assert vencedor in ['Caio', 'Gi']
