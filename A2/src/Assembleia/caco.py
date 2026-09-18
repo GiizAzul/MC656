@@ -2,6 +2,7 @@ from typing import List, Dict, Set, Optional
 from src import SistemaEleitoral
 from enum import Enum
 import math 
+import time
 
 # tipos válidos de voto
 class OpcaoVoto(Enum):
@@ -51,11 +52,35 @@ class EleicaoAssembleia(SistemaEleitoral):
                 OpcaoVoto.ABSTER: 0
         }
         
-        # controle de estados
+        # controle de estados e temporização
         self.estado = Estado.AGUARDANDO
+        self.inicio_votacao = Optional[float] = None
 
-    """Implementar temporizacao e mudanca de estados"""
+    def iniciar_votacao(self) -> None:
+        """Inicia ciclo de votação."""
     
+        # não permite iniciar uma votação já encerrada
+        if self.estado == Estado.ENCERRADA:
+            raise RuntimeError("A votação já foi encerrada.")
+    
+        # não permite iniciar uma votação duas vezes
+        if self.estado == Estado.VOTACAO:
+            raise RuntimeError("A votação já está em andamento.")
+    
+        self.estado = Estado.VOTACAO
+        self.inicio_votacao = time.monotonic()
+
+    def tempo_acabou(self) -> bool:
+        """Verifica se o tempo da votação terminou."""
+
+        # se a votação ainda não começou, não acabou
+        if self.inicio_votacao is None:
+            return False
+
+        tempo_decorrido = time.monotonic() - self.inicio_votacao
+
+        return tempo_decorrido >= self.duracao_ciclo
+ 
     def registrar_voto (self, eleitor:str, opcao: OpcaoVoto) -> None:
         """Registra o voto de um eleitor"""
 
@@ -69,5 +94,15 @@ class EleicaoAssembleia(SistemaEleitoral):
 
         self.contadores[opcao] += 1
         self.votantes.add(eleitor)
+
+    def encerrar_votacao(self) -> None:
+        """Encerra ciclo de votação."""
+        
+        # Só encerra se ainda estiver acontecendo
+        if self.estado == Estado.ENCERRADA:
+            return
+    
+        self.estado = Estado.ENCERRADA
+        self.inicio_votacao = None
                 
     """Implementar apuracao de vencedor"""
