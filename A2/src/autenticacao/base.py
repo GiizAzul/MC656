@@ -24,6 +24,8 @@ class ServicoAutenticacao:
         self._banco: dict[str, Usuario] = {}
 
     def registrar(self, usuario: Usuario) -> None:
+        if not usuario.username.strip() or not usuario.senha.strip():
+            raise ValueError("Erro: Username e senha não podem ser vazios")
         if usuario.username in self._banco:
             raise ValueError(f"Erro: username {usuario.username} já existente.")
         self._banco[usuario.username] = usuario
