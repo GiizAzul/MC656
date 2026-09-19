@@ -1,8 +1,10 @@
+import time
+
 import pytest
 
 from src import EleicaoAssembleia
 from src.caco import OpcaoVoto
-import time
+
 
 # Verifica se está barrando corretamente não alunos
 def test_eleitor_nao_aluno():

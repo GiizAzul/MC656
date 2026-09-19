@@ -1,8 +1,9 @@
-from typing import List, Dict, Set, Optional
-from src import SistemaEleitoral
-from enum import Enum
-import math 
+import math
 import time
+from enum import Enum
+
+from src import SistemaEleitoral
+
 
 # tipos válidos de voto
 class OpcaoVoto(Enum):
@@ -18,7 +19,7 @@ class Estado(Enum):
 class EleicaoAssembleia(SistemaEleitoral):
     """"Classe para apuração utilizando modelo baseado nas assembleias do CACo."""
 
-    def __init__(self, alunos_cadastrados: List[str], eleitores: List[str], duracao_ciclo: float): #talvez checar duplicatas
+    def __init__(self, alunos_cadastrados: list[str], eleitores: list[str], duracao_ciclo: float): #talvez checar duplicatas
 
         # verifica quorum mínimo
         num_alunos = len(alunos_cadastrados)
@@ -43,10 +44,10 @@ class EleicaoAssembleia(SistemaEleitoral):
         self.duracao_ciclo = duracao_ciclo
 
         # inicializa registro de quem já votou
-        self.votantes: Set[str] = set()
+        self.votantes: set[str] = set()
 
         # inicializa contadores
-        self.contadores: Dict[OpcaoVoto, int] = {
+        self.contadores: dict[OpcaoVoto, int] = {
                 OpcaoVoto.APROVAR: 0,
                 OpcaoVoto.REJEITAR: 0,
                 OpcaoVoto.ABSTER: 0
@@ -54,7 +55,7 @@ class EleicaoAssembleia(SistemaEleitoral):
         
         # controle de estados e temporização
         self.estado = Estado.AGUARDANDO
-        self.inicio_votacao : Optional[float] = None
+        self.inicio_votacao : float | None = None
 
     def iniciar_votacao(self) -> None:
         """Inicia ciclo de votação."""
@@ -105,7 +106,7 @@ class EleicaoAssembleia(SistemaEleitoral):
         self.estado = Estado.ENCERRADA
         self.inicio_votacao = None
                 
-    def obter_contadores(self) -> Dict[str, int]:
+    def obter_contadores(self) -> dict[str, int]:
         """Retorna a quantidade de votos de cada opção."""
     
         return {
@@ -114,7 +115,7 @@ class EleicaoAssembleia(SistemaEleitoral):
             "ABSTER": self.contadores[OpcaoVoto.ABSTER]
         }
     
-    def apurar_vencedor(self) -> Optional[str]:
+    def apurar_vencedor(self) -> str | None:
         """Apura o resultado final da votação."""
     
         votos_aprovar = self.contadores[OpcaoVoto.APROVAR]
