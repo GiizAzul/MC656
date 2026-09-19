@@ -158,13 +158,13 @@ def test_voto_unico():
     eleicao = criar_eleicao()
     eleicao.iniciar_votacao()
 
-    eleicao.registrar_voto('Juh', 'APROVAR')
+    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
 
     with pytest.raises(
         ValueError,
         match="O eleitor já registrou um voto nesta votação."
     ):
-        eleicao.registrar_voto('Juh', 'REJEITAR')
+        eleicao.registrar_voto('Juh', OpcaoVoto.REJEITAR)
 
 
 # Testa se barra votos antes do ínico da votacão
@@ -176,7 +176,7 @@ def test_voto_antes_do_inicio():
         RuntimeError,
         match="Não existe um ciclo de votação ativo."
     ):
-        eleicao.registrar_voto('Juh', 'APROVAR')
+        eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
 
 # Testa se barra votos depois do fim da votacão
 def test_voto_depois_do_encerramento():
@@ -189,7 +189,7 @@ def test_voto_depois_do_encerramento():
         RuntimeError,
         match="Não existe um ciclo de votação ativo."
     ):
-        eleicao.registrar_voto('Juh', 'APROVAR')
+        eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
 
 # Testa se uma votação não pode ser iniciada duas vezes
 def test_iniciar_votacao_duplicado():
@@ -224,11 +224,11 @@ def test_contagem_dos_votos():
     eleicao = criar_eleicao()
     eleicao.iniciar_votacao()
 
-    eleicao.registrar_voto('Juh', 'APROVAR')
-    eleicao.registrar_voto('Samuel', 'APROVAR')
-    eleicao.registrar_voto('Caio', 'REJEITAR')
-    eleicao.registrar_voto('Gi', 'ABSTER')
-    eleicao.registrar_voto('Leo', 'ABSTER')
+    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
+    eleicao.registrar_voto('Samuel', OpcaoVoto.APROVAR)
+    eleicao.registrar_voto('Caio', OpcaoVoto.REJEITAR)
+    eleicao.registrar_voto('Gi', OpcaoVoto.ABSTER)
+    eleicao.registrar_voto('Leo', OpcaoVoto.ABSTER)
 
     contadores = eleicao.obter_contadores()
 
