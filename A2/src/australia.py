@@ -1,4 +1,4 @@
-import copy
+
 
 from .interfaces import SistemaEleitoral
 
@@ -9,7 +9,7 @@ class EleicaoAustralia(SistemaEleitoral):
     def __init__(self, candidatos: list[str], cedulas: list[list[str]]):
         self.candidatos_oficiais = set(candidatos)
         self.candidatos = {nome: True for nome in candidatos}
-        self.cedulas = copy.deepcopy(cedulas)
+        self.cedulas = []
 
         # Validação que os dados são íntegros com os candidatos registrados
         num_candidatos = len(candidatos)
