@@ -26,7 +26,7 @@ class EleicaoAssembleia(SistemaEleitoral):
         num_eleitores = len(eleitores)
 
         if num_eleitores < quorum:
-            raise RuntimeError(f"Quórum mínimo não foi satisfeito: "f"são necessários pelo menos {quorum:.0f} eleitores.") # runtime ou value?
+            raise RuntimeError(f"Quórum mínimo não foi satisfeito: "f"são necessários pelo menos {quorum} eleitores.") 
         
         # verifica se todos os eleitores são alunos cadastrados
         alunos = set(alunos_cadastrados)
@@ -105,4 +105,31 @@ class EleicaoAssembleia(SistemaEleitoral):
         self.estado = Estado.ENCERRADA
         self.inicio_votacao = None
                 
-    """Implementar apuracao de vencedor"""
+    def obter_contadores(self) -> Dict[str, int]:
+        """Retorna a quantidade de votos de cada opção."""
+    
+        return {
+            "APROVAR": self.contadores[OpcaoVoto.APROVAR],
+            "REJEITAR": self.contadores[OpcaoVoto.REJEITAR],
+            "ABSTER": self.contadores[OpcaoVoto.ABSTER]
+        }
+    
+    def apurar_vencedor(self) -> Optional[str]:
+        """Apura o resultado final da votação."""
+    
+        votos_aprovar = self.contadores[OpcaoVoto.APROVAR]
+        votos_rejeitar = self.contadores[OpcaoVoto.REJEITAR]
+    
+        # abstenções não participam da decisão
+        votos_nao_nulos = votos_aprovar + votos_rejeitar
+    
+        # se ninguém aprovou ou rejeitou, considera-se veto
+        if votos_nao_nulos == 0:
+            return "VETADA"
+    
+        # aprovação precisa ser maior que 50%
+        if votos_aprovar * 2 > votos_nao_nulos:
+            return "APROVADA"
+    
+        # rejeição e empate
+        return "VETADA"
