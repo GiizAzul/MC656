@@ -54,7 +54,7 @@ class EleicaoAssembleia(SistemaEleitoral):
         
         # controle de estados e temporização
         self.estado = Estado.AGUARDANDO
-        self.inicio_votacao = Optional[float] = None
+        self.inicio_votacao : Optional[float] = None
 
     def iniciar_votacao(self) -> None:
         """Inicia ciclo de votação."""
