@@ -2,7 +2,7 @@ import math
 import time
 from enum import Enum
 
-from src import SistemaEleitoral
+from .interfaces import SistemaEleitoral
 
 
 # tipos válidos de voto
