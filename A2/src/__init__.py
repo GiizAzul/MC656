@@ -3,7 +3,7 @@ from .caco import EleicaoAssembleia
 from .interfaces import SistemaEleitoral
 
 __all__ = [
-    "EleicaoAustralia",
     "EleicaoAssembleia",
+    "EleicaoAustralia",
     "SistemaEleitoral",
 ]
