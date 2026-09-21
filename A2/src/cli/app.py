@@ -8,6 +8,7 @@ from src.cli.telas.login import tela_login
 from src.cli.telas.selecao_contexto import OpcaoContexto, tela_selecao_contexto
 from src.cli.telas.caco import tela_caco
 from src.cli.telas.australia import tela_australia
+from src.cli.telas.botc import tela_botc
 
 
 class Estado(Enum):
@@ -84,6 +85,10 @@ def executar_app(servico_auth: ServicoAutenticacao, sessao: Sessao | None = None
 
         elif estado == Estado.VOTACAO_AUSTRALIA:
             tela_australia(sessao.candidatos_australia, sessao.cedulas_australia, sessao.usuario)
+            estado = Estado.SELECAO_CONTEXTO
+
+        elif estado == Estado.VOTACAO_BOTC:
+            tela_botc(sessao.sistema_botc, sessao.usuario)
             estado = Estado.SELECAO_CONTEXTO
 
     print("\nAté logo!")
