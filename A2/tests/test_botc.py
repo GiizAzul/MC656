@@ -34,6 +34,11 @@ def test_votos_negativos_invalido():
     with pytest.raises(ValueError):
         sistema.registrar_votacao("Alice", -1)
 
+def test_votos_maior_numero_vivos_invalido():
+    sistema = SistemaEleitoralBotC(10)
+    with pytest.raises(ValueError):
+        sistema.registrar_votacao("Alice", 11)
+
 def test_sem_votos():
     sistema = SistemaEleitoralBotC(10)
     assert sistema.apurar_vencedor() is None
