@@ -97,15 +97,17 @@ def tela_cadastro(servico: ServicoAutenticacao, proximo_id: int) -> Usuario | No
 
     ra = None
     if tipo == TipoConta.CACO_ESTUDANTE:
-        try:
-            ra = int(input("RA: ").strip())
-        except ValueError:
-            cli_utils.imprimir_erro("RA inválido: deve ser um número.")
-            return None
+        while True:
+            ra = input("RA: ").strip()
+            if not ra.isnumeric():
+                cli_utils.imprimir_erro("RA inválido: deve ser um número.")
+                continue
 
-        if not 100000 <= ra <= 999999:
-            cli_utils.imprimir_erro("RA inválido: deve ter 6 dígitos.")
-            return None
+            ra = int(ra)
+            if not 100000 <= ra <= 999999:
+                cli_utils.imprimir_erro("RA inválido: deve ter 6 dígitos.")
+                continue
+            break
 
     novo_usuario = construir_usuario(tipo, proximo_id, username, senha, nome_real, ra)
 

@@ -1,4 +1,4 @@
-from enum import Enum
+from getpass import getpass
 
 from src.autenticacao.base import ServicoAutenticacao, Usuario
 from src.cli import cli_utils
@@ -14,7 +14,7 @@ def tela_login(servico: ServicoAutenticacao) -> Usuario | None:
     """
     cli_utils.imprimir_titulo("Login")
     username = input("Usuário: ")
-    senha = input("Senha: ")
+    senha = getpass("Senha: ")
 
     try:
         usuario = servico.login(username, senha)
