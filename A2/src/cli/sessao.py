@@ -1,9 +1,7 @@
-#TODO: descomentar botc
-
 from dataclasses import dataclass, field
 
 from src.autenticacao.base import Usuario
-#from src.botc import SistemaEleitoralBotC
+from src.botc import SistemaEleitoralBotC
 from src.caco import EleicaoAssembleia
 
 
@@ -15,7 +13,7 @@ class Sessao:
     eleicao_caco: EleicaoAssembleia | None = None
     candidatos_australia: list[str] = field(default_factory=list)
     cedulas_australia: list[list[str]] = field(default_factory=list)
-    #sistema_botc: SistemaEleitoralBotC | None = None
+    sistema_botc: SistemaEleitoralBotC | None = None
     proximo_id_usuario: int = 100 # usado em telas/cadastro.py ao criar uma nova conta
 
     def esta_logado(self) -> bool:
