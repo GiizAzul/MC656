@@ -17,6 +17,8 @@ class SistemaEleitoralBotC(SistemaEleitoral):
     def registrar_votacao(self, candidato: str, num_votos: int):
         if num_votos < 0:
             raise ValueError("O número de votos não pode ser negativo.")
+        if num_votos > self.jogadores_vivos:
+            raise ValueError("O número de votos não pode ser maior que a quantidade de jogadores.")
         self.votos[candidato] = num_votos
 
     def apurar_vencedor(self) -> str | None:
