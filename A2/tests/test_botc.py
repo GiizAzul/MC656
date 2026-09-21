@@ -26,17 +26,17 @@ def test_maior_voto_vence():
     assert sistema.apurar_vencedor() == "Bob"
 
 def test_numero_vivos_invalido():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="O número de jogadores vivos deve ser maior que zero."):
         SistemaEleitoralBotC(0)
 
 def test_votos_negativos_invalido():
     sistema = SistemaEleitoralBotC(10)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="O número de votos não pode ser negativo."):
         sistema.registrar_votacao("Alice", -1)
 
 def test_votos_maior_numero_vivos_invalido():
     sistema = SistemaEleitoralBotC(10)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="O número de votos não pode ser maior que a quantidade de jogadores."):
         sistema.registrar_votacao("Alice", 11)
 
 def test_sem_votos():
