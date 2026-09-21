@@ -7,6 +7,7 @@ from src.autenticacao import (
     ServicoAutenticacao,
     StoryTellerBOTC,
 )
+from src.botc import SistemaEleitoralBotC
 from src.caco import EleicaoAssembleia
 from src.cli.app import executar_app
 from src.cli.sessao import Sessao
@@ -42,12 +43,12 @@ def montar_sessao() -> Sessao:
 
     candidatos_australia = ["Carlos Candidato", "Outro Candidato"]
 
-    #sistema_botc = SistemaEleitoralBotC(jogadores_vivos=5)
+    sistema_botc = SistemaEleitoralBotC(jogadores_vivos=5)
 
     return Sessao(
         eleicao_caco=eleicao_caco,
         candidatos_australia=candidatos_australia,
-        #sistema_botc=sistema_botc,
+        sistema_botc=sistema_botc,
     )
 
 def main() -> None:
