@@ -16,10 +16,10 @@ def montar_servico_autenticacao() -> ServicoAutenticacao:
     servico = ServicoAutenticacao()
 
     servico.registrar(GestaoCACo(1, "gestao_caco", "gestao123", "Diretoria do CACo"))
-    servico.registrar(EstudanteCACo(2, "estudante1", "senha123", "Ana Estudante", ra=123456))
+    servico.registrar(EstudanteCACo(2, "estudante1", "senha123", "Julia de Souza Nardo", ra=123456))
 
     servico.registrar(StoryTellerBOTC(3, "narrador", "narrador123", "Storyteller"))
-    servico.registrar(JogadorBOTC(4, "jogador1", "senha123", "Beatriz Jogadora"))
+    servico.registrar(JogadorBOTC(4, "jogador1", "senha123", "Leonardo"))
 
     servico.registrar(CandidatoAustralia(5, "candidato1", "senha123", "Carlos Candidato"))
     servico.registrar(EleitorAustralia(6, "eleitor1", "senha123", "Diego Eleitor"))
