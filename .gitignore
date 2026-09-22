@@ -1,0 +1,25 @@
+# Arquivos de compilação do Latex
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.blg
+*.bbl
+
+# Ambientes Virtuais
+venv/
+env/
+.venv/
+.env/
+
+# Cache do Python e Pytest
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+.cache/
+
+# Cache do Linter (Ruff)
+.ruff_cache/
