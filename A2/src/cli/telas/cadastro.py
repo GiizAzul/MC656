@@ -10,7 +10,6 @@ from src.autenticacao import (
     ServicoAutenticacao,
     StoryTellerBOTC,
 )
-
 from src.autenticacao.base import Usuario
 from src.cli import cli_utils
 

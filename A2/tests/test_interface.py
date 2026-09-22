@@ -11,34 +11,50 @@ from src.autenticacao import (
 )
 from src.botc import SistemaEleitoralBotC
 from src.caco import EleicaoAssembleia, OpcaoVoto
-
 from src.cli import cli_utils
 from src.cli.app import Estado, decidir_proximo_estado, executar_app
 from src.cli.sessao import Sessao
 from src.cli.telas.australia import (
     AcaoAustralia,
-    acoes_disponiveis as acoes_australia,
     cedula_e_valida,
-    decidir_acao as decidir_acao_australia,
     montar_ranking,
     tela_australia,
+)
+from src.cli.telas.australia import (
+    acoes_disponiveis as acoes_australia,
+)
+from src.cli.telas.australia import (
+    decidir_acao as decidir_acao_australia,
 )
 from src.cli.telas.boas_vindas import EscolhaInicial, tela_boas_vindas
 from src.cli.telas.botc import (
     AcaoBotc,
-    acoes_disponiveis as acoes_botc,
-    decidir_acao as decidir_acao_botc,
     decidir_num_votos,
     tela_botc,
 )
+from src.cli.telas.botc import (
+    acoes_disponiveis as acoes_botc,
+)
+from src.cli.telas.botc import (
+    decidir_acao as decidir_acao_botc,
+)
 from src.cli.telas.caco import (
     AcaoCaco,
-    acoes_disponiveis as acoes_caco,
-    decidir_acao as decidir_acao_caco,
     decidir_opcao_voto,
     tela_caco,
 )
-from src.cli.telas.cadastro import TipoConta, construir_usuario, decidir_tipo, tela_cadastro
+from src.cli.telas.caco import (
+    acoes_disponiveis as acoes_caco,
+)
+from src.cli.telas.caco import (
+    decidir_acao as decidir_acao_caco,
+)
+from src.cli.telas.cadastro import (
+    TipoConta,
+    construir_usuario,
+    decidir_tipo,
+    tela_cadastro,
+)
 from src.cli.telas.login import tela_login
 from src.cli.telas.resultados import (
     acompanhar_votacao_caco,
@@ -52,7 +68,6 @@ from src.cli.telas.selecao_contexto import (
     opcoes_disponiveis,
     tela_selecao_contexto,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers para simular entrada do usuário nas telas interativas.

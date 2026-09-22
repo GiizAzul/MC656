@@ -2,13 +2,13 @@ from enum import Enum, auto
 
 from src.autenticacao.base import ServicoAutenticacao
 from src.cli.sessao import Sessao
-from src.cli.telas.cadastro import tela_cadastro
+from src.cli.telas.australia import tela_australia
 from src.cli.telas.boas_vindas import EscolhaInicial, tela_boas_vindas
+from src.cli.telas.botc import tela_botc
+from src.cli.telas.caco import tela_caco
+from src.cli.telas.cadastro import tela_cadastro
 from src.cli.telas.login import tela_login
 from src.cli.telas.selecao_contexto import OpcaoContexto, tela_selecao_contexto
-from src.cli.telas.caco import tela_caco
-from src.cli.telas.australia import tela_australia
-from src.cli.telas.botc import tela_botc
 
 
 class Estado(Enum):

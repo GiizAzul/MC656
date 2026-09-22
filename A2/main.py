@@ -12,6 +12,7 @@ from src.caco import EleicaoAssembleia
 from src.cli.app import executar_app
 from src.cli.sessao import Sessao
 
+
 def montar_servico_autenticacao() -> ServicoAutenticacao:
     """Cria e popula o serviço de autenticação com usuários de demonstração."""
     servico = ServicoAutenticacao()

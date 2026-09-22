@@ -3,6 +3,7 @@ from enum import Enum
 
 from src.cli import cli_utils
 
+
 class EscolhaInicial(Enum):
     """Opções do menu inicial, antes de qualquer autenticação."""
 

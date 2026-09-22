@@ -3,6 +3,7 @@ from getpass import getpass
 from src.autenticacao.base import ServicoAutenticacao, Usuario
 from src.cli import cli_utils
 
+
 def tela_login(servico: ServicoAutenticacao) -> Usuario | None:
     """Pede usuário e senha, tenta autenticar e retorna o usuário logado.
 
