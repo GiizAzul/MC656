@@ -1,0 +1,99 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{float}
+\usepackage{array}
+\usepackage{indentfirst}
+\usepackage{todonotes}
+\usepackage{tabularx}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\geometry{a4paper, margin=2cm}
+
+\title{\textbf{Atividade 1 - Definição do\\Processo de Desenvolvimento}\\
+\large MC656 - Engenharia de Software}
+\author{
+  Caio Lima Albuquerque - RA: 288808 \\
+  Giovana Jacome Marchetti - RA: 177700 \\
+  Julia de Souza Nardo - RA: 281272 \\
+  Leonardo Carvalho De Luca - RA: 288820\\
+  Samuel Rodrigues Ferreira - RA: 195440
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introdução}
+Este documento reúne o registro da elicitação de requisitos do projeto, a análise que
+transformou as descobertas em requisitos, os épicos e histórias resultantes e a
+priorização do \textit{backlog}. O código já existente (Atividade 2) não foi interrompido: os requisitos aqui descritos orientam e refinam o trabalho que continua em andamento.
+
+O fluxo seguido pela equipe foi:
+
+\begin{center}
+\small
+Elicitação (entrevistas) $\rightarrow$ Descobertas $\rightarrow$ Análise $\rightarrow$
+Requisitos funcionais e não funcionais $\rightarrow$ Épicos $\rightarrow$ Histórias
+$\rightarrow$ Critérios de aceitação $\rightarrow$ Backlog priorizado
+\end{center}
+
+\textbf{Resumo em números:} \todo{n} entrevistas com \todo{n} participantes;
+\todo{n} descobertas registradas; \todo{n} requisitos funcionais e \todo{n} não funcionais;
+\todo{n} épicos e \todo{n} histórias; \todo{n} itens na primeira entrega de valor.
+
+\textbf{Onde estão os artefatos no GitHub:} todas as issues desta atividade possuem a label \texttt{Atividade3}; as histórias referenciam o épico correspondente por \texttt{\#N} e o backlog está organizado no GitHub Projects \todo{link do projeto}.
+
+\section{Elicitação de requisitos}
+
+\subsection{Técnica escolhida e justificativa}
+
+A técnica utilizada foi a \textbf{entrevista semiestruturada} nos três contextos do sistema. \todo{Explique por que entrevista é adequada ao projeto, contexto por contexto. Cite fatos concretos: quem foi acessível, por que o conhecimento dessa pessoa não está em documento, que tipo de regra/detalhe só aparece em relato de experiência. Evite frases que serviriam a qualquer projeto.} \\
+
+\subsection{Participantes e fontes}
+
+Abaixo seguem informações sobre os participantes das entrevistas:
+
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l Y l@{}}
+\toprule
+\textbf{C\'odigo} & \textbf{Contexto} & \textbf{Perfil} & \textbf{Modo / dura\c{c}\~ao}\\
+\midrule
+ENT-BOT-1 & BotC & & \\
+ENT-BOT-2 & BotC &  & \\
+ENT-CAC-1 & CACo & & \\
+ENT-CAC-2 & CACo & & \\
+ENT-AUS-1 & Austr\'alia & & \\
+\bottomrule
+\end{tabularx}
+\caption{Fontes utilizadas na elicita\c{c}\~ao.}
+\end{table}
+
+\subsection{Evid\^encias}
+
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l Y l@{}}
+\toprule
+\textbf{Entrevista} & \textbf{Tipo de evid\^encia} & \textbf{Onde est\'a} & \textbf{Acesso}\\
+\midrule
+ENT-BOT-1 & \'Audio, transcri\c{c}\~ao, ficha & \todo{link ou Ap\^endice~\ref{ap:fichas}} & \todo{restrito}\\
+ENT-BOT-2 & \todo{} & \todo{} & \todo{}\\
+ENT-CAC-1 & \todo{} & \todo{} & \todo{}\\
+ENT-CAC-2 & \todo{} & \todo{} & \todo{}\\
+ENT-AUS-1 & \todo{} & \todo{} & \todo{}\\
+\bottomrule
+\end{tabularx}
+\caption{Evid\^encias de que as entrevistas foram executadas.}
+\end{table}
+
+\end{document}
