@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h2>Bem-vindo, {{ usuario.nome }}!</h2>
+    <a href="/logout" class="btn-secondary">Sair da Sessão</a>
+</header>
+
+<main>
+    <h3>Votações Disponíveis</h3>
+    <div class="card-list">
+        <!-- Renderização condicional baseada na autenticação -->
+        {% if "AUSTRALIA" in usuario.escopo %}
+            <div class="card">
+                <h4>Eleição Federal 2026</h4>
+                <p>Status: Aberta</p>
+                <a href="/australia/votar" class="btn-primary">Acessar Cédula</a>
+            </div>
+        {% endif %}
+        
+        {% if "BOTC" in usuario.escopo %}
+            <div class="card">
+                <h4>Indicações</h4>
+                <a href="/botc/jogo" class="btn-primary">Indicar</a>
+            </div>
+        {% endif %}
+        
+        {% if "CACO" in usuario.escopo %}
+            <div class="card">
+                <h4>Pauta #5 - Regimento</h4>
+                <a href="/caco/assembleia" class="btn-primary">Participar</a>
+            </div>
+        {% endif %}
+    </div>
+</main>
+{% endblock %}
