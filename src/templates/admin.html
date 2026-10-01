@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="header-context">
+    <h2>Gerenciar Votações</h2>
+</header>
+<main class="box-content">
+    
+    {% if "CACO_GESTAO" in usuario.escopo %}
+    <div class="card">
+        <h3>Assembleia CACo - Pauta #5</h3>
+        <p>Status Atual: {{ status_caco }}</p>
+        
+        <div class="botoes-votacao mt-2">
+            <!-- Estas rotas precisarão ser criadas no caco_router.py -->
+            <form action="/caco/iniciar" method="POST" style="display:inline;">
+                <button type="submit" class="btn-success">Iniciar Votação</button>
+            </form>
+            <form action="/caco/encerrar" method="POST" style="display:inline;">
+                <button type="submit" class="btn-danger">Encerrar Votação</button>
+            </form>
+            <a href="/caco/resultados" class="btn-primary">Ver Resultados</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel Principal</a>
+</main>
+{% endblock %}
