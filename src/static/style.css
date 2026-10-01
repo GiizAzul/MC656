@@ -1,0 +1,51 @@
+:root {
+    --bg-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --text-main: #333333;
+    --primary: #1a1a1a;
+    --primary-hover: #404040;
+    --success: #28a745;
+    --danger: #dc3545;
+    --neutral: #ffc107;
+    --border-radius: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; padding: 2rem; }
+
+.container { width: 100%; max-width: 600px; }
+
+/* Box genérica para login e telas */
+.login-box, .box-content { background: var(--card-bg); padding: 2rem; border-radius: var(--border-radius); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+h1, h2, h3 { text-align: center; margin-bottom: 1.5rem; }
+.text-center { text-align: center; }
+.mt-2 { margin-top: 1rem; }
+
+/* Botões */
+button, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-neutral {
+    display: inline-block; width: 100%; padding: 0.8rem; border: none; border-radius: var(--border-radius);
+    font-size: 1rem; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; transition: 0.2s;
+}
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-secondary { background: #e0e0e0; color: var(--text-main); }
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-neutral { background: var(--neutral); color: var(--text-main); }
+
+/* Austrália List */
+.lista-candidatos { list-style: none; margin-bottom: 1.5rem; }
+.candidato-item { display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #ddd; border-radius: var(--border-radius); margin-bottom: 0.5rem; background: #fafafa; }
+.posicao-input { width: 60px; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; text-align: center; }
+
+/* BoTC Roda */
+.roda-jogadores { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin: 2rem 0; }
+.jogador-card { border: 2px solid var(--primary); padding: 1rem; border-radius: 50%; width: 100px; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.9rem; }
+.jogador-card.morto { border-color: var(--danger); opacity: 0.6; background-color: #ffe6e6; }
+
+/* CACo Assembleia */
+.botoes-votacao { display: flex; gap: 1rem; justify-content: space-between; flex-direction: column; }
+@media(min-width: 500px) { .botoes-votacao { flex-direction: row; } }
