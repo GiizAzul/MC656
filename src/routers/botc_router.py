@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
+from src.autenticacao.base import Usuario
 
 from .dependencias import obter_usuario_logado
 
@@ -31,4 +33,37 @@ async def processar_voto_botc(request: Request, acao: str = Form(...)):
     return templates.TemplateResponse(
         "sucesso.html", 
         {"request": request, "mensagem": "Ação registrada na roda da cidade."}
+    )
+
+@router.post("/registrar")
+async def registrar_votos_botc(
+    request: Request, 
+    nomeado: str = Form(...), 
+    num_votos: int = Form(...),
+    usuario: Usuario = Depends(obter_usuario_logado)
+):
+    if "BOTC_STORYTELLER" not in usuario.escopo:
+        raise HTTPException(status_code=403, detail="Apenas o Storyteller pode registrar votos.")
+
+    # request.app.state.sistema_botc.registrar_votacao(nomeado, num_votos)
+    
+    return templates.TemplateResponse(
+        "sucesso.html", 
+        {"request": request, "mensagem": f"{num_votos} votos registrados para {nomeado}."}
+    )
+
+@router.post("/apurar")
+async def apurar_execucao_botc(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+    if "BOTC_STORYTELLER" not in usuario.escopo:
+        raise HTTPException(status_code=403, detail="Apenas o Storyteller pode apurar a execução.")
+
+    # resultado = request.app.state.sistema_botc.apurar_vencedor()
+    # Mock temporário
+    resultado = "Jogador X" 
+    
+    mensagem = f"O jogador executado foi: {resultado}" if resultado else "Ninguém foi executado. Empate ou votos insuficientes."
+
+    return templates.TemplateResponse(
+        "sucesso.html", 
+        {"request": request, "mensagem": mensagem}
     )
