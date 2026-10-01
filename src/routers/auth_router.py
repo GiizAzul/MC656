@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from src.autenticacao.base import Usuario
 from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
@@ -10,6 +11,14 @@ from .dependencias import obter_usuario_logado
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+@router.get("/admin", response_class=HTMLResponse)
+async def painel_admin(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+    # Impede que usuários comuns entrem na tela de gestão
+    if "GESTAO" not in usuario.escopo and "STORYTELLER" not in usuario.escopo:
+        return RedirectResponse(url="/dashboard")
+        
+    return templates.TemplateResponse("admin.html", {"request": request, "usuario": usuario})
 
 @router.get("/cadastro", response_class=HTMLResponse)
 async def tela_cadastro(request: Request):
