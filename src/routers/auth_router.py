@@ -6,6 +6,8 @@ from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 
+from .dependencias import obter_usuario_logado
+
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
@@ -87,7 +89,7 @@ async def processar_login(
 @router.get("/dashboard")
 async def painel_usuario(request: Request):
     # Verifica o cookie para saber se está logado
-    username_logado = request.cookies.get("sessao_usuario")
+    username_logado = await obter_usuario_logado(request)
     if not username_logado:
         return RedirectResponse(url="/")
         

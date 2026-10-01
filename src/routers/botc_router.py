@@ -2,6 +2,8 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from .dependencias import obter_usuario_logado
+
 router = APIRouter(prefix="/botc", tags=["BOTC"])
 templates = Jinja2Templates(directory="templates")
 
@@ -14,7 +16,7 @@ JOGADORES_MOCK = [
 
 @router.get("/partida", response_class=HTMLResponse)
 async def tela_partida(request: Request):
-    usuario_logado = request.cookies.get("sessao_usuario")
+    usuario_logado = await obter_usuario_logado(request)
     if not usuario_logado:
         return RedirectResponse(url="/")
         

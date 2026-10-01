@@ -2,6 +2,8 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from .dependencias import obter_usuario_logado
+
 router = APIRouter(prefix="/australia", tags=["Australia"])
 templates = Jinja2Templates(directory="templates")
 
@@ -10,7 +12,7 @@ CANDIDATOS_MOCK = ["Candidato A", "Candidato B", "Candidato C"]
 
 @router.get("/votar", response_class=HTMLResponse)
 async def tela_votacao(request: Request):
-    usuario_logado = request.cookies.get("sessao_usuario")
+    usuario_logado = await obter_usuario_logado(request)
     if not usuario_logado:
         return RedirectResponse(url="/")
         
