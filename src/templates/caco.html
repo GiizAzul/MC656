@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="header-context caco-theme">
+    <h2>Assembleia CACo - Pauta #5</h2>
+</header>
+<main class="box-content text-center">
+    <div class="pauta-desc">
+        <p>Aprovação do novo estatuto de representação discente.</p>
+    </div>
+    
+    <form action="/caco/votar" method="POST" class="botoes-votacao">
+        <button type="submit" name="opcao" value="APROVAR" class="btn-success">A Favor</button>
+        <button type="submit" name="opcao" value="REJEITAR" class="btn-danger">Contra</button>
+        <button type="submit" name="opcao" value="ABSTER" class="btn-neutral">Abster-se</button>
+    </form>
+    <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
+</main>
+{% endblock %}
