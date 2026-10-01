@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-box">
+    <h1>Criar Nova Conta</h1>
+    
+    {% if erro %}
+        <div class="alert alert-danger">{{ erro }}</div>
+    {% endif %}
+
+    <form action="/cadastro" method="POST">
+        <div class="form-group">
+            <label>Tipo de Conta</label>
+            <select name="tipo_conta" required>
+                <option value="CACO_ESTUDANTE">Estudante (CACo)</option>
+                <option value="CACO_GESTAO">Gestão (CACo)</option>
+                <option value="AUSTRALIA_ELEITOR">Eleitor (Austrália)</option>
+                <option value="BOTC_JOGADOR">Jogador (Blood on the Clocktower)</option>
+                <option value="BOTC_STORYTELLER">Mestre (Blood on the Clocktower)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Nome Completo</label>
+            <input type="text" name="nome_real" required>
+        </div>
+
+        <div class="form-group">
+            <label>Username (Login)</label>
+            <input type="text" name="username" required>
+        </div>
+
+        <!-- Campo condicional para RA. Usaremos JS no futuro para esconder se não for estudante -->
+        <div class="form-group" id="campo-ra">
+            <label>RA (Apenas para estudantes CACo)</label>
+            <input type="number" name="ra" placeholder="123456">
+        </div>
+        
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" name="senha" required>
+        </div>
+
+        <div class="form-group">
+            <label>Confirme a Senha</label>
+            <input type="password" name="senha_confirma" required>
+        </div>
+
+        <button type="submit" class="btn-primary mt-2">Registrar e Entrar</button>
+        <a href="/" class="btn-secondary mt-2">Voltar ao Login</a>
+    </form>
+</div>
+{% endblock %}
