@@ -1,13 +1,19 @@
 from abc import ABC, abstractmethod
+import uuid
 
 
 class Usuario(ABC):
     """Classe base abstrata para todos os usuários do sistema."""
-    def __init__(self, id: int, username:str, senha: str, nome_real: str):
-        self.id = id
+    def __init__(self, username:str, senha: str, nome_real: str):
+        self.id = uuid.uuid4()
         self.username = username
         self.senha = senha
         self.nome_real = nome_real
+
+    @property
+    def id(self) -> str:
+        """Garante que o ID seja acessível apenas para leitura (imutável)."""
+        return self._id
 
     @property
     @abstractmethod
