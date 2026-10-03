@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 class Usuario(ABC):
     """Classe base abstrata para todos os usuários do sistema."""
     def __init__(self, username:str, senha: str, nome_real: str):
-        self.id = uuid.uuid4()
+        self._id = str(uuid.uuid4())
         self.username = username
         self.senha = senha
         self.nome_real = nome_real
