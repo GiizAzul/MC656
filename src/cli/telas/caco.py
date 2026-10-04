@@ -110,7 +110,7 @@ def _executar_voto(eleicao: EleicaoAssembleia, usuario: Usuario) -> None:
         return
 
     try:
-        eleicao.registrar_voto(usuario.username, opcao)
+        eleicao.registrar_voto(usuario.id, opcao)
         cli_utils.imprimir_sucesso("Voto registrado com sucesso.")
     except (ValueError, RuntimeError) as erro:
         cli_utils.imprimir_erro(str(erro))

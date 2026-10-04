@@ -1,18 +1,16 @@
-
-
 from .interfaces import SistemaEleitoral
 
 
 class EleicaoAustralia(SistemaEleitoral):
     """"Classe para apuração utilizando voto único transferível."""
 
-    def __init__(self, candidatos: list[str], cedulas: list[list[str]]):
-        self.candidatos_oficiais = set(candidatos)
-        self.candidatos = {nome: True for nome in candidatos}
+    def __init__(self, candidatos_ids: list[str], cedulas: list[list[str]]):
+        self.candidatos_oficiais = set(candidatos_ids)
+        self.candidatos = {cid: True for cid in candidatos_ids}
         self.cedulas = []
 
         # Validação que os dados são íntegros com os candidatos registrados
-        num_candidatos = len(candidatos)
+        num_candidatos = len(candidatos_ids)
         for i, cedula in enumerate(cedulas):
             # Verifica se tem o tamanho exato com todos os candidatos escolhidos
             if len(cedula) != num_candidatos:
@@ -26,13 +24,13 @@ class EleicaoAustralia(SistemaEleitoral):
 
     def _contar_primeiras_preferencias(self) -> dict[str, int]:
         """Método privado para contabilizar os votos válidos da rodada atual."""
-        contagem = {nome: 0 for nome, ativo in self.candidatos.items() if ativo}
+        contagem = {cid: 0 for cid, ativo in self.candidatos.items() if ativo}
         
         for cedula in self.cedulas:
             # Varre o ranking do eleitor e dá o voto para o primeiro candidato ativo que achar
-            for opcao in cedula:
-                if self.candidatos.get(opcao):
-                    contagem[opcao] += 1
+            for opcao_id in cedula:
+                if self.candidatos.get(opcao_id):
+                    contagem[opcao_id] += 1
                     break  # Pula para o próximo eleitor
         return contagem
 
@@ -49,9 +47,9 @@ class EleicaoAustralia(SistemaEleitoral):
                 return None
 
             # Verifica se alguém atingiu maioria absoluta
-            for candidato, votos in contagem.items():
+            for candidato_id, votos in contagem.items():
                 if votos > total_votos_validos / 2:
-                    return candidato
+                    return candidato_id
 
             # Encontra o candidato com menos votos
             candidato_menos_votado = min(contagem, key=contagem.get)
