@@ -96,3 +96,17 @@ def testa_id_gerado_e_imutavel(auth: ServicoAutenticacao) -> None:
     #Garante que a propriedade é read-only
     with pytest.raises(AttributeError):
         jogador.id = "tentando_hackear_e_mudar_o_id"
+
+def testa_banco_corrompido_ou_usuario_deletado(auth: ServicoAutenticacao) -> None:
+    """
+    Testa a validação de segurança quando um username existe no mapa,
+    mas o objeto do usuário não se encontra mais no banco por ID.
+    """
+    jogador = JogadorBOTC("n sei", "senha123", "Deletado")
+    auth.registrar(jogador)
+    
+    # Simulamos uma inconsistência no banco principal enquanto o mapa de usernames continua apontando para o ID deletado
+    del auth._banco_por_id[jogador.id]
+    
+    with pytest.raises(ValueError, match="não encontrado"):
+        auth.login("n sei", "senha123")
