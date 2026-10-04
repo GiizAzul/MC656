@@ -1,4 +1,7 @@
+from typing import ClassVar
+
 from .base import Usuario
+
 
 class ErroAcessoNaoAutorizado(Exception):
     """Exceção customizada para simular um HTTP 403 - Forbidden"""
@@ -10,23 +13,23 @@ class ErroAcessoNaoAutorizado(Exception):
 class ControleDeAcesso:
     """Gerencia o acesso baseado estritamente nos escopos existentes no domínio."""
     
-    # Traduz o prefixo das classes (BOTC, CACO, AUSTRALIA)
-    MAPA_SCOPES = {
+    # 1. Traduz o prefixo das suas classes (BOTC, CACO, AUSTRALIA) para o exigido na história
+    MAPA_SCOPES: ClassVar[dict[str, str]] = {
         "BOTC": "SCOPE_BCT", 
         "CACO": "SCOPE_CACO",
         "AUSTRALIA": "SCOPE_AUSTRALIA"
     }
 
-    # (substituir pelos endpoints web)
-    PAINEIS_INICIAIS = {
+    # 2. Painéis iniciais definidos estritamente pela sua História de Usuário
+    PAINEIS_INICIAIS: ClassVar[dict[str, str]] = {
         "SCOPE_BCT": "painel_jogador_bct",
         "SCOPE_CACO": "painel_estudante_caco",
         "SCOPE_AUSTRALIA": "painel_eleitor_australia",
         "SCOPE_GLOBAL": "painel_global"
     }
 
-    # Proteção das lógicas (substituir pelos endpoints web)
-    RECURSOS_PROTEGIDOS = {
+    # 3. Proteção das lógicas (substitua pelos endpoints web quando forem criados)
+    RECURSOS_PROTEGIDOS: ClassVar[dict[str, str]] = {
         "painel_jogador_bct": "SCOPE_BCT",
         "painel_estudante_caco": "SCOPE_CACO",
         "painel_eleitor_australia": "SCOPE_AUSTRALIA"
