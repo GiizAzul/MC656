@@ -1,9 +1,9 @@
 import pytest
 
-from src.autenticacao.botc import JogadorBOTC
-from src.autenticacao.caco import EstudanteCACo
 from src.autenticacao.australia import EleitorAustralia
 from src.autenticacao.autorizacao import ControleDeAcesso, ErroAcessoNaoAutorizado
+from src.autenticacao.botc import JogadorBOTC
+from src.autenticacao.caco import EstudanteCACo
 
 
 @pytest.fixture
