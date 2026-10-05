@@ -22,7 +22,8 @@ async def tela_votacao(request: Request):
         
     return templates.TemplateResponse(
         "australia.html", 
-        {"request": request, "candidatos": CANDIDATOS_MOCK}
+        request=request,
+        context={"candidatos": CANDIDATOS_MOCK}
     )
 
 @router.post("/votar")
@@ -32,5 +33,6 @@ async def processar_voto(request: Request, ranking: str = Form(...)):
     # Por enquanto, apenas redirecionamos para uma tela de sucesso.
     return templates.TemplateResponse(
         "sucesso.html", 
-        {"request": request, "mensagem": "Voto registrado com sucesso na Eleição Federal!"}
+        request=request, 
+        context={"mensagem": "Voto registrado com sucesso na Eleição Federal!"}
     )

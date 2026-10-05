@@ -24,7 +24,8 @@ async def iniciar_votacao_caco(request: Request, usuario: Usuario = Depends(obte
     
     return templates.TemplateResponse(
         "sucesso.html", 
-        {"request": request, "mensagem": "Votação da Assembleia iniciada com sucesso!"}
+        request=request, 
+        context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
     )
 
 @router.get("/assembleia", response_class=HTMLResponse)
@@ -33,14 +34,15 @@ async def tela_assembleia(request: Request):
     if not usuario_logado:
         return RedirectResponse(url="/")
         
-    return templates.TemplateResponse("caco.html", {"request": request})
+    return templates.TemplateResponse("caco.html", request=request, context={})
 
 @router.post("/votar")
 async def processar_voto_caco(request: Request, opcao: str = Form(...)):
     # opcao receberá "APROVAR", "REJEITAR" ou "ABSTER" do HTML
     return templates.TemplateResponse(
         "sucesso.html", 
-        {"request": request, "mensagem": "Seu voto na assembleia foi contabilizado."}
+        request=request, 
+        context={"mensagem": "Seu voto na assembleia foi contabilizado."}
     )
 
 @router.post("/encerrar")
@@ -52,7 +54,8 @@ async def encerrar_votacao_caco(request: Request, usuario: Usuario = Depends(obt
     
     return templates.TemplateResponse(
         "sucesso.html", 
-        {"request": request, "mensagem": "Votação da Assembleia encerrada."}
+        request=request, 
+        context={"mensagem": "Votação da Assembleia encerrada."}
     )
 
 @router.get("/resultados", response_class=HTMLResponse)
@@ -66,5 +69,6 @@ async def resultados_caco(request: Request, usuario: Usuario = Depends(obter_usu
     
     return templates.TemplateResponse(
         "sucesso.html", # Futuramente criar um resultados.html específico
-        {"request": request, "mensagem": f"Resultados atuais: {contadores}"}
+        request=request, 
+        context={"mensagem": f"Resultados atuais: {contadores}"}
     )

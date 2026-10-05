@@ -28,7 +28,8 @@ async def tela_partida(request: Request):
         
     return templates.TemplateResponse(
         "botc.html", 
-        {"request": request, "jogadores": JOGADORES_MOCK}
+        request=request, 
+        context={"jogadores": JOGADORES_MOCK}
     )
 
 @router.post("/votar")
@@ -36,7 +37,8 @@ async def processar_voto_botc(request: Request, acao: str = Form(...)):
     # acao receberá "levantar_mao" ou "abaixar_mao"
     return templates.TemplateResponse(
         "sucesso.html", 
-        {"request": request, "mensagem": "Ação registrada na roda da cidade."}
+        request=request, 
+        context={"mensagem": "Ação registrada na roda da cidade."}
     )
 
 @router.post("/registrar")
@@ -53,7 +55,8 @@ async def registrar_votos_botc(
     
     return templates.TemplateResponse(
         "sucesso.html", 
-        {"request": request, "mensagem": f"{num_votos} votos registrados para {nomeado}."}
+        request=request, 
+        context={"mensagem": f"{num_votos} votos registrados para {nomeado}."}
     )
 
 @router.post("/apurar")
@@ -69,5 +72,6 @@ async def apurar_execucao_botc(request: Request, usuario: Usuario = Depends(obte
 
     return templates.TemplateResponse(
         "sucesso.html", 
-        {"request": request, "mensagem": mensagem}
+        request=request, 
+        context={"mensagem": mensagem}
     )

@@ -22,11 +22,11 @@ async def painel_admin(request: Request, usuario: Usuario = Depends(obter_usuari
     if "GESTAO" not in usuario.escopo and "STORYTELLER" not in usuario.escopo:
         return RedirectResponse(url="/dashboard")
         
-    return templates.TemplateResponse("admin.html", {"request": request, "usuario": usuario})
+    return templates.TemplateResponse(request=request, name="admin.html", context={"usuario": usuario})
 
 @router.get("/cadastro", response_class=HTMLResponse)
 async def tela_cadastro(request: Request):
-    return templates.TemplateResponse("cadastro.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="cadastro.html", context={})
 
 @router.post("/cadastro")
 async def processar_cadastro(
@@ -39,7 +39,7 @@ async def processar_cadastro(
     ra: str = Form(None) # Opcional no form, obrigatório para EstudanteCACo
 ):
     if senha != senha_confirma:
-        return templates.TemplateResponse("cadastro.html", {"request": request, "erro": "Senhas não conferem."})
+        return templates.TemplateResponse("cadastro.html", {"request": request}, context={"erro": "Senhas não conferem"})
         
     banco = request.app.state.banco_auth
     
@@ -70,7 +70,7 @@ async def processar_cadastro(
         return resposta
         
     except ValueError as erro:
-        return templates.TemplateResponse("cadastro.html", {"request": request, "erro": str(erro)})
+        return templates.TemplateResponse("cadastro.html", request=request, context={"erro": str(erro)})
 
 @router.post("/login")
 async def processar_login(
@@ -93,7 +93,8 @@ async def processar_login(
         # Devolve a tela de login com a mensagem de erro (ex: "Senha incorreta")
         return templates.TemplateResponse(
             "login.html", 
-            {"request": request, "erro": str(erro)}
+            request=request,
+            context={"erro": str(erro)}
         )
 
 @router.get("/dashboard")
@@ -108,7 +109,8 @@ async def painel_usuario(request: Request):
     
     return templates.TemplateResponse(
         "dashboard.html", 
-        {"request": request, "usuario": usuario}
+        request=request, 
+        context={"usuario": usuario}
     )
 
 @router.get("/logout")
