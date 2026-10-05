@@ -16,7 +16,7 @@
                 <span class="nome">{{ candidato }}</span>
                 <input type="number" class="posicao-input" min="1" max="{{ candidatos|length }}" placeholder="Posição" required>
             </li>
-            {% endblock %}
+            {% endfor %}
         </ul>
         <button type="submit" class="btn-primary mt-2">Confirmar Cédula</button>
         <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
