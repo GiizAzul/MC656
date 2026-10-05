@@ -9,7 +9,7 @@ from src.autenticacao.base import Usuario
 from .dependencias import obter_usuario_logado
 
 # Pega o diretório absoluto onde o main.py está (a pasta src/)
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 router = APIRouter(prefix="/caco", tags=["CACo"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
