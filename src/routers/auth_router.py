@@ -11,10 +11,10 @@ from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 from .dependencias import obter_usuario_logado
 
 # Pega o diretório absoluto onde o main.py está (a pasta src/)
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 router = APIRouter()
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.get("/admin", response_class=HTMLResponse)
 async def painel_admin(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):

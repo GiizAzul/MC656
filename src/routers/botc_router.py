@@ -11,7 +11,7 @@ from .dependencias import obter_usuario_logado
 BASE_DIR = Path(__file__).resolve().parent
 
 router = APIRouter(prefix="/botc", tags=["BOTC"])
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Memória interna de jogadores para a roda visual
 JOGADORES_MOCK = [

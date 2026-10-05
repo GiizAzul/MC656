@@ -9,7 +9,7 @@ from .dependencias import obter_usuario_logado
 BASE_DIR = Path(__file__).resolve().parent
 
 router = APIRouter(prefix="/australia", tags=["Australia"])
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Simulação de uma eleição ativa em memória
 CANDIDATOS_MOCK = ["Candidato A", "Candidato B", "Candidato C"]
