@@ -65,11 +65,10 @@ def executar_app(servico_auth: ServicoAutenticacao, sessao: Sessao | None = None
             estado = Estado.SELECAO_CONTEXTO
 
         elif estado == Estado.CADASTRO:
-            usuario = tela_cadastro(servico_auth, sessao.proximo_id_usuario)
+            usuario = tela_cadastro(servico_auth,)
             if usuario is None:
                 estado = Estado.BOAS_VINDAS
                 continue
-            sessao.proximo_id_usuario += 1
             sessao.logar(usuario)
             estado = Estado.SELECAO_CONTEXTO
 
