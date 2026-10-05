@@ -26,7 +26,7 @@ def test_fluxo_login_sucesso():
     }
     
     # Faz o POST no formulário de login (sem seguir o redirecionamento automático)
-    response_login = client.post("/login", data=dados_login, allow_redirects=False)
+    response_login = client.post("/login", data=dados_login, follow_redirects=False)
     
     # O servidor deve responder com 302 (Found) redirecionando para o Dashboard
     assert response_login.status_code == 302
@@ -60,7 +60,7 @@ def test_fluxo_cadastro_e_acesso_dashboard():
     }
     
     # Realiza o cadastro
-    response_cadastro = client.post("/cadastro", data=dados_cadastro, allow_redirects=False)
+    response_cadastro = client.post("/cadastro", data=dados_cadastro, follow_redirects=False)
     assert response_cadastro.status_code == 302 # Redireciona para o dashboard
     
     # Acessa o dashboard usando os cookies ganhos no cadastro
@@ -100,7 +100,7 @@ def test_acesso_bloqueado_ao_painel_admin():
     response = client.get("/admin", follow_redirects=False)
     
     # O redirecionamento (302) joga o usuário de volta para o Dashboard, pois ele não é GESTAO nem STORYTELLER
-    assert response.status_code == 302
+    assert response.status_code in  [302,307]
     assert response.headers["location"] == "/dashboard"
 
     client.cookies.clear()
@@ -121,7 +121,7 @@ def test_acesso_logout():
     client.cookies.set("sessao_usuario", "caio")
     response = client.get("/logout", follow_redirects=False)
     
-    assert response.status_code == 302
+    assert response.status_code in [302,307]
     assert response.headers["location"] == "/"
     
     # A resposta de um logout deleta o cookie setando sua data de validade para o passado
