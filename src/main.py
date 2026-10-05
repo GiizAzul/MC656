@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pathlib import Path
 
 from src.routers import auth_router, australia_router, caco_router, botc_router
 from src.autenticacao.base import ServicoAutenticacao
@@ -9,9 +10,12 @@ from src.autenticacao.australia import EleitorAustralia
 
 app = FastAPI(title="Sistema de Votação Web")
 
-# Configuração do Frontend
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+# Pega o diretório absoluto onde o main.py está (a pasta src/)
+BASE_DIR = Path(__file__).resolve().parent
+
+# Configuração do Frontend com caminhos absolutos
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # Banco de Dados em Memória
 banco_auth = ServicoAutenticacao()

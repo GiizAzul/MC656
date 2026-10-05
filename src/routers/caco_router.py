@@ -1,14 +1,18 @@
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pathlib import Path
 
 from src.caco import OpcaoVoto
 from src.autenticacao.base import Usuario
 
 from .dependencias import obter_usuario_logado
 
+# Pega o diretório absoluto onde o main.py está (a pasta src/)
+BASE_DIR = Path(__file__).resolve().parent
+
 router = APIRouter(prefix="/caco", tags=["CACo"])
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 @router.post("/iniciar")
 async def iniciar_votacao_caco(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):

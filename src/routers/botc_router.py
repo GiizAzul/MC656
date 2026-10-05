@@ -1,13 +1,17 @@
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pathlib import Path
 
 from src.autenticacao.base import Usuario
 
 from .dependencias import obter_usuario_logado
 
+# Pega o diretório absoluto onde o main.py está (a pasta src/)
+BASE_DIR = Path(__file__).resolve().parent
+
 router = APIRouter(prefix="/botc", tags=["BOTC"])
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # Memória interna de jogadores para a roda visual
 JOGADORES_MOCK = [

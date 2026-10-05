@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pathlib import Path
 
 from src.autenticacao.base import Usuario
 from src.autenticacao.caco import EstudanteCACo, GestaoCACo
@@ -9,8 +10,11 @@ from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 
 from .dependencias import obter_usuario_logado
 
+# Pega o diretório absoluto onde o main.py está (a pasta src/)
+BASE_DIR = Path(__file__).resolve().parent
+
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 @router.get("/admin", response_class=HTMLResponse)
 async def painel_admin(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):

@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pathlib import Path
 
 from .dependencias import obter_usuario_logado
 
+# Pega o diretório absoluto onde o main.py está (a pasta src/)
+BASE_DIR = Path(__file__).resolve().parent
+
 router = APIRouter(prefix="/australia", tags=["Australia"])
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # Simulação de uma eleição ativa em memória
 CANDIDATOS_MOCK = ["Candidato A", "Candidato B", "Candidato C"]
