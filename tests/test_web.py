@@ -115,3 +115,51 @@ def test_acesso_liberado_ao_painel_admin():
     assert "Gerenciar Votações" in response.text
 
     client.cookies.clear()
+
+def test_acesso_logout():
+    """Testa se o botão de logout apaga os cookies e redireciona."""
+    client.cookies.set("sessao_usuario", "caio")
+    response = client.get("/logout", follow_redirects=False)
+    
+    assert response.status_code == 302
+    assert response.headers["location"] == "/"
+    
+    # A resposta de um logout deleta o cookie setando sua data de validade para o passado
+    # ou setando valor vazio.
+    cookie_str = response.headers.get("set-cookie", "")
+    assert "sessao_usuario" in cookie_str 
+    assert "expires" in cookie_str or "Max-Age=0" in cookie_str
+
+def test_rota_votar_australia():
+    """Simula o envio de uma cédula australiana pela interface."""
+    client.cookies.set("sessao_usuario", "caio")
+    
+    # Simula o formulário preenchido da tela
+    dados_voto = {"ranking": "Candidato A,Candidato B,Candidato C"}
+    response = client.post("/australia/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "Voto registrado" in response.text
+    client.cookies.clear()
+
+def test_rota_votar_caco():
+    """Simula o envio de um voto de assembleia (Aprovar)."""
+    client.cookies.set("sessao_usuario", "julia")
+    
+    dados_voto = {"opcao": "APROVAR"}
+    response = client.post("/caco/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "Seu voto na assembleia foi contabilizado" in response.text
+    client.cookies.clear()
+
+def test_rota_votar_botc():
+    """Simula a ação de levantar a mão no BoTC."""
+    client.cookies.set("sessao_usuario", "leo")
+    
+    dados_voto = {"acao": "levantar_mao"}
+    response = client.post("/botc/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "Ação registrada" in response.text
+    client.cookies.clear()
