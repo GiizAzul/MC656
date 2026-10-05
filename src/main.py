@@ -1,14 +1,21 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
 from src.routers import auth_router, australia_router, caco_router, botc_router
+from src.routers.dependencias import RequerRedirecionamentoException
+
 from src.autenticacao.base import ServicoAutenticacao
 from src.autenticacao.caco import GestaoCACo
 from src.autenticacao.australia import EleitorAustralia
 
 app = FastAPI(title="Sistema de Votação Web")
+
+@app.exception_handler(RequerRedirecionamentoException)
+async def auth_exception_handler(request: Request, exc: RequerRedirecionamentoException):
+    return RedirectResponse(url="/", status_code=302)
 
 # Pega o diretório absoluto onde o main.py está (a pasta src/)
 BASE_DIR = Path(__file__).resolve().parent
