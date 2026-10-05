@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 
 from src.routers import auth_router, australia_router, caco_router, botc_router
 from src.autenticacao.base import ServicoAutenticacao
-from src.autenticacao.caco import DiretoriaCACo
+from src.autenticacao.caco import GestaoCACo
 from src.autenticacao.australia import EleitorAustralia
 
 app = FastAPI(title="Sistema de Votação Web")
@@ -17,7 +17,7 @@ templates = Jinja2Templates(directory="templates")
 banco_auth = ServicoAutenticacao()
 # Usuários pré-cadastrados para teste <- Talvez seja melhor mudar depois
 banco_auth.registrar(EleitorAustralia("caio", "senha123", "Caio Lima"))
-banco_auth.registrar(DiretoriaCACo("julia", "admin", "Julia Nardo", "281272"))
+banco_auth.registrar(GestaoCACo("julia", "admin", "Julia Nardo", "281272"))
 
 # Injeta o banco nas rotas
 app.state.banco_auth = banco_auth
