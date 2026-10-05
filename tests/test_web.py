@@ -163,3 +163,18 @@ def test_rota_votar_botc():
     assert response.status_code == 200
     assert "Ação registrada" in response.text
     client.cookies.clear()
+
+def test_dependencia_usuario_inexistente_no_mapa():
+    """Testa se a dependência lança 401 caso o cookie exista mas o username não esteja no mapa."""
+    client.cookies.set("sessao_usuario", "username_que_nao_existe")
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code == 401
+    assert "Sessão inválida" in response.text
+    client.cookies.clear()
+
+def test_dependencia_cookie_vazio():
+    """Testa o acesso sem o cookie."""
+    client.cookies.clear()
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code == 401
+
