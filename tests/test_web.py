@@ -14,10 +14,10 @@ def test_pagina_raiz_redireciona_para_login():
     assert "Identificação (RA/Usuário)" in response.text
 
 def test_acesso_negado_ao_dashboard_sem_login():
-    """Tentar acessar o painel sem um cookie de sessão válido retorna 401 ou expulsa."""
+    """Tentar acessar o painel sem um cookie de sessão válido retorna 302 ou expulsa."""
     response = client.get("/dashboard", follow_redirects=False)
-    # A dependência levanta um HTTPException 401
-    assert response.status_code == 401 
+    # A dependência levanta uma exceção de redirecionamento com código forçado 302
+    assert response.status_code == 302
 
 def test_fluxo_login_sucesso():
     """Testa se o usuário mockado consegue logar e se recebe um cookie de sessão."""
@@ -166,18 +166,18 @@ def test_rota_votar_botc():
     client.cookies.clear()
 
 def test_dependencia_usuario_inexistente_no_mapa():
-    """Testa se a dependência lança 401 caso o cookie exista mas o username não esteja no mapa."""
+    """Testa se a dependência lança 302 caso o cookie exista mas o username não esteja no mapa."""
     client.cookies.set("sessao_usuario", "username_que_nao_existe")
     response = client.get("/dashboard", follow_redirects=False)
-    assert response.status_code == 401
-    assert "Sessão inválida" in response.text
+    assert response.status_code == 302
+    assert response.headers["location"] == "/"
     client.cookies.clear()
 
 def test_dependencia_cookie_vazio():
     """Testa o acesso sem o cookie."""
     client.cookies.clear()
     response = client.get("/dashboard", follow_redirects=False)
-    assert response.status_code == 401
+    assert response.status_code == 302
 
 # Testes de auth_router.py 
 def test_cadastro_senhas_diferentes():
