@@ -42,3 +42,12 @@ def test_votos_maior_numero_vivos_invalido():
 def test_sem_votos():
     sistema = SistemaEleitoralBotC(10)
     assert sistema.apurar_vencedor() is None
+
+def test_id_candidato_invalido():
+    """Garante que o sistema barre candidatos sem User_ID válido."""
+    sistema = SistemaEleitoralBotC(10)
+    with pytest.raises(ValueError, match="O identificador do candidato deve ser um User_ID válido."):
+        sistema.registrar_votacao("", 5)
+    
+    with pytest.raises(ValueError, match="O identificador do candidato deve ser um User_ID válido."):
+        sistema.registrar_votacao(None, 5)
