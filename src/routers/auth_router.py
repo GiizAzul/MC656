@@ -38,16 +38,15 @@ async def processar_cadastro(
     nome_real: str = Form(...),
     ra: str = Form(None) # Opcional no form, obrigatório para EstudanteCACo
 ):
-    if senha != senha_confirma:
-        return templates.TemplateResponse(name="cadastro.html", request=request, context={"erro": "Senhas não conferem"})
-        
-    banco = request.app.state.banco_auth
-    
     try:
+        if senha != senha_confirma: # Verifica se as senhas inseridas batem
+            raise ValueError("As senhas inseridas não batem. Tente novamente")
+        banco = request.app.state.banco_auth
+    
         # Análise condicional do tipo de usuário
         if tipo_conta == "CACO_ESTUDANTE":
             if not ra or not ra.isnumeric():
-                raise ValueError("RA inválido.")
+                raise ValueError("RA inválido. Tente novamente.")
             novo_usuario = EstudanteCACo(username, senha, nome_real, int(ra))
         elif tipo_conta == "CACO_GESTAO":
             novo_usuario = GestaoCACo(username, senha, nome_real)
@@ -70,7 +69,18 @@ async def processar_cadastro(
         return resposta
         
     except ValueError as erro:
-        return templates.TemplateResponse(name="cadastro.html", request=request, context={"erro": str(erro)})
+        # Devolve o HTML de erro preenchendo os dados antigos para não apagar a tela
+        return templates.TemplateResponse(
+            request=request,
+            name="cadastro.html",
+            context={
+                "erro": str(erro),
+                "tipo_conta_selecionada": tipo_conta,
+                "nome_real_digitado": nome_real,
+                "username_digitado": username,
+                "ra_digitado": ra
+            }
+        )
 
 @router.post("/login")
 async def processar_login(
