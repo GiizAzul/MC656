@@ -294,3 +294,9 @@ def test_botc_acoes_storyteller_bloqueadas():
     assert response.status_code == 403
     assert "Apenas o Storyteller pode" in response.text
     client.cookies.clear()
+
+# Testes australia_router.py
+def test_australia_acesso_deslogado():
+    client.cookies.clear()
+    response = client.get("/australia/votar", follow_redirects=False)
+    assert response.status_code == 302 # Redireciona
