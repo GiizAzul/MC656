@@ -23,7 +23,7 @@ async def iniciar_votacao_caco(request: Request, usuario: Usuario = Depends(obte
     # Exemplo: request.app.state.eleicao_caco.iniciar_votacao()
     
     return templates.TemplateResponse(
-        "sucesso.html", 
+        name="sucesso.html", 
         request=request, 
         context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
     )
