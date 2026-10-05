@@ -27,7 +27,7 @@ async def tela_partida(request: Request):
         return RedirectResponse(url="/")
         
     return templates.TemplateResponse(
-        "botc.html", 
+        name="botc.html", 
         request=request, 
         context={"jogadores": JOGADORES_MOCK}
     )
@@ -36,7 +36,7 @@ async def tela_partida(request: Request):
 async def processar_voto_botc(request: Request, acao: str = Form(...)):
     # acao receberá "levantar_mao" ou "abaixar_mao"
     return templates.TemplateResponse(
-        "sucesso.html", 
+        name="sucesso.html", 
         request=request, 
         context={"mensagem": "Ação registrada na roda da cidade."}
     )
@@ -54,7 +54,7 @@ async def registrar_votos_botc(
     # request.app.state.sistema_botc.registrar_votacao(nomeado, num_votos)
     
     return templates.TemplateResponse(
-        "sucesso.html", 
+        name="sucesso.html", 
         request=request, 
         context={"mensagem": f"{num_votos} votos registrados para {nomeado}."}
     )
@@ -71,7 +71,7 @@ async def apurar_execucao_botc(request: Request, usuario: Usuario = Depends(obte
     mensagem = f"O jogador executado foi: {resultado}" if resultado else "Ninguém foi executado. Empate ou votos insuficientes."
 
     return templates.TemplateResponse(
-        "sucesso.html", 
+        name="sucesso.html", 
         request=request, 
         context={"mensagem": mensagem}
     )

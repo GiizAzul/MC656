@@ -21,7 +21,7 @@ async def tela_votacao(request: Request):
         return RedirectResponse(url="/")
         
     return templates.TemplateResponse(
-        "australia.html", 
+        name="australia.html", 
         request=request,
         context={"candidatos": CANDIDATOS_MOCK}
     )
@@ -32,7 +32,7 @@ async def processar_voto(request: Request, ranking: str = Form(...)):
     # (ex: "A,C,B") em uma lista e injetar na classe EleicaoAustralia.
     # Por enquanto, apenas redirecionamos para uma tela de sucesso.
     return templates.TemplateResponse(
-        "sucesso.html", 
+        name="sucesso.html", 
         request=request, 
         context={"mensagem": "Voto registrado com sucesso na Eleição Federal!"}
     )

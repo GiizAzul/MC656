@@ -39,7 +39,7 @@ async def processar_cadastro(
     ra: str = Form(None) # Opcional no form, obrigatório para EstudanteCACo
 ):
     if senha != senha_confirma:
-        return templates.TemplateResponse("cadastro.html", {"request": request}, context={"erro": "Senhas não conferem"})
+        return templates.TemplateResponse(name="cadastro.html", request=request, context={"erro": "Senhas não conferem"})
         
     banco = request.app.state.banco_auth
     
@@ -70,7 +70,7 @@ async def processar_cadastro(
         return resposta
         
     except ValueError as erro:
-        return templates.TemplateResponse("cadastro.html", request=request, context={"erro": str(erro)})
+        return templates.TemplateResponse(name="cadastro.html", request=request, context={"erro": str(erro)})
 
 @router.post("/login")
 async def processar_login(
@@ -92,7 +92,7 @@ async def processar_login(
     except ValueError as erro:
         # Devolve a tela de login com a mensagem de erro (ex: "Senha incorreta")
         return templates.TemplateResponse(
-            "login.html", 
+            name="login.html", 
             request=request,
             context={"erro": str(erro)}
         )
@@ -108,7 +108,7 @@ async def painel_usuario(request: Request):
     usuario = banco._banco.get(username_logado)
     
     return templates.TemplateResponse(
-        "dashboard.html", 
+        name="dashboard.html", 
         request=request, 
         context={"usuario": usuario}
     )

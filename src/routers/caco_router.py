@@ -34,13 +34,13 @@ async def tela_assembleia(request: Request):
     if not usuario_logado:
         return RedirectResponse(url="/")
         
-    return templates.TemplateResponse("caco.html", request=request, context={})
+    return templates.TemplateResponse(name="caco.html", request=request, context={})
 
 @router.post("/votar")
 async def processar_voto_caco(request: Request, opcao: str = Form(...)):
     # opcao receberá "APROVAR", "REJEITAR" ou "ABSTER" do HTML
     return templates.TemplateResponse(
-        "sucesso.html", 
+        name="sucesso.html", 
         request=request, 
         context={"mensagem": "Seu voto na assembleia foi contabilizado."}
     )
@@ -53,7 +53,7 @@ async def encerrar_votacao_caco(request: Request, usuario: Usuario = Depends(obt
     # request.app.state.eleicao_caco.encerrar_votacao()
     
     return templates.TemplateResponse(
-        "sucesso.html", 
+        name="sucesso.html", 
         request=request, 
         context={"mensagem": "Votação da Assembleia encerrada."}
     )
@@ -68,7 +68,7 @@ async def resultados_caco(request: Request, usuario: Usuario = Depends(obter_usu
     contadores = {"APROVAR": 15, "REJEITAR": 5, "ABSTER": 2}
     
     return templates.TemplateResponse(
-        "sucesso.html", # Futuramente criar um resultados.html específico
+        name="sucesso.html", # Futuramente criar um resultados.html específico
         request=request, 
         context={"mensagem": f"Resultados atuais: {contadores}"}
     )
