@@ -4,22 +4,27 @@
 <div class="login-box">
     <h1>Sistema de votação</h1>
     
+    <div class="tabs-container">
+        <button class="btn-tab active">Entrar</button>
+        <a href="/cadastro" class="btn-tab inactive" style="text-decoration: none;">Cadastrar</a>
+    </div>
+    
     {% if erro %}
-        <div class="alert alert-danger">{{ erro }}</div>
+        <div class="alert alert-danger" style="margin-top: 1rem; color: #721c24; background-color: #f8d7da; padding: 0.5rem; border-radius: 4px;">{{ erro }}</div>
     {% endif %}
 
-    <form action="/login" method="POST">
+    <form action="/login" method="POST" style="margin-top: 1rem;">
         <div class="form-group">
             <label for="username">Identificação (RA/Usuário)</label>
-            <input type="text" id="username" name="username" required>
+            <input type="text" id="username" name="username" class="form-control" required>
         </div>
         
-        <div class="form-group">
+        <div class="form-group mt-2">
             <label for="senha">Senha</label>
-            <input type="password" id="senha" name="senha" required>
+            <input type="password" id="senha" name="senha" class="form-control" required>
         </div>
 
-        <button type="submit" class="btn-primary">Entrar</button>
+        <button type="submit" class="btn-primary mt-2">Entrar</button>
     </form>
 </div>
 {% endblock %}
