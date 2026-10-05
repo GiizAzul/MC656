@@ -178,3 +178,43 @@ def test_dependencia_cookie_vazio():
     response = client.get("/dashboard", follow_redirects=False)
     assert response.status_code == 401
 
+def test_cadastro_senhas_diferentes():
+    """Tenta cadastrar mas digita senhas divergentes."""
+    dados = {
+        "tipo_conta": "AUSTRALIA_ELEITOR",
+        "nome_real": "Erro Senha",
+        "username": "errosenha",
+        "senha": "123",
+        "senha_confirma": "321" # Diferente
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "Senhas não conferem" in response.text
+
+def test_cadastro_tipo_desconhecido():
+    """Tenta cadastrar enviando um tipo de conta malicioso/inexistente."""
+    dados = {
+        "tipo_conta": "TIPO_HACKER",
+        "nome_real": "Hacker",
+        "username": "hacker123",
+        "senha": "123",
+        "senha_confirma": "123"
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "Tipo de conta desconhecido" in response.text
+
+def test_cadastro_estudante_ra_invalido():
+    """Tenta cadastrar estudante sem passar o RA."""
+    dados = {
+        "tipo_conta": "CACO_ESTUDANTE",
+        "nome_real": "Sem RA",
+        "username": "semra",
+        "senha": "123",
+        "senha_confirma": "123",
+        "ra": "" # Vazio
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "RA inválido" in response.text
+
