@@ -279,7 +279,16 @@ def test_botc_acoes_storyteller():
 
 def test_botc_acoes_storyteller_bloqueadas():
     """Um jogador não pode apurar votos do BoTC."""
-    client.cookies.set("sessao_usuario", "leo") # JogadorBOTC
+    # Cadastrando um jogador temporário para garantir que ele existe no banco do teste
+    dados_jogador = {
+        "tipo_conta": "BOTC_JOGADOR",
+        "nome_real": "Leo Jogador",
+        "username": "leojogador",
+        "senha": "123",
+        "senha_confirma": "123"
+    }
+    client.post("/cadastro", data=dados_jogador)
+    client.cookies.set("sessao_usuario", "leojogador") 
     
     response = client.post("/botc/apurar")
     assert response.status_code == 403
