@@ -21,7 +21,7 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 banco_auth = ServicoAutenticacao()
 # Usuários pré-cadastrados para teste <- Talvez seja melhor mudar depois
 banco_auth.registrar(EleitorAustralia("caio", "senha123", "Caio Lima"))
-banco_auth.registrar(GestaoCACo("julia", "admin", "Julia Nardo", "281272"))
+banco_auth.registrar(GestaoCACo("julia", "Julia Nardo", "281272"))
 
 # Injeta o banco nas rotas
 app.state.banco_auth = banco_auth
