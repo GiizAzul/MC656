@@ -4,9 +4,9 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
 from src.autenticacao.base import Usuario
-from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
+from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 
 from .dependencias import obter_usuario_logado
 
@@ -98,18 +98,14 @@ async def processar_login(
         )
 
 @router.get("/dashboard")
-async def painel_usuario(request: Request):
-    # Verifica o cookie para saber se está logado
-    username_logado = await obter_usuario_logado(request)
-    if not username_logado:
-        return RedirectResponse(url="/")
-        
-    banco = request.app.state.banco_auth
-    usuario = banco._banco.get(username_logado)
-    
+async def painel_usuario(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+    """A dependência 'obter_usuario_logado' já verifica os cookies.
+    Busca no '_mapa_usernames' e devolve o objeto correto do '_banco_por_id'.
+    Se o cookie não existir, ela mesma já expulsa o usuário para a tela de erro 401.
+    """
     return templates.TemplateResponse(
-        name="dashboard.html", 
         request=request, 
+        name="dashboard.html", 
         context={"usuario": usuario}
     )
 
