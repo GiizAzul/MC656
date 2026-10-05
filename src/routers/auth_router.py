@@ -40,7 +40,7 @@ async def processar_cadastro(
 ):
     try:
         if senha != senha_confirma: # Verifica se as senhas inseridas batem
-            raise ValueError("As senhas inseridas não batem. Tente novamente")
+            raise ValueError("Senhas não conferem. Tente novamente")
         banco = request.app.state.banco_auth
     
         # Análise condicional do tipo de usuário
