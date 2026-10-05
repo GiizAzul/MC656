@@ -218,3 +218,72 @@ def test_cadastro_estudante_ra_invalido():
     assert response.status_code == 200
     assert "RA inválido" in response.text
 
+# 2. Cobertura adicional para auth_router.py (Cadastro com Erros)
+def test_cadastro_senhas_diferentes():
+    """Tenta cadastrar mas digita senhas divergentes."""
+    dados = {
+        "tipo_conta": "AUSTRALIA_ELEITOR",
+        "nome_real": "Erro Senha",
+        "username": "errosenha",
+        "senha": "123",
+        "senha_confirma": "321" # Diferente
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "Senhas não conferem" in response.text
+
+def test_cadastro_tipo_desconhecido():
+    """Tenta cadastrar enviando um tipo de conta malicioso/inexistente."""
+    dados = {
+        "tipo_conta": "TIPO_HACKER",
+        "nome_real": "Hacker",
+        "username": "hacker123",
+        "senha": "123",
+        "senha_confirma": "123"
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "Tipo de conta desconhecido" in response.text
+
+def test_cadastro_estudante_ra_invalido():
+    """Tenta cadastrar estudante sem passar o RA."""
+    dados = {
+        "tipo_conta": "CACO_ESTUDANTE",
+        "nome_real": "Sem RA",
+        "username": "semra",
+        "senha": "123",
+        "senha_confirma": "123",
+        "ra": "" # Vazio
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "RA inválido" in response.text
+
+def test_caco_acesso_deslogado():
+    """Tentativa de acessar a tela da assembleia sem login."""
+    client.cookies.clear()
+    response = client.get("/caco/assembleia", follow_redirects=False)
+    assert response.status_code == 302 # Redireciona para login
+
+def test_caco_acoes_gestao():
+    """Testa os botões de Iniciar, Encerrar e Resultados acessados por alguém da Gestão."""
+    client.cookies.set("sessao_usuario", "julia") # julia é GestaoCACo
+    
+    res_iniciar = client.post("/caco/iniciar")
+    assert "Votação da Assembleia iniciada" in res_iniciar.text
+    
+    res_encerrar = client.post("/caco/encerrar")
+    assert "Votação da Assembleia encerrada" in res_encerrar.text
+    
+    res_resultados = client.get("/caco/resultados")
+    assert "Resultados atuais:" in res_resultados.text
+    client.cookies.clear()
+
+def test_caco_acoes_gestao_bloqueadas():
+    """Garante que um Estudante ou Eleitor da Austrália não pode iniciar a assembleia."""
+    client.cookies.set("sessao_usuario", "caio") # EleitorAustrália
+    
+    response = client.post("/caco/iniciar")
+    assert response.status_code == 403 # Forbidden
+    assert "Acesso negado" in response.text
+    client.cookies.clear()
