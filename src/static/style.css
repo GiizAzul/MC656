@@ -49,3 +49,60 @@ button, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-neutral {
 /* CACo Assembleia */
 .botoes-votacao { display: flex; gap: 1rem; justify-content: space-between; flex-direction: column; }
 @media(min-width: 500px) { .botoes-votacao { flex-direction: row; } }
+
+/* Estilo para os inputs de texto e senha */
+.form-control, input[type="text"], input[type="password"], input[type="number"], select {
+    width: 100%;
+    padding: 0.8rem;
+    margin-top: 0.3rem;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    background-color: #fafafa;
+}
+
+.form-control:focus, input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: #fff;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.form-group label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Estilo para as abas (Tabs) Entrar / Cadastrar */
+.tabs-container {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #eee;
+}
+
+.btn-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 0.8rem;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    color: #777;
+}
+
+.btn-tab.active {
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    background-color: #f9f9f9;
+}
+
+.btn-tab.inactive:hover {
+    background-color: #f0f0f0;
+}
