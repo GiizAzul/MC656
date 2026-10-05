@@ -14,8 +14,8 @@ def test_pagina_raiz_redireciona_para_login():
 
 def test_acesso_negado_ao_dashboard_sem_login():
     """Tentar acessar o painel sem um cookie de sessão válido retorna 401 ou expulsa."""
-    response = client.get("/dashboard", allow_redirects=False)
-    # A nossa dependência levanta um HTTPException 401
+    response = client.get("/dashboard", follow_redirects=False)
+    # A dependência levanta um HTTPException 401
     assert response.status_code == 401 
 
 def test_fluxo_login_sucesso():
@@ -64,8 +64,8 @@ def test_fluxo_cadastro_e_acesso_dashboard():
     assert response_cadastro.status_code == 302 # Redireciona para o dashboard
     
     # Acessa o dashboard usando os cookies ganhos no cadastro
-    cookies = response_cadastro.cookies
-    response_dashboard = client.get("/dashboard", cookies=cookies)
+    client.cookies.update(response_cadastro.cookies)
+    response_dashboard = client.get("/dashboard")
     
     html = response_dashboard.text
     assert response_dashboard.status_code == 200
@@ -79,12 +79,15 @@ def test_fluxo_cadastro_e_acesso_dashboard():
     # Mas DEVE ver a assembleia
     assert "Assembleia CACo" in html or "Pauta" in html
 
+    # Limpa os cookies para os próximos testes
+    client.cookies.clear()
+
 def test_roteamento_polimorfico_caio_australia():
     """Verifica se o Caio (cadastrado no main.py como EleitorAustrália) só vê sua eleição."""
     # Simula o cookie já existente sem precisar fazer o POST do login
-    cookies = {"sessao_usuario": "caio"}
+    client.cookies.set("sessao_usuario", "caio")
     
-    response = client.get("/dashboard", cookies=cookies)
+    response = client.get("/dashboard")
     html = response.text
     
     assert "Eleição Federal 2026" in html
@@ -93,17 +96,22 @@ def test_roteamento_polimorfico_caio_australia():
 
 def test_acesso_bloqueado_ao_painel_admin():
     """Garante que usuários comuns (como o Caio, EleitorAustralia) não possam acessar a rota /admin."""
-    cookies = {"sessao_usuario": "caio"}
-    response = client.get("/admin", cookies=cookies, allow_redirects=False)
+    client.cookies.set("sessao_usuario", "caio")
+    response = client.get("/admin", follow_redirects=False)
     
     # O redirecionamento (302) joga o usuário de volta para o Dashboard, pois ele não é GESTAO nem STORYTELLER
     assert response.status_code == 302
     assert response.headers["location"] == "/dashboard"
 
+    client.cookies.clear()
+
+
 def test_acesso_liberado_ao_painel_admin():
     """Garante que a Gestão (Julia) consiga acessar o painel administrativo."""
-    cookies = {"sessao_usuario": "julia"}
-    response = client.get("/admin", cookies=cookies)
+    client.cookies.set("sessao_usuario", "julia")
+    response = client.get("/admin")
     
     assert response.status_code == 200
     assert "Gerenciar Votações" in response.text
+
+    client.cookies.clear()
