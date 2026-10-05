@@ -9,4 +9,4 @@ ruff
 fastapi[standard]
 jinja2 
 python-multipart 
-httpx 
+httpx2
