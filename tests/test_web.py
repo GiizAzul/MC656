@@ -220,6 +220,7 @@ def test_cadastro_estudante_ra_invalido():
     assert response.status_code == 200
     assert "RA inválido" in response.text
 
+# Testes caco_router.py
 def test_caco_acesso_deslogado():
     """Tentativa de acessar a tela da assembleia sem login."""
     client.cookies.clear()
@@ -247,4 +248,40 @@ def test_caco_acoes_gestao_bloqueadas():
     response = client.post("/caco/iniciar")
     assert response.status_code == 403 # Forbidden
     assert "Acesso negado" in response.text
+    client.cookies.clear()
+
+# Testes botc_router.py
+def test_botc_acesso_deslogado():
+    client.cookies.clear()
+    response = client.get("/botc/partida", follow_redirects=False)
+    assert response.status_code == 302 # Redireciona
+
+def test_botc_acoes_storyteller():
+    """Testa o registro de votos e a apuração da forca feitos pelo mestre."""
+    client.cookies.set("sessao_usuario", "leo") # leo é Jogador, precisaremos de um storyteller
+    # Cadastrando um Mestre temporário para o teste
+    dados_mestre = {
+        "tipo_conta": "BOTC_STORYTELLER",
+        "nome_real": "Mestre Supremo",
+        "username": "mestresup",
+        "senha": "123",
+        "senha_confirma": "123"
+    }
+    client.post("/cadastro", data=dados_mestre)
+    client.cookies.set("sessao_usuario", "mestresup")
+    
+    res_registro = client.post("/botc/registrar", data={"nomeado": "Leo", "num_votos": 3})
+    assert "3 votos registrados" in res_registro.text
+    
+    res_apurar = client.post("/botc/apurar")
+    assert "executado" in res_apurar.text
+    client.cookies.clear()
+
+def test_botc_acoes_storyteller_bloqueadas():
+    """Um jogador não pode apurar votos do BoTC."""
+    client.cookies.set("sessao_usuario", "leo") # JogadorBOTC
+    
+    response = client.post("/botc/apurar")
+    assert response.status_code == 403
+    assert "Apenas o Storyteller pode" in response.text
     client.cookies.clear()
