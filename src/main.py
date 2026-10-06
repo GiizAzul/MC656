@@ -43,12 +43,12 @@ app.state.banco_auth = banco_auth
 # Inicialização das eleições
 # Cria a eleição da Austrália com os candidatos
 CANDIDATOS_AUSTRALIA = ["Candidato A", "Candidato B", "Candidato C"]
-eleicao_australia = EleicaoAustralia(candidatos=CANDIDATOS_AUSTRALIA, cedulas=[])
+eleicao_australia = EleicaoAustralia(candidatos_ids=CANDIDATOS_AUSTRALIA, cedulas=[])
 app.state.eleicao_australia = eleicao_australia
 
 # Cria a assembleia do CACo
 alunos_caco = [banco_auth._mapa_usernames["julia"]] # IDs dos alunos habilitados
-eleicao_caco = EleicaoAssembleia(alunos_cadastrados=alunos_caco, eleitores=alunos_caco, duracao_ciclo=60)
+eleicao_caco = EleicaoAssembleia(alunos_cadastrados_ids=alunos_caco, eleitores_ids=alunos_caco, duracao_ciclo=60)
 app.state.eleicao_caco = eleicao_caco
 
 # Cria a partida do BoTC
