@@ -132,16 +132,21 @@ def test_acesso_logout():
     assert "expires" in cookie_str or "Max-Age=0" in cookie_str
 
 def test_rota_votar_australia():
-    """Simula o envio de uma cédula australiana pela interface."""
+    """Simula o envio de uma cédula australiana ordenando os candidatos numericamente."""
     client.cookies.set("sessao_usuario", "caio")
     
-    # Simula o formulário preenchido da tela
-    dados_voto = {"ranking": "Candidato A,Candidato B,Candidato C"}
+    # Simula o formulário web onde o usuário digitou as posições 1, 2 e 3
+    dados_voto = {
+        "posicao_Ana": "1",
+        "posicao_Beto": "2",
+        "posicao_Caio": "3"
+    }
     response = client.post("/australia/votar", data=dados_voto)
     
     assert response.status_code == 200
-    assert "Voto registrado" in response.text
+    assert "voto registrado" in response.text.lower()
     client.cookies.clear()
+    
 
 def test_rota_votar_caco():
     """Simula o envio de um voto de assembleia (Aprovar)."""
