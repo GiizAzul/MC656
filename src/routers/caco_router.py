@@ -31,10 +31,20 @@ async def iniciar_votacao_caco(request: Request, usuario: Usuario = Depends(obte
 @router.get("/assembleia", response_class=HTMLResponse)
 async def tela_assembleia(request: Request):
     usuario_logado = await obter_usuario_logado(request)
-    if not usuario_logado:
+    if not usuario_logado or "CACO" not in usuario_logado.escopo:
         return RedirectResponse(url="/")
         
-    return templates.TemplateResponse(name="caco.html", request=request, context={})
+    eleicao = request.app.state.eleicao_caco
+    is_gestao = "GESTAO" in usuario_logado.escopo
+        
+    return templates.TemplateResponse(
+        name="caco.html", 
+        request=request,
+        context={
+            "estado_eleicao": eleicao.estado.name,
+            "is_gestao": is_gestao
+        }
+    )
 
 @router.post("/votar")
 async def processar_voto_caco(request: Request, opcao: str = Form(...), usuario: Usuario = Depends(obter_usuario_logado)):
