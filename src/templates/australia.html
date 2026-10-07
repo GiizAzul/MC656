@@ -5,6 +5,9 @@
 </header>
 <main class="box-content">
     <p>Ordene os candidatos de acordo com sua preferência (1 = Maior prioridade):</p>
+    {% if erro %}
+        <div class="alert alert-danger">{{ erro }}</div>
+    {% endif %}
     <form action="/australia/votar" method="POST">
         <!-- O input hidden guardará a ordem gerada pelo drag and drop via JS futuro -->
         <input type="hidden" name="ranking" id="ranking_field" value="">
