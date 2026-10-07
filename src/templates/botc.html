@@ -7,7 +7,7 @@
     <h3 class="text-center">Nomeação: Jogador X</h3>
     
     <div class="roda-jogadores">
-        {% for jog em jogadores %}
+        {% for jog in jogadores %}
         <div class="jogador-card {% if 'Morto' in jog.status %}morto{% endif %}">
             <span>{{ jog.nome }}</span>
             <small>{{ jog.status }}</small>
