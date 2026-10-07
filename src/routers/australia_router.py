@@ -32,7 +32,7 @@ async def tela_votacao(request: Request):
     )
 
 @router.post("/votar")
-async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+async def processar_voto_australia(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
     if "AUSTRALIA" not in usuario.escopo:
         # Redirect para a raiz em caso de fraude de escopo:
         return RedirectResponse(url="/", status_code=302)
