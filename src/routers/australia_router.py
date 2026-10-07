@@ -33,6 +33,24 @@ async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usua
         # Redirect para a raiz em caso de fraude de escopo:
         return RedirectResponse(url="/", status_code=302)
         
+    # Recupera a eleição do estado global
+    eleicao = request.app.state.eleicao_australia 
+
+    # Cria o "caderno de assinaturas" em memória caso ainda não exista
+    if not hasattr(request.app.state, "eleitores_australia_votaram"):
+        request.app.state.eleitores_australia_votaram = set()
+        
+    # Verifica se o usuário logado já votou
+    if usuario.id in request.app.state.eleitores_australia_votaram:
+        return templates.TemplateResponse(
+            request=request, 
+            name="australia.html", 
+            context={
+                "candidatos": list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos, 
+                "erro": "Você já registrou seu voto nesta eleição."
+            }
+        )
+
     form_data = await request.form()
     
     # Coleta e ordena os candidatos com base nos números digitados
@@ -47,13 +65,16 @@ async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usua
     cedula_ordenada = [candidato for posicao, candidato in tuplas_posicao]
     
     try:
-        # Recupera a eleição do estado global
-        eleicao = request.app.state.eleicao_australia 
+        # O usuário não pode pular candidatos
+        if len(cedula_ordenada) != len(eleicao.candidatos):
+            raise ValueError("Você deve ranquear exatamente todos os candidatos.")
+
         
-        # ATENÇÃO: Dependendo de como sua classe de domínio foi feita, adicione a cédula:
-        # Exemplo 1: eleicao.registrar_voto(cedula_ordenada)
-        # Exemplo 2: eleicao.cedulas.append(cedula_ordenada)
-        eleicao.cedulas.append(cedula_ordenada) # <--- Adapte para o método real da sua classe
+        # Deposita a cédula na urna
+        eleicao.cedulas.append(cedula_ordenada) 
+
+        # Marca que este usuário já votou
+        request.app.state.eleitores_australia_votaram.add(usuario.id)
         
         return templates.TemplateResponse(
             request=request, 
@@ -63,6 +84,9 @@ async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usua
     except ValueError as e:
         return templates.TemplateResponse(
             request=request, 
-            name="australia.html", 
-            context={"candidatos": list(eleicao.candidatos.keys()), "erro": str(e)}
+            name="australia.html",  
+            context={
+                "candidatos": list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos, 
+                "erro": str(e)
+            }
         )
