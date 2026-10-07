@@ -17,16 +17,28 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 @router.post("/iniciar")
 async def iniciar_votacao_caco(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
     if "CACO_GESTAO" not in usuario.escopo:
-        raise HTTPException(status_code=403, detail="Acesso negado. Apenas a Gestão pode iniciar a votação.")
-    
-    # Lógica para iniciar a eleição (utilizando a instância global/state da eleição)
-    # Exemplo: request.app.state.eleicao_caco.iniciar_votacao()
-    
-    return templates.TemplateResponse(
-        name="sucesso.html", 
-        request=request, 
-        context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
-    )
+        return RedirectResponse(url="/", status_code=302)
+
+    eleicao = request.app.state.eleicao_caco
+
+    try:
+        eleicao.iniciar_votacao()
+        
+        return templates.TemplateResponse(
+            request=request,
+            name="sucesso.html",
+            context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="caco.html",
+            context={
+                "erro": str(e),
+                "estado_eleicao": eleicao.estado.name,
+                "is_gestao": True
+            }
+        )
 
 @router.get("/assembleia", response_class=HTMLResponse)
 async def tela_assembleia(request: Request):
@@ -98,15 +110,32 @@ async def processar_voto_caco(request: Request, opcao: str = Form(...), usuario:
 @router.post("/encerrar")
 async def encerrar_votacao_caco(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
     if "CACO_GESTAO" not in usuario.escopo:
-        raise HTTPException(status_code=403, detail="Acesso negado.")
-    
-    # request.app.state.eleicao_caco.encerrar_votacao()
-    
-    return templates.TemplateResponse(
-        name="sucesso.html", 
-        request=request, 
-        context={"mensagem": "Votação da Assembleia encerrada."}
-    )
+        return RedirectResponse(url="/", status_code=302)
+
+    eleicao = request.app.state.eleicao_caco
+
+    try:
+        # Garante que a votação será fechada
+        eleicao.encerrar_votacao()
+        
+        return templates.TemplateResponse(
+            request=request,
+            name="sucesso.html",
+            context={"mensagem": "Votação da Assembleia encerrada."}
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="caco.html",
+            context={
+                "erro": str(e),
+                "estado_eleicao": eleicao.estado.name,
+                "is_gestao": True
+            }
+        )
+
+
+
 
 @router.get("/resultados", response_class=HTMLResponse)
 async def resultados_caco(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
