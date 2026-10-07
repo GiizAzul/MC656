@@ -8,6 +8,10 @@
         <p>Aprovação do novo estatuto de representação discente.</p>
     </div>
     
+    {% if erro %}
+        <div class="alert alert-danger">{{ erro }}</div>
+    {% endif %}
+    
     <form action="/caco/votar" method="POST" class="botoes-votacao">
         <button type="submit" name="opcao" value="APROVAR" class="btn-success">A Favor</button>
         <button type="submit" name="opcao" value="REJEITAR" class="btn-danger">Contra</button>
