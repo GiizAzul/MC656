@@ -13,18 +13,22 @@ router = APIRouter(prefix="/australia", tags=["Australia"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Simulação de uma eleição ativa em memória
-CANDIDATOS_MOCK = ["Candidato A", "Candidato B", "Candidato C"]
+# CANDIDATOS_MOCK = ["Candidato A", "Candidato B", "Candidato C"]
 
 @router.get("/votar", response_class=HTMLResponse)
 async def tela_votacao(request: Request):
     usuario_logado = await obter_usuario_logado(request)
     if not usuario_logado:
         return RedirectResponse(url="/")
+
+    # USA OS CANDIDATOS REAIS DO MAIN.PY (Remove o MOCK)
+    eleicao = request.app.state.eleicao_australia
+    candidatos_reais = list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos
         
     return templates.TemplateResponse(
         name="australia.html", 
         request=request,
-        context={"candidatos": CANDIDATOS_MOCK}
+        context={"candidatos": candidatos_reais}
     )
 
 @router.post("/votar")
@@ -35,6 +39,8 @@ async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usua
         
     # Recupera a eleição do estado global
     eleicao = request.app.state.eleicao_australia 
+    candidatos_reais = list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos
+
 
     # Cria o "caderno de assinaturas" em memória caso ainda não exista
     if not hasattr(request.app.state, "eleitores_australia_votaram"):
@@ -46,7 +52,7 @@ async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usua
             request=request, 
             name="australia.html", 
             context={
-                "candidatos": list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos, 
+                "candidatos": candidatos_reais, 
                 "erro": "Você já registrou seu voto nesta eleição."
             }
         )
@@ -67,7 +73,7 @@ async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usua
     try:
         # O usuário não pode pular candidatos
         if len(cedula_ordenada) != len(eleicao.candidatos):
-            raise ValueError("Você deve ranquear exatamente todos os candidatos.")
+            raise ValueError(f"Erro: Você ranqueou {len(cedula_ordenada)} candidatos. Você deve ranquear exatamente todos os {len(candidatos_reais)} candidatos.")
 
         
         # Deposita a cédula na urna
@@ -86,7 +92,7 @@ async def processar_voto(request: Request, usuario: Usuario = Depends(obter_usua
             request=request, 
             name="australia.html",  
             context={
-                "candidatos": list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos, 
+                "candidatos": candidatos_reais, 
                 "erro": str(e)
             }
         )
