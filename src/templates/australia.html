@@ -17,7 +17,7 @@
             <li class="candidato-item">
                 <span class="drag-handle">☰</span>
                 <span class="nome">{{ candidato }}</span>
-                <input type="number" class="posicao-input" min="1" max="{{ candidatos|length }}" placeholder="Posição" required>
+                <input type="number" name="posicao_{{ candidato }}" class="posicao-input" min="1" max="{{ candidatos|length }}" placeholder="Posição" required>
             </li>
             {% endfor %}
         </ul>
