@@ -171,6 +171,7 @@ def test_rota_votar_botc():
     assert "Ação registrada" in response.text
     client.cookies.clear()
 
+# Testes dependencias.py
 def test_dependencia_usuario_inexistente_no_mapa():
     """Testa se a dependência lança 302 caso o cookie exista mas o username não esteja no mapa."""
     client.cookies.set("sessao_usuario", "username_que_nao_existe")
@@ -184,6 +185,20 @@ def test_dependencia_cookie_vazio():
     client.cookies.clear()
     response = client.get("/dashboard", follow_redirects=False)
     assert response.status_code == 302
+
+def test_dependencia_usuario_deletado_do_banco():
+    """Cobre a linha do dependencias.py onde o ID existe no mapa de cookies, mas o usuário sumiu do banco principal."""
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Fantasma", "username": "fantasminha", "senha": "123", "senha_confirma": "123"})
+    
+    # Apaga o usuário do banco, mas deixa no mapa (simulando corrupção ou deleção no DB)
+    from src.main import app
+    user_id = app.state.banco_auth._mapa_usernames["fantasminha"]
+    del app.state.banco_auth._banco_por_id[user_id]
+    
+    client.cookies.set("sessao_usuario", "fantasminha")
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code in [302, 307] # Deve expulsar o usuário
+    client.cookies.clear()
 
 # Testes de auth_router.py 
 def test_cadastro_senhas_diferentes():
