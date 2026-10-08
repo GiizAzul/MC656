@@ -376,13 +376,27 @@ def test_botc_acoes_storyteller_bloqueadas():
     client.cookies.clear()
 
 def test_botc_router_excecoes_internas():
-    """Aciona os blocos 'except Exception' do botc_router."""
-    # O storyteller foi cadastrado em testes anteriores, aqui vamos usar a rota direto
-    client.cookies.set("sessao_usuario", "leo") 
-    # Voto absurdo (Cai no ValueError da classe e retorna o template com a caixa de erro)
+    """Aciona os blocos 'except Exception' do botc_router garantindo que o autor é Storyteller."""
+    # Cadastra um Mestre dinamicamente para não depender da ordem em que os testes rodam
+    client.post("/cadastro", data={
+        "tipo_conta": "BOTC_STORYTELLER",
+        "nome_real": "Mestre Isolado",
+        "username": "mestre_teste_isolado",
+        "senha": "123",
+        "senha_confirma": "123"
+    })
+    
+    # Faz o login para obter as credenciais reais
+    client.post("/login", data={"username": "mestre_teste_isolado", "senha": "123"})
+    client.cookies.set("sessao_usuario", "mestre_teste_isolado") 
+    
+    # Manda um voto absurdo (Cai no ValueError da classe e renderiza a tela com o card de erro)
     dados = {"nomeado": "Fantasma", "num_votos": 9999}
     response = client.post("/botc/registrar", data=dados)
+    
+    # Agora sim, como ele é Storyteller, a requisição passa pelo 403 e chega no try/except (200 OK HTML)
     assert response.status_code == 200
+    assert "erro" in response.text.lower() or "quantidade" in response.text.lower()
     client.cookies.clear()
     
 # Testes australia_router.py
