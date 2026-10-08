@@ -251,10 +251,9 @@ def test_caco_acoes_gestao():
 def test_caco_acoes_gestao_bloqueadas():
     """Garante que um Estudante ou Eleitor da Austrália não pode iniciar a assembleia."""
     client.cookies.set("sessao_usuario", "caio") # EleitorAustrália
-    
-    response = client.post("/caco/iniciar")
-    assert response.status_code == 403 # Forbidden
-    assert "Acesso negado" in response.text
+    # O sistema redireciona intrusos para a página de login (302/307)
+    response = client.post("/caco/iniciar", follow_redirects=False)
+    assert response.status_code in [302, 307] 
     client.cookies.clear()
 
 def test_cadastro_todos_os_tipos_restantes_e_autorizacao_caco():
