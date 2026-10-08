@@ -420,6 +420,14 @@ def test_botc_router_excecoes_internas():
     # Verifica apenas se a página carregou adequadamente para lidar com o erro
     assert "voltar ao dashboard" in response.text.lower() or "botc" in response.text.lower()
     client.cookies.clear()
+
+def test_botc_jogador_tenta_registrar_votos():
+    """Cobre a linha do botc_router onde um jogador comum (não storyteller) tenta registrar votos."""
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Invasor", "username": "jogador_invasor", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "jogador_invasor")
+    response = client.post("/botc/registrar", data={"nomeado": "X", "num_votos": 1})
+    assert response.status_code == 403
+    client.cookies.clear()
     
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
