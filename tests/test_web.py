@@ -496,3 +496,17 @@ def test_australia_rejeita_posicoes_repetidas():
     assert response.status_code == 200
     assert "repetir" in response.text.lower() or "inválidas" in response.text.lower()
     client.cookies.clear()
+
+def test_australia_votar_duas_vezes():
+    """Cobre o bloco if de voto duplo na eleição do australia_router."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Duplo Aus", "username": "voto_duplo_aus", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "voto_duplo_aus")
+    
+    # Vota a 1ª vez corretamente
+    dados_voto = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Candidato C": "3"}
+    client.post("/australia/votar", data=dados_voto)
+    
+    # Tenta submeter de novo
+    res_duplo = client.post("/australia/votar", data=dados_voto)
+    assert "já registrou seu voto nesta eleição" in res_duplo.text
+    client.cookies.clear()
