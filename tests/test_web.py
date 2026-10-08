@@ -411,6 +411,7 @@ def test_caco_acessar_tela_assembleia_estudante():
     # Como é estudante, a tela não deve ter os Controles da Gestão
     assert "Controles da Gestão" not in res_caco_get.text
     client.cookies.clear()
+        
     
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
@@ -501,6 +502,18 @@ def test_botc_apurar_sem_voto():
     # Testa a string exata gerada pelo 'else' da variável 'mensagem' no botc_router.py
     assert "Ninguém foi executado" in res_botc.text
     client.cookies.clear()
+    
+def test_sniper_linhas_ocultas_final():
+    """Testa renderizar a tela de partida quando já existem votos"""    
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Sniper BoTC", "username": "sniper_botc", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "sniper_botc", "senha": "123"})
+    client.cookies.set("sessao_usuario", "sniper_botc")
+    
+    # Registra um voto válido para forçar o sistema a criar o atributo
+    client.post("/botc/registrar", data={"nomeado": "Alvo", "num_votos": 1})
+    # Agora acessa a partida (vai engatilhar a leitura dos votos)
+    assert client.get("/botc/partida").status_code == 200
+    client.cookies.clear()    
     
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
