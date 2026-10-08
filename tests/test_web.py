@@ -317,6 +317,21 @@ def test_caco_router_excecoes_internas():
     assert "não existe" in res_encerrar2.text.lower() or "encerrada" in res_encerrar2.text.lower()
     client.cookies.clear()
 
+def test_caco_voto_invalido_gera_erro():
+    """Aciona o erro de voto inexistente."""
+    # Garante que a votação está iniciada usando a conta Gestão
+    client.cookies.set("sessao_usuario", "novo_gestor")
+    client.post("/caco/iniciar")
+    
+    # Usuário tenta votar uma opção falsa
+    client.cookies.set("sessao_usuario", "julia") 
+    dados_voto = {"opcao": "OPCAO_INEXISTENTE"}
+    response = client.post("/caco/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "erro" in response.text.lower() or "inválido" in response.text.lower()
+    client.cookies.clear()    
+
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
