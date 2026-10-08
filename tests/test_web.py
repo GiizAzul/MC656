@@ -411,7 +411,17 @@ def test_caco_acessar_tela_assembleia_estudante():
     # Como é estudante, a tela não deve ter os Controles da Gestão
     assert "Controles da Gestão" not in res_caco_get.text
     client.cookies.clear()
-        
+    
+def test_sniper_linhas_ocultas_final():
+    """Testa disparar o HTTPException 403 explicitamente na rota de resultados."""    
+    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Sniper CACo", "username": "sniper_caco", "senha": "123", "senha_confirma": "123", "ra": "999999"})
+    client.post("/login", data={"username": "sniper_caco", "senha": "123"})
+    client.cookies.set("sessao_usuario", "sniper_caco")
+    
+    res_403 = client.get("/caco/resultados", follow_redirects=False)
+    # A rota resultados devolve raise HTTPException(403) para quem não é gestão
+    assert res_403.status_code == 403
+    client.cookies.clear()    
     
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
