@@ -69,6 +69,61 @@ button, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-neutral {
     color: #777; 
 }
 
+/* Resultados e Barras de Progresso */
+
+.total-votos {
+    margin-bottom: 2rem;
+    color: var(--text-main);
+}
+
+.resultados-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.resultado-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.resultado-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+    color: var(--text-main);
+}
+
+.progress-bar-bg {
+    background-color: #eee;
+    border-radius: var(--border-radius);
+    height: 20px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: var(--border-radius);
+    /* Adiciona uma animação suave quando a barra cresce */
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fill-success {
+    background-color: var(--success);
+}
+
+.fill-danger {
+    background-color: var(--danger);
+}
+
+.fill-neutral {
+    background-color: var(--neutral);
+}
+
 /* Utilitários de Margem */
 .mb-2 { margin-bottom: 2rem; }
 
