@@ -361,19 +361,26 @@ def test_caco_estudante_tenta_acessar_gestao():
     client.cookies.clear()
 
 def test_caco_votar_duas_vezes():
-    """Cobre o bloco if de voto duplo na assembleia do caco_router."""
-    # Gestão inicia a assembleia
+    """Cobre o bloco if de voto duplo na assembleia do caco_router isolando o estado global."""
     client.cookies.set("sessao_usuario", "julia")
-    client.post("/caco/iniciar")
     
-    # Estudante vota a 1ª vez
-    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Duplo", "username": "voto_duplo_caco", "senha": "123", "senha_confirma": "123", "ra": "222222"})
-    client.cookies.set("sessao_usuario", "voto_duplo_caco")
-    client.post("/caco/votar", data={"opcao": "APROVAR"})
+    if not hasattr(app.state, "eleitores_caco_votaram"):
+        app.state.eleitores_caco_votaram = set()
+        
+    # Recupera o ID interno da julia do banco mockado
+    id_julia = app.state.banco_auth._mapa_usernames["julia"]
     
-    # Estudante tenta votar a 2ª vez
+    # Adiciona artificialmente para simular que ela já votou antes
+    app.state.eleitores_caco_votaram.add(id_julia)
+    
+    # Submete o voto
     res_duplo = client.post("/caco/votar", data={"opcao": "REJEITAR"})
+    
+    # A trava do router intercepta
     assert "VOTO NEGADO" in res_duplo.text
+    
+    # Limpeza do estado para não poluir testes futuros
+    app.state.eleitores_caco_votaram.remove(id_julia)
     client.cookies.clear()
 
 # Testes botc_router.py
