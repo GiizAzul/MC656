@@ -351,6 +351,15 @@ def test_caco_voto_invalido_gera_erro():
     assert response.status_code == 200
     client.cookies.clear()
 
+def test_caco_estudante_tenta_acessar_gestao():
+    """Cobre a barreira de GESTAO para Estudantes Comuns do CACo no caco_router."""
+    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Est", "username": "estudante_comum", "senha": "123", "senha_confirma": "123", "ra": "111111"})
+    client.cookies.set("sessao_usuario", "estudante_comum")
+    assert client.post("/caco/iniciar", follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/encerrar", follow_redirects=False).status_code in [302, 307]
+    assert client.get("/caco/resultados", follow_redirects=False).status_code == 403
+    client.cookies.clear()
+
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
