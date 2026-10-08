@@ -19,14 +19,13 @@ async def tela_votacao(request: Request, usuario: Usuario = Depends(obter_usuari
         return RedirectResponse(url="/", status_code=302)
 
     eleicao = request.app.state.eleicao_australia
-    candidatos_reais = list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos
-        
+    candidatos_reais = list(eleicao.candidatos)
+    
     return templates.TemplateResponse(
         name="australia.html", 
         request=request,
         context={"candidatos": candidatos_reais}
-    )
-    
+    )    
 
 @router.post("/votar")
 async def processar_voto_australia(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
