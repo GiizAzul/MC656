@@ -75,7 +75,9 @@ async def processar_voto_australia(request: Request, usuario: Usuario = Depends(
         if len(cedula_ordenada) != len(eleicao.candidatos):
             raise ValueError(f"Erro: Você ranqueou {len(cedula_ordenada)} candidatos. Você deve ranquear exatamente todos os {len(candidatos_reais)} candidatos.")
 
-        
+        posicoes_originais = [pos for pos, cand in tuplas_posicao]
+        if len(set(posicoes_originais)) != len(posicoes_originais):
+            raise ValueError("Erro: Não é permitido repetir a mesma posição no ranking. Insira um número diferente para cada candidato.")
         # Deposita a cédula na urna
         eleicao.cedulas.append(cedula_ordenada) 
 
