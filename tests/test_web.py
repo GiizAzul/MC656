@@ -241,6 +241,12 @@ def test_cadastro_estudante_ra_invalido():
     assert response.status_code == 200
     assert "RA inválido" in response.text
 
+def test_cadastro_estudante_ra_nao_numerico():
+    """Cobre a validação de erro de RA contendo letras no auth_router.py."""
+    dados = {"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Letras", "username": "letrasra", "senha": "123", "senha_confirma": "123", "ra": "ABCDEF"}
+    response = client.post("/cadastro", data=dados)
+    assert "RA inválido" in response.text
+
 def test_fraude_de_escopos_cross_router():
     """Testa se as verificações de escopo expulsam intrusos."""
     client.cookies.set("sessao_usuario", "caio") # Austrália tentando acessar CACo e BOTC
