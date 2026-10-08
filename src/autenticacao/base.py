@@ -45,15 +45,15 @@ class ServicoAutenticacao:
         if hasattr(usuario, 'ra') and usuario.ra:
             self._mapa_usernames[str(usuario.ra)] = usuario.id  # Permite login via RA
 
-    def login(self, username: str, senha_tentativa: str) -> Usuario:
-        user_id = self._mapa_usernames.get(username)
+    def login(self, identifier: str, senha_tentativa: str) -> Usuario:
+        user_id = self._mapa_usernames.get(identifier)  # Pode ser username ou RA
         if not user_id:
-            raise ValueError(f"Erro: Usuário {username} não encontrado.")
+            raise ValueError(f"Erro: Usuário {identifier} não encontrado.")
         
         usuario = self._banco_por_id.get(user_id)
 
         if not usuario:
-            raise ValueError(f"Erro: Usuário {username} não encontrado.")
+            raise ValueError(f"Erro: Usuário {identifier} não encontrado.")
         if not usuario.validar_senha(senha_tentativa):
             raise ValueError("Erro: Senha incorreta.")
         
