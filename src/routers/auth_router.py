@@ -62,6 +62,14 @@ async def processar_cadastro(
             raise ValueError("Tipo de conta desconhecido.")
             
         banco.registrar(novo_usuario)
+
+        # Adiciona alunos e gestores novos na lista de eleitores da assembleia ativa 
+        if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
+            eleicao_caco = request.app.state.eleicao_caco
+            eleicao_caco.alunos_cadastrados.add(novo_usuario.id)
+            eleicao_caco.eleitores.add(novo_usuario.id)
+        
+        # return RedirectResponse(url="/", status_code=302)
         
         # Faz o login automático após cadastro
         resposta = RedirectResponse(url="/dashboard", status_code=302)
