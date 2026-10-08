@@ -50,6 +50,8 @@ app.state.eleicao_australia = eleicao_australia
 alunos_caco = [banco_auth._mapa_usernames["julia"]] # IDs dos alunos habilitados
 eleicao_caco = EleicaoAssembleia(alunos_cadastrados_ids=alunos_caco, eleitores_ids=alunos_caco, duracao_ciclo=60)
 app.state.eleicao_caco = eleicao_caco
+app.state.eleitores_australia_votaram = set()
+app.state.eleitores_caco_votaram = set()
 
 # Cria a partida do BoTC
 sistema_botc = SistemaEleitoralBotC(jogadores_vivos=10)
