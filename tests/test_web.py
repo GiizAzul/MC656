@@ -281,7 +281,6 @@ def test_fraude_de_escopos_cross_router():
     assert client.get("/australia/votar", follow_redirects=False).status_code in [302, 307] # NOVO
     client.cookies.clear()
     
-
 # Testes caco_router.py
 def test_caco_acesso_deslogado():
     """Tentativa de acessar a tela da assembleia sem login."""
@@ -401,6 +400,18 @@ def test_caco_votar_duas_vezes():
     app.state.eleitores_caco_votaram.remove(id_julia)
     client.cookies.clear()
 
+def test_caco_acessar_tela_assembleia_estudante():
+    """ Cobre o caso de acessar a tela da Assembleia como Estudante"""
+    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Estudante Sweep", "username": "estudante_sweep", "senha": "123", "senha_confirma": "123", "ra": "888888"})
+    client.post("/login", data={"username": "estudante_sweep", "senha": "123"})
+    client.cookies.set("sessao_usuario", "estudante_sweep")
+    
+    res_caco_get = client.get("/caco/assembleia")
+    assert res_caco_get.status_code == 200
+    # Como é estudante, a tela não deve ter os Controles da Gestão
+    assert "Controles da Gestão" not in res_caco_get.text
+    client.cookies.clear()
+    
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
@@ -478,6 +489,18 @@ def test_botc_jogador_tenta_registrar_votos():
     response = client.post("/botc/registrar", data={"nomeado": "X", "num_votos": 1})
     assert response.status_code == 403
     client.cookies.clear()
+
+def test_botc_apurar_sem_voto():
+    """Cobre o caso de apurar sem nenhum voto da cidade em botc"""
+    # Cadastra o storyteller e garante a sessão limpa
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Mestre Sweep", "username": "mestre_sweep", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "mestre_sweep", "senha": "123"})
+    client.cookies.set("sessao_usuario", "mestre_sweep")
+    
+    res_botc = client.post("/botc/apurar")
+    # Testa a string exata gerada pelo 'else' da variável 'mensagem' no botc_router.py
+    assert "Ninguém foi executado" in res_botc.text
+    client.cookies.clear()
     
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
@@ -534,4 +557,17 @@ def test_australia_votar_duas_vezes():
     # Tenta submeter de novo
     res_duplo = client.post("/australia/votar", data=dados_voto)
     assert "já registrou seu voto nesta eleição" in res_duplo.text
+    client.cookies.clear()
+
+def test_australia_votar_sem_digito():
+    """ Cobre a condição Falsa do 'valor.strip().isdigit()' e o 'startswith"""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Sweep", "username": "aus_sweep", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "aus_sweep", "senha": "123"})
+    client.cookies.set("sessao_usuario", "aus_sweep")
+    
+    # Envia lixo proposital: um campo com outro nome e um campo numérico com 'letras'
+    dados_aus = {"campo_hacker": "1", "posicao_Candidato A": "nao_sou_numero"}
+    res_aus = client.post("/australia/votar", data=dados_aus)
+    assert res_aus.status_code == 200
+    assert "erro" in res_aus.text.lower()
     client.cookies.clear()
