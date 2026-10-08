@@ -367,3 +367,12 @@ def test_australia_acesso_deslogado():
     client.cookies.clear()
     response = client.get("/australia/votar", follow_redirects=False)
     assert response.status_code == 302 # Redireciona
+
+def test_australia_router_excecoes_internas():
+    """Aciona os blocos 'except ValueError' do australia_router."""
+    client.cookies.set("sessao_usuario", "caio")
+    # Vota em um único candidato (Gera ValueError por tamanho)
+    dados = {"posicao_Candidato A": "1"}
+    response = client.post("/australia/votar", data=dados)
+    assert "exatamente todos" in response.text.lower()
+    client.cookies.clear()
