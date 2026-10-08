@@ -12,16 +12,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 router = APIRouter(prefix="/australia", tags=["Australia"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-# Simulação de uma eleição ativa em memória
-# CANDIDATOS_MOCK = ["Candidato A", "Candidato B", "Candidato C"]
-
 @router.get("/votar", response_class=HTMLResponse)
-async def tela_votacao(request: Request):
-    usuario_logado = await obter_usuario_logado(request)
-    if not usuario_logado:
-        return RedirectResponse(url="/")
+async def tela_votacao(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+    # Valida apenas a permissão da pauta, pois o Depends já garantiu o login
+    if "AUSTRALIA" not in usuario.escopo:
+        return RedirectResponse(url="/", status_code=302)
 
-    # USA OS CANDIDATOS REAIS DO MAIN.PY (Remove o MOCK)
     eleicao = request.app.state.eleicao_australia
     candidatos_reais = list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos
         
@@ -30,6 +26,7 @@ async def tela_votacao(request: Request):
         request=request,
         context={"candidatos": candidatos_reais}
     )
+    
 
 @router.post("/votar")
 async def processar_voto_australia(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
