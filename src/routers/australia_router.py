@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/australia", tags=["Australia"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.get("/votar", response_class=HTMLResponse)
-async def tela_votacao(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+async def tela_votacao(request: Request, usuario: Annotated[Usuario, Depends(obter_usuario_logado)]):
     # Valida apenas a permissão da pauta, pois o Depends já garantiu o login
     if "AUSTRALIA" not in usuario.escopo:
         return RedirectResponse(url="/", status_code=302)
@@ -30,7 +31,7 @@ async def tela_votacao(request: Request, usuario: Usuario = Depends(obter_usuari
     )    
 
 @router.post("/votar")
-async def processar_voto_australia(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+async def processar_voto_australia(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
     if "AUSTRALIA" not in usuario.escopo:
         # Redirect para a raiz em caso de fraude de escopo:
         return RedirectResponse(url="/", status_code=302)

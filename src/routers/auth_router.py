@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -18,7 +19,7 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.get("/admin", response_class=HTMLResponse)
-async def painel_admin(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+async def painel_admin(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
     # Impede que usuários comuns entrem na tela de gestão
     if "GESTAO" not in usuario.escopo and "STORYTELLER" not in usuario.escopo:
         return RedirectResponse(url="/dashboard")
@@ -115,7 +116,7 @@ async def processar_login(
         )
 
 @router.get("/dashboard")
-async def painel_usuario(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+async def painel_usuario(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
     """A dependência 'obter_usuario_logado' já verifica os cookies.
     Busca no '_mapa_usernames' e devolve o objeto correto do '_banco_por_id'.
     Se o cookie não existir, ela mesma já expulsa o usuário para a tela de erro 401.

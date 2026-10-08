@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -22,7 +23,7 @@ JOGADORES_MOCK = [
 ]
 
 @router.get("/partida", response_class=HTMLResponse)
-async def tela_partida(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+async def tela_partida(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
     if "BOTC" not in usuario.escopo:
         return RedirectResponse(url="/", status_code=302)
         
@@ -54,7 +55,7 @@ async def registrar_votos_botc(
     request: Request, 
     nomeado: str = Form(...), 
     num_votos: int = Form(...),
-    usuario: Usuario = Depends(obter_usuario_logado)
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode registrar votos.")
@@ -68,7 +69,7 @@ async def registrar_votos_botc(
     )
 
 @router.post("/apurar")
-async def apurar_execucao_botc(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+async def apurar_execucao_botc(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode apurar a execução.")
 
