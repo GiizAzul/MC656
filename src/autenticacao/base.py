@@ -36,9 +36,14 @@ class ServicoAutenticacao:
             raise ValueError("Erro: Username e senha não podem ser vazios")
         if usuario.username in self._mapa_usernames:
             raise ValueError(f"Erro: username {usuario.username} já existente.")
+        if hasattr(usuario, 'ra') and usuario.ra and str(usuario.ra) in self._mapa_usernames:
+            raise ValueError(f"Erro: RA {usuario.ra} já existente.")
         
         self._banco_por_id[usuario.id] = usuario
         self._mapa_usernames[usuario.username] = usuario.id
+
+        if hasattr(usuario, 'ra') and usuario.ra:
+            self._mapa_usernames[str(usuario.ra)] = usuario.id  # Permite login via RA
 
     def login(self, username: str, senha_tentativa: str) -> Usuario:
         user_id = self._mapa_usernames.get(username)
