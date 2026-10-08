@@ -1,5 +1,5 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from src.main import app
 
 # Inicializa o cliente de testes simulando um navegador
@@ -432,7 +432,7 @@ def test_caco_acessar_tela_assembleia_estudante():
     assert "Controles da Gestão" not in res_caco_get.text
     client.cookies.clear()
     
-def test_sniper_linhas_ocultas_final():
+def test_caco_erro_em_resultados():
     """Testa disparar o HTTPException 403 explicitamente na rota de resultados."""    
     client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Sniper CACo", "username": "sniper_caco", "senha": "123", "senha_confirma": "123", "ra": "999999"})
     client.post("/login", data={"username": "sniper_caco", "senha": "123"})
@@ -533,7 +533,7 @@ def test_botc_apurar_sem_voto():
     assert "Ninguém foi executado" in res_botc.text
     client.cookies.clear()
     
-def test_sniper_linhas_ocultas_final():
+def test_botc_renderiza_tela_com_voto():
     """Testa renderizar a tela de partida quando já existem votos"""    
     client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Sniper BoTC", "username": "sniper_botc", "senha": "123", "senha_confirma": "123"})
     client.post("/login", data={"username": "sniper_botc", "senha": "123"})

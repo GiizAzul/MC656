@@ -1,20 +1,19 @@
-from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from src.routers import auth_router, australia_router, caco_router, botc_router
-from src.routers.dependencias import RequerRedirecionamentoException
-
-from src.autenticacao.base import ServicoAutenticacao
-from src.autenticacao.caco import GestaoCACo
-from src.autenticacao.australia import EleitorAustralia
-from src.autenticacao.botc import JogadorBOTC
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from src.australia import EleicaoAustralia
-from src.caco import EleicaoAssembleia
+from src.autenticacao.australia import EleitorAustralia
+from src.autenticacao.base import ServicoAutenticacao
+from src.autenticacao.botc import JogadorBOTC
+from src.autenticacao.caco import GestaoCACo
 from src.botc import SistemaEleitoralBotC
+from src.caco import EleicaoAssembleia
+from src.routers import australia_router, auth_router, botc_router, caco_router
+from src.routers.dependencias import RequerRedirecionamentoException
 
 app = FastAPI(title="Sistema de Votação Web")
 

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Request, Form, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from src.caco import OpcaoVoto
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+
 from src.autenticacao.base import Usuario
+from src.caco import OpcaoVoto
 
 from .dependencias import obter_usuario_logado
 

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Request, Form, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from src.autenticacao.base import Usuario
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+
 from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
+from src.autenticacao.base import Usuario
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 

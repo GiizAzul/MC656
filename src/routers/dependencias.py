@@ -1,10 +1,10 @@
-from fastapi import Request, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi import Request
+
 from src.autenticacao.base import Usuario
+
 
 class RequerRedirecionamentoException(Exception):
     """Exceção customizada para forçar o redirect na Web."""
-    pass
 
 async def obter_usuario_logado(request: Request) -> Usuario:
     username_logado = request.cookies.get("sessao_usuario")
