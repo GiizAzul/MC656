@@ -147,10 +147,11 @@ def test_rota_votar_australia():
     assert "voto registrado" in response.text.lower()
     client.cookies.clear()
     
-
 def test_rota_votar_caco():
     """Simula o envio de um voto de assembleia (Aprovar)."""
     client.cookies.set("sessao_usuario", "julia")
+    # A eleição precisa estar iniciada para o voto ser aceito
+    client.post("/caco/iniciar") 
     
     dados_voto = {"opcao": "APROVAR"}
     response = client.post("/caco/votar", data=dados_voto)
