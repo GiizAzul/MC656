@@ -360,6 +360,22 @@ def test_caco_estudante_tenta_acessar_gestao():
     assert client.get("/caco/resultados", follow_redirects=False).status_code == 403
     client.cookies.clear()
 
+def test_caco_votar_duas_vezes():
+    """Cobre o bloco if de voto duplo na assembleia do caco_router."""
+    # Gestão inicia a assembleia
+    client.cookies.set("sessao_usuario", "julia")
+    client.post("/caco/iniciar")
+    
+    # Estudante vota a 1ª vez
+    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Duplo", "username": "voto_duplo_caco", "senha": "123", "senha_confirma": "123", "ra": "222222"})
+    client.cookies.set("sessao_usuario", "voto_duplo_caco")
+    client.post("/caco/votar", data={"opcao": "APROVAR"})
+    
+    # Estudante tenta votar a 2ª vez
+    res_duplo = client.post("/caco/votar", data={"opcao": "REJEITAR"})
+    assert "VOTO NEGADO" in res_duplo.text
+    client.cookies.clear()
+
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
