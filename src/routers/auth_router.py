@@ -68,9 +68,7 @@ async def processar_cadastro(
             eleicao_caco = request.app.state.eleicao_caco
             eleicao_caco.alunos_cadastrados.add(novo_usuario.id)
             eleicao_caco.eleitores.add(novo_usuario.id)
-        
-        # return RedirectResponse(url="/", status_code=302)
-        
+                
         # Faz o login automático após cadastro
         resposta = RedirectResponse(url="/dashboard", status_code=302)
         resposta.set_cookie(key="sessao_usuario", value=username, httponly=True)
