@@ -78,7 +78,6 @@ async def processar_voto_caco(request: Request, opcao: str = Form(...), usuario:
         )
 
     try:
-        from src.caco import OpcaoVoto
         opcao_enum = OpcaoVoto[opcao]
         
         eleicao.registrar_voto(usuario.id, opcao_enum)
