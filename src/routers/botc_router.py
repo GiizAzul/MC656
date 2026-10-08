@@ -71,9 +71,7 @@ async def apurar_execucao_botc(request: Request, usuario: Usuario = Depends(obte
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode apurar a execução.")
 
-    # resultado = request.app.state.sistema_botc.apurar_vencedor()
-    # Mock temporário
-    resultado = "Jogador X" 
+    resultado = request.app.state.sistema_botc.apurar_vencedor()
     
     mensagem = f"O jogador executado foi: {resultado}" if resultado else "Ninguém foi executado. Empate ou votos insuficientes."
 
