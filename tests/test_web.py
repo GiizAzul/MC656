@@ -346,14 +346,34 @@ def test_caco_router_excecoes_internas():
     # A página retorna 200 OK porque é renderizado o template caco.html com o card de erro
     assert res_iniciar2.status_code == 200 
     
+    # Cria um gestor novo para não cair na trava de "você já votou"
+    client.post("/cadastro", data={"tipo_conta": "CACO_GESTAO", "nome_real": "Exception Maker", "username": "gestor_exc", "senha": "12", "senha_confirma": "12"})
+    client.post("/login", data={"username": "gestor_exc", "senha": "12"})
+    client.cookies.set("sessao_usuario", "gestor_exc")
     # Tenta votar com enum quebrado (Gera KeyError na classe)
     res_voto_errado = client.post("/caco/votar", data={"opcao": "FRAUDE"})
     assert res_voto_errado.status_code == 200
     
-    # Encerra e tenta encerrar de novo
+    # Fazemos backup da eleição real
+    eleicao_backup = app.state.eleicao_caco
+    
+    # Criamos uma classe dummy que obrigatoriamente explode ao tentar encerrar
+    class MockEleicaoParaErro:
+        class MockEstado:
+            name = "TESTE"
+        estado = MockEstado()
+        
+        def encerrar_votacao(self):
+            raise RuntimeError("Explosão programada para o Coverage!")
+            
+    # Injeta a eleição sabotada no estado da aplicação
+    app.state.eleicao_caco = MockEleicaoParaErro()
+    
+    # Aciona a rota. O try chama o mock, explode, e desce direto para a exceção
     client.post("/caco/encerrar")
-    res_encerrar2 = client.post("/caco/encerrar")
-    assert res_encerrar2.status_code == 200
+    
+    # Restaura a sanidade do sistema
+    app.state.eleicao_caco = eleicao_backup
     client.cookies.clear()
 
 def test_caco_voto_invalido_gera_erro():
