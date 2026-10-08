@@ -385,3 +385,14 @@ def test_australia_router_excecoes_internas():
     response = client.post("/australia/votar", data=dados)
     assert "exatamente todos" in response.text.lower()
     client.cookies.clear()
+
+def test_australia_voto_incompleto_gera_erro():
+    """Aciona o bloco except ValueError no australia_router.py."""
+    client.cookies.set("sessao_usuario", "caio")
+    # Fornecendo um ranking faltando candidatos
+    dados_voto = {"posicao_Candidato A": "1"}
+    response = client.post("/australia/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "erro" in response.text.lower()
+    client.cookies.clear()
