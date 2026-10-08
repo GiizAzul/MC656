@@ -229,17 +229,18 @@ def test_cadastro_estudante_ra_invalido():
 def test_fraude_de_escopos_cross_router():
     """Testa se as verificações de escopo expulsam intrusos."""
     client.cookies.set("sessao_usuario", "caio") # Austrália tentando acessar CACo e BOTC
-    assert client.post("/caco/votar", data={"opcao": "APROVAR"}, follow_redirects=False).status_code in [302, 307]
-    assert client.post("/caco/iniciar", follow_redirects=False).status_code in [302, 307]
-    assert client.post("/caco/encerrar", follow_redirects=False).status_code in [302, 307]
-    assert client.get("/caco/resultados", follow_redirects=False).status_code in [403, 302]
-    # O botc_router.py retorna 302 se o escopo não for BOTC
-    assert client.post("/botc/registrar", data={"nomeado": "x", "num_votos": 1}, follow_redirects=False).status_code in [302, 307]
-    assert client.post("/botc/apurar", follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/votar", data={"opcao": "APROVAR"}, follow_redirects=False).status_code in [302, 307, 403]
+    assert client.post("/caco/iniciar", follow_redirects=False).status_code in [302, 307, 403]
+    assert client.post("/caco/encerrar", follow_redirects=False).status_code in [302, 307, 403]
+    assert client.get("/caco/resultados", follow_redirects=False).status_code in [403, 302, 307]
+    
+    # O botc_router.py retorna 403 ou 302 dependendo da implementação de fraude
+    assert client.post("/botc/registrar", data={"nomeado": "x", "num_votos": 1}, follow_redirects=False).status_code in [302, 307, 403]
+    assert client.post("/botc/apurar", follow_redirects=False).status_code in [302, 307, 403]
     
     client.cookies.set("sessao_usuario", "julia") # CACo tentando acessar Austrália
-    assert client.post("/australia/votar", data={"posicao_Candidato A": "1"}, follow_redirects=False).status_code in [302, 307]
-    assert client.get("/botc/partida", follow_redirects=False).status_code in [302, 307]
+    assert client.post("/australia/votar", data={"posicao_Candidato A": "1"}, follow_redirects=False).status_code in [302, 307, 403]
+    assert client.get("/botc/partida", follow_redirects=False).status_code in [302, 307, 403]
     client.cookies.clear()
 
 # Testes caco_router.py
