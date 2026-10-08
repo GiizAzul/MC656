@@ -418,8 +418,19 @@ def test_australia_router_excecoes_internas():
 
 def test_australia_rejeita_posicoes_repetidas():
     """Garante que a rota da Austrália barra cédulas com números repetidos (ex: tudo 1)."""
-    client.cookies.set("sessao_usuario", "caio")
+    # Cria um eleitor novo
+    client.post("/cadastro", data={
+        "tipo_conta": "AUSTRALIA_ELEITOR",
+        "nome_real": "Eleitor Repetido",
+        "username": "eleitor_repetido",
+        "senha": "123",
+        "senha_confirma": "123"
+    })
     
+    # Faz o login com ele
+    client.post("/login", data={"username": "eleitor_repetido", "senha": "123"})
+    client.cookies.set("sessao_usuario", "eleitor_repetido")
+
     # Vota colocando dois candidatos em 1º lugar 
     dados_voto = {
         "posicao_Candidato A": "1",
