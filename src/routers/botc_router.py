@@ -23,13 +23,21 @@ JOGADORES_MOCK = [
 @router.get("/partida", response_class=HTMLResponse)
 async def tela_partida(request: Request):
     usuario_logado = await obter_usuario_logado(request)
-    if not usuario_logado:
+    if not usuario_logado or "BOTC" not in usuario_logado.escopo:
         return RedirectResponse(url="/")
         
+    sistema = request.app.state.sistema_botc
+    
+    # O HTML do botc exige essas variáveis para renderizar a roda de jogadores
+    # e verificar se o usuário atual é o Storyteller.
     return templates.TemplateResponse(
         name="botc.html", 
-        request=request, 
-        context={"jogadores": JOGADORES_MOCK}
+        request=request,
+        context={
+            "jogadores": [],
+            "votos": sistema.votos if hasattr(sistema, 'votos') else {},
+            "is_storyteller": "STORYTELLER" in usuario_logado.escopo
+        }
     )
 
 @router.post("/votar")
