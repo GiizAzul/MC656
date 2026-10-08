@@ -395,6 +395,17 @@ def test_botc_router_excecoes_internas():
     response = client.post("/botc/registrar", data=dados)
     assert "erro" in response.text.lower() or "quantidade" in response.text.lower()
     client.cookies.clear()
+
+def test_botc_registrar_votos_absurdos_gera_erro():
+    """Aciona o erro se o storyteller avacalhar."""
+    client.cookies.set("sessao_usuario", "novo_storyteller")
+    
+    dados = {"nomeado": "Alguem", "num_votos": 9999}
+    response = client.post("/botc/registrar", data=dados)
+    
+    assert response.status_code == 200
+    assert "erro" in response.text.lower()
+    client.cookies.clear()    
     
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
