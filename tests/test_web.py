@@ -299,6 +299,24 @@ def test_cadastro_todos_os_tipos_restantes_e_autorizacao_caco():
     assert "sucesso" in res_caco.text.lower() or "andamento" in res_caco.text.lower()
     client.cookies.clear()    
 
+def test_caco_router_excecoes_internas():
+    """Aciona os blocos 'except Exception' do caco_router."""
+    client.cookies.set("sessao_usuario", "julia")
+    # Inicia e tenta iniciar de novo (Gera RuntimeError)
+    client.post("/caco/iniciar")
+    res_iniciar2 = client.post("/caco/iniciar")
+    assert "já está em andamento" in res_iniciar2.text.lower()
+    
+    # Tenta votar com enum quebrado (Gera KeyError/Exception)
+    res_voto_errado = client.post("/caco/votar", data={"opcao": "FRAUDE"})
+    assert "erro" in res_voto_errado.text.lower() or "fraude" in res_voto_errado.text
+    
+    # Encerra e tenta encerrar de novo (Gera RuntimeError)
+    client.post("/caco/encerrar")
+    res_encerrar2 = client.post("/caco/encerrar")
+    assert "não existe" in res_encerrar2.text.lower() or "encerrada" in res_encerrar2.text.lower()
+    client.cookies.clear()
+
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
