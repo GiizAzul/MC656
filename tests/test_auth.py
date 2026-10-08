@@ -36,12 +36,29 @@ def testa_login_varios_escopos(auth: ServicoAutenticacao) -> None:
     logado_jogador = auth.login("Leo_bct", "EuSouOLeo")
     assert logado_jogador.escopo == "BOTC_JOGADOR"
 
+def testa_login_via_ra(auth: ServicoAutenticacao) -> None:
+    """Verifica se estudantes do CACo conseguem autenticar utilizando o RA como login."""
+    aluno = EstudanteCACo("caiolima", "senha123", "Caio Lima", 288808)
+    auth.registrar(aluno)
+    
+    # Faz login passando o RA como string em vez do username 'caiolima'
+    logado = auth.login("288808", "senha123")
+    assert logado.id == aluno.id
+    assert logado.escopo == "CACO_ESTUDANTE"
+
 def testa_bloqueia_username_duplicado(auth: ServicoAutenticacao) -> None:
     """Um usuário não pode ter o mesmo login mesmo em escopos diferentes"""
     auth.registrar(EstudanteCACo("samuel", "123", "Samuel", 5))
 
     with pytest.raises(ValueError, match="já existente"):
         auth.registrar(JogadorBOTC("samuel", "213", "Samuel Impostor"))
+
+def testa_bloqueia_ra_duplicado(auth: ServicoAutenticacao) -> None:
+    """Um usuário não pode ter o mesmo RA mesmo em escopos diferentes"""
+    auth.registrar(EstudanteCACo("samuel", "123", "Samuel", 5))
+
+    with pytest.raises(ValueError, match="já existente"):
+        auth.registrar(EstudanteCACo("outro", "456", "Outro Aluno", 5))
 
 def testa_falha_de_seguranca(auth: ServicoAutenticacao) -> None:
     auth.registrar(JogadorBOTC("Tekpix", "senhasegura", "Yago"))
