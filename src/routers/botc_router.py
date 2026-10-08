@@ -34,11 +34,10 @@ async def tela_partida(request: Request, usuario: Usuario = Depends(obter_usuari
         request=request,
         context={
             "jogadores": [],
-            "votos": sistema.votos if hasattr(sistema, 'votos') else {},
+            "votos": getattr(sistema, "votos", {}),
             "is_storyteller": "STORYTELLER" in usuario.escopo
         }
-    )
-    
+    ) 
 
 @router.post("/votar")
 async def processar_voto_botc(request: Request, acao: str = Form(...)):
