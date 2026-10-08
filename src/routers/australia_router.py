@@ -37,11 +37,6 @@ async def processar_voto_australia(request: Request, usuario: Usuario = Depends(
     eleicao = request.app.state.eleicao_australia 
     candidatos_reais = list(eleicao.candidatos.keys()) if isinstance(eleicao.candidatos, dict) else eleicao.candidatos
 
-
-    # Cria o "caderno de assinaturas" em memória caso ainda não exista
-    if not hasattr(request.app.state, "eleitores_australia_votaram"):
-        request.app.state.eleitores_australia_votaram = set()
-        
     # Verifica se o usuário logado já votou
     if usuario.id in request.app.state.eleitores_australia_votaram:
         return templates.TemplateResponse(
