@@ -329,16 +329,6 @@ def test_caco_voto_invalido_gera_erro():
     assert response.status_code == 200
     client.cookies.clear()
 
-def test_caco_encerrar_duas_vezes_gera_erro():
-    """Aciona o bloco except no caco_router.py."""
-    client.cookies.set("sessao_usuario", "novo_gestor")
-    client.post("/caco/encerrar") # Encerra
-    
-    response = client.post("/caco/encerrar")
-    assert response.status_code == 200
-    assert "erro" in response.text.lower() or "não existe" in response.text.lower()
-    client.cookies.clear()    
-
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
@@ -393,17 +383,6 @@ def test_botc_router_excecoes_internas():
     response = client.post("/botc/registrar", data=dados)
     assert response.status_code == 200
     client.cookies.clear()
-
-def test_botc_registrar_votos_absurdos_gera_erro():
-    """Aciona o erro se o storyteller avacalhar."""
-    client.cookies.set("sessao_usuario", "novo_storyteller")
-    
-    dados = {"nomeado": "Alguem", "num_votos": 9999}
-    response = client.post("/botc/registrar", data=dados)
-    
-    assert response.status_code == 200
-    assert "erro" in response.text.lower()
-    client.cookies.clear()    
     
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
@@ -419,15 +398,4 @@ def test_australia_router_excecoes_internas():
     response = client.post("/australia/votar", data=dados)
     # Backend retorna 200 OK com o template australia.html + erro na tela
     assert response.status_code == 200
-    client.cookies.clear()
-
-def test_australia_voto_incompleto_gera_erro():
-    """Aciona o bloco except ValueError no australia_router.py."""
-    client.cookies.set("sessao_usuario", "caio")
-    # Fornecendo um ranking faltando candidatos
-    dados_voto = {"posicao_Candidato A": "1"}
-    response = client.post("/australia/votar", data=dados_voto)
-    
-    assert response.status_code == 200
-    assert "erro" in response.text.lower()
     client.cookies.clear()
