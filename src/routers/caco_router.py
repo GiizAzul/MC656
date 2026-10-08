@@ -57,7 +57,6 @@ async def tela_assembleia(request: Request, usuario: Usuario = Depends(obter_usu
         }
     )
     
-
 @router.post("/votar")
 async def processar_voto_caco(request: Request, opcao: str = Form(...), usuario: Usuario = Depends(obter_usuario_logado)):
     if "CACO" not in usuario.escopo:
@@ -65,10 +64,6 @@ async def processar_voto_caco(request: Request, opcao: str = Form(...), usuario:
 
     # Puxa o contexto global de eleição
     eleicao = request.app.state.eleicao_caco
-
-    # Cria o registro de quem votou na memória do servidor
-    if not hasattr(request.app.state, "eleitores_caco_votaram"):
-        request.app.state.eleitores_caco_votaram = set()
 
     # Bloqueia se o usuário já votou
     if usuario.id in request.app.state.eleitores_caco_votaram:
