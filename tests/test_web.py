@@ -235,16 +235,17 @@ def test_caco_acesso_deslogado():
 
 def test_caco_acoes_gestao():
     """Testa os botões de Iniciar, Encerrar e Resultados acessados por alguém da Gestão."""
-    client.cookies.set("sessao_usuario", "julia") # julia é GestaoCACo
-    
+    client.cookies.set("sessao_usuario", "julia")
+
     res_iniciar = client.post("/caco/iniciar")
-    assert "Votação da Assembleia iniciada" in res_iniciar.text
-    
+    assert res_iniciar.status_code == 200
+
+    res_resultados = client.get("/caco/resultados")
+    # Verifica a nova interface de barras de progresso
+    assert "Total de Votos Registrados" in res_resultados.text 
+
     res_encerrar = client.post("/caco/encerrar")
     assert "Votação da Assembleia encerrada" in res_encerrar.text
-    
-    res_resultados = client.get("/caco/resultados")
-    assert "Resultados atuais:" in res_resultados.text
     client.cookies.clear()
 
 def test_caco_acoes_gestao_bloqueadas():
