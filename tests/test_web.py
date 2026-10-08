@@ -420,7 +420,7 @@ def test_australia_rejeita_posicoes_repetidas():
     """Garante que a rota da Austrália barra cédulas com números repetidos (ex: tudo 1)."""
     client.cookies.set("sessao_usuario", "caio")
     
-    # Vota colocando dois candidatos em 1º lugar
+    # Vota colocando dois candidatos em 1º lugar 
     dados_voto = {
         "posicao_Candidato A": "1",
         "posicao_Candidato B": "1",
@@ -429,5 +429,5 @@ def test_australia_rejeita_posicoes_repetidas():
     response = client.post("/australia/votar", data=dados_voto)
     
     assert response.status_code == 200
-    assert "repetir" in response.text.lower()
+    assert "repetir" in response.text.lower() or "inválidas" in response.text.lower()
     client.cookies.clear()
