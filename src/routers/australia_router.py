@@ -81,8 +81,6 @@ async def processar_voto_australia(request: Request, usuario: Usuario = Depends(
         if sorted(posicoes_originais) != posicoes_esperadas:
                     raise ValueError("As posições informadas são inválidas. Não é permitido repetir números ou pular posições.\nInsira um número diferente para cada candidato.")
         
-        if len(set(posicoes_originais)) != len(posicoes_originais):
-            raise ValueError("Erro: Não é permitido repetir a mesma posição no ranking. Insira um número diferente para cada candidato.")
         # Deposita a cédula na urna
         eleicao.cedulas.append(cedula_ordenada) 
 
