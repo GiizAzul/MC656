@@ -6,6 +6,22 @@ from src.main import app
 client = TestClient(app)
 
 # Testes padrões de interface
+def test_renderizacao_telas_get():
+    """Cobre as linhas de renderização GET puras nos routers"""
+    
+    # Tela de Cadastro (auth_router)
+    assert client.get("/cadastro").status_code == 200
+    
+    # Tela de Votação da Austrália (australia_router)
+    client.cookies.set("sessao_usuario", "caio")
+    assert client.get("/australia/votar").status_code == 200
+    
+    # Tela da Assembleia (caco_router)
+    client.cookies.set("sessao_usuario", "julia")
+    assert client.get("/caco/assembleia").status_code == 200
+    
+    client.cookies.clear()
+
 def test_pagina_raiz_redireciona_para_login():
     """A raiz do site ('/') deve renderizar a tela de login."""
     response = client.get("/")
