@@ -31,7 +31,7 @@ async def iniciar_votacao_caco(request: Request, usuario: Annotated [Usuario, De
             name="sucesso.html",
             context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
         )
-    except Exception as e:
+    except RuntimeError as e:
         return templates.TemplateResponse(
             request=request,
             name="caco.html",
@@ -92,7 +92,7 @@ async def processar_voto_caco(request: Request, opcao: str = Form(...), usuario:
             name="sucesso.html", 
             context={"mensagem": f"Seu voto na assembleia foi contabilizado como: {opcao}"}
         )
-    except Exception as e:
+    except (RuntimeError, KeyError, ValueError) as e:
         return templates.TemplateResponse(
             request=request,
             name="caco.html",
@@ -119,7 +119,7 @@ async def encerrar_votacao_caco(request: Request, usuario: Annotated [Usuario, D
             name="sucesso.html",
             context={"mensagem": "Votação da Assembleia encerrada."}
         )
-    except Exception as e:
+    except RuntimeError as e:
         return templates.TemplateResponse(
             request=request,
             name="caco.html",
