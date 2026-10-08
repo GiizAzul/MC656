@@ -332,6 +332,16 @@ def test_caco_voto_invalido_gera_erro():
     assert "erro" in response.text.lower() or "inválido" in response.text.lower()
     client.cookies.clear()    
 
+def test_caco_encerrar_duas_vezes_gera_erro():
+    """Aciona o bloco except no caco_router.py."""
+    client.cookies.set("sessao_usuario", "novo_gestor")
+    client.post("/caco/encerrar") # Encerra
+    
+    response = client.post("/caco/encerrar")
+    assert response.status_code == 200
+    assert "erro" in response.text.lower() or "não existe" in response.text.lower()
+    client.cookies.clear()    
+
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
