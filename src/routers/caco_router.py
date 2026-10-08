@@ -60,7 +60,7 @@ async def tela_assembleia(request: Request, usuario: Annotated [Usuario, Depends
     )
     
 @router.post("/votar")
-async def processar_voto_caco(request: Request, opcao: str = Form(...), usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
+async def processar_voto_caco(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)], opcao: str = Form(...)):
     if "CACO" not in usuario.escopo:
         return RedirectResponse(url="/", status_code=302)
 

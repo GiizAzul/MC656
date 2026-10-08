@@ -53,9 +53,9 @@ async def processar_voto_botc(request: Request, acao: str = Form(...)):
 @router.post("/registrar")
 async def registrar_votos_botc(
     request: Request, 
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
     nomeado: str = Form(...), 
-    num_votos: int = Form(...),
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
+    num_votos: int = Form(...)
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode registrar votos.")
