@@ -134,20 +134,23 @@ async def encerrar_votacao_caco(request: Request, usuario: Usuario = Depends(obt
             }
         )
 
-
-
-
 @router.get("/resultados", response_class=HTMLResponse)
 async def resultados_caco(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
     if "CACO_GESTAO" not in usuario.escopo:
-        raise HTTPException(status_code=403, detail="Acesso negado.")
-        
-    # contadores = request.app.state.eleicao_caco.obter_contadores()
-    # Mock para renderização inicial:
-    contadores = {"APROVAR": 15, "REJEITAR": 5, "ABSTER": 2}
+        raise HTTPException(status_code=403, detail="Acesso negado.")   # Tem que ver issae
+    eleicao = request.app.state.eleicao_caco
+    
+    contadores = eleicao.obter_contadores()
+    
+    # Calcula o total para fazer as barras de porcentagem no HTML
+    total_votos = sum(contadores.values())
     
     return templates.TemplateResponse(
-        name="sucesso.html", # Futuramente criar um resultados.html específico
+        name="resultados_caco.html",
         request=request, 
-        context={"mensagem": f"Resultados atuais: {contadores}"}
+        context={
+            "contadores": contadores,
+            "total_votos": total_votos,
+            "estado": eleicao.estado.name
+        }
     )
