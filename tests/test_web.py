@@ -226,6 +226,21 @@ def test_cadastro_estudante_ra_invalido():
     assert response.status_code == 200
     assert "RA inválido" in response.text
 
+def test_fraude_de_escopos_cross_router():
+    """Testa se as verificações de escopo expulsam intrusos."""
+    client.cookies.set("sessao_usuario", "caio") # Austrália tentando acessar CACo e BOTC
+    assert client.post("/caco/votar", data={"opcao": "APROVAR"}, follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/iniciar", follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/encerrar", follow_redirects=False).status_code in [302, 307]
+    assert client.get("/caco/resultados", follow_redirects=False).status_code in [403]
+    assert client.post("/botc/registrar", data={"nomeado": "x", "num_votos": 1}, follow_redirects=False).status_code in [302, 307]
+    assert client.post("/botc/apurar", follow_redirects=False).status_code in [302, 307]
+    
+    client.cookies.set("sessao_usuario", "julia") # CACo tentando acessar Austrália
+    assert client.post("/australia/votar", data={"posicao_Candidato A": "1"}, follow_redirects=False).status_code in [302, 307]
+    assert client.get("/botc/partida", follow_redirects=False).status_code in [302, 307]
+    client.cookies.clear()
+
 # Testes caco_router.py
 def test_caco_acesso_deslogado():
     """Tentativa de acessar a tela da assembleia sem login."""
