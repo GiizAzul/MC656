@@ -362,6 +362,15 @@ def test_botc_acoes_storyteller_bloqueadas():
     assert "Apenas o Storyteller pode" in response.text
     client.cookies.clear()
 
+def test_botc_router_excecoes_internas():
+    """Aciona os blocos 'except Exception' do botc_router."""
+    client.cookies.set("sessao_usuario", "novo_storyteller_exaustivo")
+    # Voto absurdo (Gera ValueError por estourar o limite de jogadores)
+    dados = {"nomeado": "Fantasma", "num_votos": 9999}
+    response = client.post("/botc/registrar", data=dados)
+    assert "erro" in response.text.lower() or "quantidade" in response.text.lower()
+    client.cookies.clear()
+    
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
     client.cookies.clear()
