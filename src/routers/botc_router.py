@@ -21,10 +21,9 @@ JOGADORES_MOCK = [
 ]
 
 @router.get("/partida", response_class=HTMLResponse)
-async def tela_partida(request: Request):
-    usuario_logado = await obter_usuario_logado(request)
-    if not usuario_logado or "BOTC" not in usuario_logado.escopo:
-        return RedirectResponse(url="/")
+async def tela_partida(request: Request, usuario: Usuario = Depends(obter_usuario_logado)):
+    if "BOTC" not in usuario.escopo:
+        return RedirectResponse(url="/", status_code=302)
         
     sistema = request.app.state.sistema_botc
     
@@ -36,9 +35,10 @@ async def tela_partida(request: Request):
         context={
             "jogadores": [],
             "votos": sistema.votos if hasattr(sistema, 'votos') else {},
-            "is_storyteller": "STORYTELLER" in usuario_logado.escopo
+            "is_storyteller": "STORYTELLER" in usuario.escopo
         }
     )
+    
 
 @router.post("/votar")
 async def processar_voto_botc(request: Request, acao: str = Form(...)):
