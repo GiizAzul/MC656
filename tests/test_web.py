@@ -255,6 +255,32 @@ def test_caco_acoes_gestao_bloqueadas():
     assert "Acesso negado" in response.text
     client.cookies.clear()
 
+def test_cadastro_todos_os_tipos_restantes_e_autorizacao_caco():
+    """Cadastra os tipos restantes e garante que um CACO_GESTAO recém-criado foi adicionado aos eleitores do app.state."""
+    tipos_restantes = [
+        ("CACO_GESTAO", "novo_gestor_exaustivo"), 
+        ("AUSTRALIA_CANDIDATO", "novo_candidato_exaustivo"), 
+        ("BOTC_STORYTELLER", "novo_storyteller_exaustivo")
+    ]
+    for tipo, user in tipos_restantes:
+        dados = {
+            "tipo_conta": tipo,
+            "nome_real": f"Teste {user}",
+            "username": user,
+            "senha": "123",
+            "senha_confirma": "123"
+        }
+        res = client.post("/cadastro", data=dados, follow_redirects=False)
+        assert res.status_code in [302, 307]
+
+    # Verifica se o 'novo_gestor_exaustivo' ganhou permissão na eleição do CACo
+    client.cookies.set("sessao_usuario", "novo_gestor_exaustivo")
+    # Tenta iniciar a eleição para ter certeza que foi reconhecido
+    res_caco = client.post("/caco/iniciar", follow_redirects=False)
+    assert res_caco.status_code == 200
+    assert "sucesso" in res_caco.text.lower() or "andamento" in res_caco.text.lower()
+    client.cookies.clear()
+
 # Testes botc_router.py
 def test_botc_acesso_deslogado():
     client.cookies.clear()
