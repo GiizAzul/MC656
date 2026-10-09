@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="header-context">
+    <h2>Gerenciar Votações</h2>
+</header>
+<main class="box-content">
+    
+    {% if "CACO_GESTAO" in usuario.escopo %}
+    <div class="card">
+        <h3>Assembleia CACo - Pauta #5</h3>
+        <p>Status Atual: {{ status_caco }}</p>
+        
+        <div class="botoes-votacao mt-2">
+            <!-- Estas rotas precisarão ser criadas no caco_router.py -->
+            <form action="/caco/iniciar" method="POST" style="display:inline;">
+                <button type="submit" class="btn-success">Iniciar Votação</button>
+            </form>
+            <form action="/caco/encerrar" method="POST" style="display:inline;">
+                <button type="submit" class="btn-danger">Encerrar Votação</button>
+            </form>
+            <a href="/caco/resultados" class="btn-primary">Ver Resultados</a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if "BOTC_STORYTELLER" in usuario.escopo %}
+    <div class="card mt-2">
+        <h3>Blood on the Clocktower - Controle do StoryTeller</h3>
+        <p>Registre os votos da cidade ou apure a execução atual.</p>
+        
+        <form action="/botc/registrar" method="POST" class="mt-2">
+            <div class="form-group">
+                <input type="text" name="nomeado" placeholder="Nome do jogador na forca" required>
+            </div>
+            <div class="form-group mt-2">
+                <input type="number" name="num_votos" placeholder="Quantidade de votos (mãos)" min="0" required>
+            </div>
+            <button type="submit" class="btn-primary mt-2">Registrar Votos</button>
+        </form>
+
+        <form action="/botc/apurar" method="POST" class="mt-2">
+            <button type="submit" class="btn-danger">Apurar Execução (Fim do Dia)</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel Principal</a>
+</main>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="header-context">
+    <h2>Eleição Federal 2026</h2>
+</header>
+<main class="box-content">
+    <p>Ordene os candidatos de acordo com sua preferência (1 = Maior prioridade):</p>
+    {% if erro %}
+        <div class="alert alert-danger">{{ erro }}</div>
+    {% endif %}
+    <form action="/australia/votar" method="POST">
+        <!-- O input hidden guardará a ordem gerada pelo drag and drop via JS futuro -->
+        <input type="hidden" name="ranking" id="ranking_field" value="">
+        
+        <ul class="lista-candidatos">
+            {% for candidato in candidatos %}
+            <li class="candidato-item">
+                <span class="drag-handle">☰</span>
+                <span class="nome">{{ candidato }}</span>
+                <input type="number" name="posicao_{{ candidato }}" class="posicao-input" min="1" max="{{ candidatos|length }}" placeholder="Posição" required>
+            </li>
+            {% endfor %}
+        </ul>
+        <button type="submit" class="btn-primary mt-2">Confirmar Cédula</button>
+        <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
+    </form>
+</main>
+{% endblock %}
