@@ -5,6 +5,23 @@ import pytest
 from src import EleicaoAssembleia
 from src.caco import OpcaoVoto
 
+# Verifica se está barrando nomes duplicados na presenca
+def test_presenca_duplicada():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+    ]
+
+    eleitores = ["Juh", "Samuel", "Juh"]
+
+    with pytest.raises(
+        ValueError,
+        match="não pode ser registrada mais de uma vez"
+    ):
+        EleicaoAssembleia(
+            alunos_cadastrados=alunos,
+            eleitores=eleitores,
+            duracao_ciclo=60
+        )
 
 # Verifica se está barrando corretamente não alunos
 def test_eleitor_nao_aluno():
