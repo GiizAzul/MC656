@@ -21,20 +21,25 @@ class EleicaoAssembleia(SistemaEleitoral):
 
     def __init__(self, alunos_cadastrados: list[str], eleitores: list[str], duracao_ciclo: float): #talvez checar duplicatas
 
+        alunos = set(alunos_cadastrados)
+
+        # verifica se há eleitores duplicados
+        if len(eleitores) != len(set(eleitores)):
+            raise ValueError("A presença de um participante não pode ser registrada mais de uma vez.")
+
+         # verifica se todos os eleitores são alunos cadastrados
+        for eleitor in eleitores:
+            if eleitor not in alunos:
+                raise ValueError(f"O eleitor '{eleitor}' não está cadastrado como aluno.")
+        
         # verifica quorum mínimo
-        num_alunos = len(alunos_cadastrados)
+        num_alunos = len(alunos)
         quorum = math.ceil(num_alunos/10)
         num_eleitores = len(eleitores)
 
         if num_eleitores < quorum:
             raise RuntimeError(f"Quórum mínimo não foi satisfeito: "f"são necessários pelo menos {quorum} eleitores.") 
         
-        # verifica se todos os eleitores são alunos cadastrados
-        alunos = set(alunos_cadastrados)
-
-        for eleitor in eleitores:
-            if eleitor not in alunos:
-                raise ValueError(f"O eleitor '{eleitor}' não está cadastrado como aluno.")
 
         if duracao_ciclo <= 0:
             raise ValueError("A duração do ciclo deve ser maior que zero.")
