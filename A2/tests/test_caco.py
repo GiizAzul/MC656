@@ -5,6 +5,7 @@ import pytest
 from src import EleicaoAssembleia
 from src.caco import OpcaoVoto
 
+
 # Verifica se está barrando nomes duplicados na presenca
 def test_presenca_duplicada():
     alunos = [
