@@ -19,23 +19,42 @@ class Estado(Enum):
 class EleicaoAssembleia(SistemaEleitoral):
     """"Classe para apuração utilizando modelo baseado nas assembleias do CACo."""
 
-    def __init__(self, alunos_cadastrados_ids: list[str], eleitores_ids: list[str], duracao_ciclo: float): #talvez checar duplicatas
+    def __init__(
+        self,
+        alunos_cadastrados_ids: list[str],
+        eleitores_ids: list[str],
+        duracao_ciclo: float,
+    ):
+        """Inicializa uma eleição da Assembleia do CACo."""
 
-        # verifica quorum mínimo
-        num_alunos = len(alunos_cadastrados_ids)
-        quorum = math.ceil(num_alunos/10)
+        alunos = set(alunos_cadastrados_ids)
+
+        # Verifica se há eleitores duplicados.
+        if len(eleitores_ids) != len(set(eleitores_ids)):
+            raise ValueError(
+                "A presença de um participante não pode ser "
+                "registrada mais de uma vez."
+            )
+
+        # Verifica se todos os eleitores são alunos cadastrados.
+        for eleitor_id in eleitores_ids:
+            if eleitor_id not in alunos:
+                raise ValueError(
+                    f"O User_ID '{eleitor_id}' não está cadastrado como aluno."
+                )
+
+        # Verifica o quórum mínimo.
+        num_alunos = len(alunos)
+        quorum = math.ceil(num_alunos / 10)
         num_eleitores = len(eleitores_ids)
 
         if num_eleitores < quorum:
-            raise RuntimeError(f"Quórum mínimo não foi satisfeito: "f"são necessários pelo menos {quorum} eleitores.") 
-        
-        # verifica se todos os eleitores são alunos cadastrados
-        alunos = set(alunos_cadastrados_ids)
+            raise RuntimeError(
+                f"Quórum mínimo não foi satisfeito: "
+                f"são necessários pelo menos {quorum} eleitores."
+            )
 
-        for eleitor_id in eleitores_ids:
-            if eleitor_id not in alunos:
-                raise ValueError(f"O User_ID '{eleitor_id}' não está cadastrado como aluno.")
-
+        # Verifica se a duração do ciclo é válida.
         if duracao_ciclo <= 0:
             raise ValueError("A duração do ciclo deve ser maior que zero.")
 
@@ -43,19 +62,19 @@ class EleicaoAssembleia(SistemaEleitoral):
         self.eleitores = set(eleitores_ids)
         self.duracao_ciclo = duracao_ciclo
 
-        # inicializa registro de quem já votou
+        # Inicializa o registro de quem já votou.
         self.votantes: set[str] = set()
 
-        # inicializa contadores
+        # Inicializa os contadores.
         self.contadores: dict[OpcaoVoto, int] = {
-                OpcaoVoto.APROVAR: 0,
-                OpcaoVoto.REJEITAR: 0,
-                OpcaoVoto.ABSTER: 0
+            OpcaoVoto.APROVAR: 0,
+            OpcaoVoto.REJEITAR: 0,
+            OpcaoVoto.ABSTER: 0,
         }
-        
-        # controle de estados e temporização
+
+        # Controla o estado e a temporização.
         self.estado = Estado.AGUARDANDO
-        self.inicio_votacao : float | None = None
+        self.inicio_votacao: float | None = None
 
     def iniciar_votacao(self) -> None:
         """Inicia ciclo de votação."""
