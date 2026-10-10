@@ -1,0 +1,616 @@
+from fastapi.testclient import TestClient
+
+from src.main import app
+
+# Inicializa o cliente de testes simulando um navegador
+client = TestClient(app)
+
+# Testes padrões de interface
+def test_renderizacao_telas_get():
+    """Cobre as linhas de renderização GET puras nos routers"""
+    
+    # Tela de Cadastro (auth_router)
+    assert client.get("/cadastro").status_code == 200
+    
+    # Tela de Votação da Austrália (australia_router)
+    client.cookies.set("sessao_usuario", "caio")
+    assert client.get("/australia/votar").status_code == 200
+    
+    # Tela da Assembleia (caco_router)
+    client.cookies.set("sessao_usuario", "julia")
+    assert client.get("/caco/assembleia").status_code == 200
+    
+    client.cookies.clear()
+
+def test_pagina_raiz_redireciona_para_login():
+    """A raiz do site ('/') deve renderizar a tela de login."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Sistema de votação" in response.text
+    assert "Identificação (RA/Usuário)" in response.text
+
+def test_acesso_negado_ao_dashboard_sem_login():
+    """Tentar acessar o painel sem um cookie de sessão válido retorna 302 ou expulsa."""
+    response = client.get("/dashboard", follow_redirects=False)
+    # A dependência levanta uma exceção de redirecionamento com código forçado 302
+    assert response.status_code == 302
+
+def test_fluxo_login_sucesso():
+    """Testa se o usuário mockado consegue logar e se recebe um cookie de sessão."""
+    dados_login = {
+        "username": "caio",
+        "senha": "senha123"
+    }
+    
+    # Faz o POST no formulário de login (sem seguir o redirecionamento automático)
+    response_login = client.post("/login", data=dados_login, follow_redirects=False)
+    
+    # O servidor deve responder com 302 (Found) redirecionando para o Dashboard
+    assert response_login.status_code == 302
+    assert response_login.headers["location"] == "/dashboard"
+    
+    # O cookie de sessão deve ter sido definido no navegador simulado
+    assert "sessao_usuario" in response_login.cookies
+    assert response_login.cookies["sessao_usuario"] == "caio"
+
+def test_fluxo_login_senha_incorreta():
+    """Testa se uma senha incorreta recarrega a tela com mensagem de erro."""
+    dados_login = {
+        "username": "caio",
+        "senha": "senha_errada_aqui"
+    }
+    
+    response = client.post("/login", data=dados_login)
+    
+    assert response.status_code == 200 # Continua na mesma página
+    assert "Erro: Senha incorreta." in response.text
+
+def test_fluxo_cadastro_e_acesso_dashboard():
+    """Simula o cadastro de um Estudadante do CACo e acesso à tela correta."""
+    dados_cadastro = {
+        "tipo_conta": "CACO_ESTUDANTE",
+        "nome_real": "Teste Silva",
+        "username": "testesilva",
+        "senha": "123",
+        "senha_confirma": "123",
+        "ra": "654321"
+    }
+    
+    # Realiza o cadastro
+    response_cadastro = client.post("/cadastro", data=dados_cadastro, follow_redirects=False)
+    assert response_cadastro.status_code == 302 # Redireciona para o dashboard
+    
+    # Acessa o dashboard usando os cookies ganhos no cadastro
+    client.cookies.update(response_cadastro.cookies)
+    response_dashboard = client.get("/dashboard")
+    
+    html = response_dashboard.text
+    assert response_dashboard.status_code == 200
+    
+    # Verifica se a variável do Jinja renderizou o nome corretamente
+    assert "Bem-vindo, Teste Silva!" in html
+    
+    # Verifica o roteamento polimórfico
+    # Como ele é estudante do CACo, NÃO deve ver a Eleição da Austrália
+    assert "Eleição Federal 2026" not in html
+    # Mas DEVE ver a assembleia
+    assert "Assembleia CACo" in html or "Pauta" in html
+
+    # Limpa os cookies para os próximos testes
+    client.cookies.clear()
+
+def test_roteamento_polimorfico_caio_australia():
+    """Verifica se o Caio (cadastrado no main.py como EleitorAustrália) só vê sua eleição."""
+    # Simula o cookie já existente sem precisar fazer o POST do login
+    client.cookies.set("sessao_usuario", "caio")
+    
+    response = client.get("/dashboard")
+    html = response.text
+    
+    assert "Eleição Federal 2026" in html
+    assert "Assembleia CACo" not in html
+    assert "Blood on the Clocktower" not in html
+
+def test_acesso_bloqueado_ao_painel_admin():
+    """Garante que usuários comuns (como o Caio, EleitorAustralia) não possam acessar a rota /admin."""
+    client.cookies.set("sessao_usuario", "caio")
+    response = client.get("/admin", follow_redirects=False)
+    
+    # O redirecionamento (302) joga o usuário de volta para o Dashboard, pois ele não é GESTAO nem STORYTELLER
+    assert response.status_code in  [302,307]
+    assert response.headers["location"] == "/dashboard"
+
+    client.cookies.clear()
+
+
+def test_acesso_liberado_ao_painel_admin():
+    """Garante que a Gestão (Julia) consiga acessar o painel administrativo."""
+    client.cookies.set("sessao_usuario", "julia")
+    response = client.get("/admin")
+    
+    assert response.status_code == 200
+    assert "Gerenciar Votações" in response.text
+
+    client.cookies.clear()
+
+def test_acesso_logout():
+    """Testa se o botão de logout apaga os cookies e redireciona."""
+    client.cookies.set("sessao_usuario", "caio")
+    response = client.get("/logout", follow_redirects=False)
+    
+    assert response.status_code in [302,307]
+    assert response.headers["location"] == "/"
+    
+    # A resposta de um logout deleta o cookie setando sua data de validade para o passado
+    # ou setando valor vazio.
+    cookie_str = response.headers.get("set-cookie", "")
+    assert "sessao_usuario" in cookie_str 
+    assert "expires" in cookie_str or "Max-Age=0" in cookie_str
+
+def test_rota_votar_australia():
+    """Simula o envio de uma cédula australiana ordenando os candidatos numericamente."""
+    client.cookies.set("sessao_usuario", "caio")
+    
+    # Simula o formulário web onde o usuário digitou as posições 1, 2 e 3
+    dados_voto = {
+        "posicao_Ana": "1",
+        "posicao_Beto": "2",
+        "posicao_Caio": "3"
+    }
+    response = client.post("/australia/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "voto registrado" in response.text.lower()
+    client.cookies.clear()
+    
+def test_rota_votar_caco():
+    """Simula o envio de um voto de assembleia (Aprovar)."""
+    client.cookies.set("sessao_usuario", "julia")
+    # A eleição precisa estar iniciada para o voto ser aceito
+    client.post("/caco/iniciar") 
+    
+    dados_voto = {"opcao": "APROVAR"}
+    response = client.post("/caco/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "Seu voto na assembleia foi contabilizado" in response.text
+    client.cookies.clear()
+
+def test_rota_votar_botc():
+    """Simula a ação de levantar a mão no BoTC."""
+    client.cookies.set("sessao_usuario", "leo")
+    
+    dados_voto = {"acao": "levantar_mao"}
+    response = client.post("/botc/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "Ação registrada" in response.text
+    client.cookies.clear()
+
+# Testes dependencias.py
+def test_dependencia_usuario_inexistente_no_mapa():
+    """Testa se a dependência lança 302 caso o cookie exista mas o username não esteja no mapa."""
+    client.cookies.set("sessao_usuario", "username_que_nao_existe")
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["location"] == "/"
+    client.cookies.clear()
+
+def test_dependencia_cookie_vazio():
+    """Testa o acesso sem o cookie."""
+    client.cookies.clear()
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code == 302
+
+def test_dependencia_usuario_deletado_do_banco():
+    """Cobre a linha do dependencias.py onde o ID existe no mapa de cookies, mas o usuário sumiu do banco principal."""
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Fantasma", "username": "fantasminha", "senha": "123", "senha_confirma": "123"})
+    
+    # Apaga o usuário do banco, mas deixa no mapa (simulando corrupção ou deleção no DB)
+    from src.main import app
+    user_id = app.state.banco_auth._mapa_usernames["fantasminha"]
+    del app.state.banco_auth._banco_por_id[user_id]
+    
+    client.cookies.set("sessao_usuario", "fantasminha")
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code in [302, 307] # Deve expulsar o usuário
+    client.cookies.clear()
+
+# Testes de auth_router.py 
+def test_cadastro_senhas_diferentes():
+    """Tenta cadastrar mas digita senhas divergentes."""
+    dados = {
+        "tipo_conta": "AUSTRALIA_ELEITOR",
+        "nome_real": "Erro Senha",
+        "username": "errosenha",
+        "senha": "123",
+        "senha_confirma": "321" # Diferente
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "Senhas não conferem" in response.text
+
+def test_cadastro_tipo_desconhecido():
+    """Tenta cadastrar enviando um tipo de conta malicioso/inexistente."""
+    dados = {
+        "tipo_conta": "TIPO_HACKER",
+        "nome_real": "Hacker",
+        "username": "hacker123",
+        "senha": "123",
+        "senha_confirma": "123"
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "Tipo de conta desconhecido" in response.text
+
+def test_cadastro_estudante_ra_invalido():
+    """Tenta cadastrar estudante sem passar o RA."""
+    dados = {
+        "tipo_conta": "CACO_ESTUDANTE",
+        "nome_real": "Sem RA",
+        "username": "semra",
+        "senha": "123",
+        "senha_confirma": "123",
+        "ra": "" # Vazio
+    }
+    response = client.post("/cadastro", data=dados)
+    assert response.status_code == 200
+    assert "RA inválido" in response.text
+
+def test_cadastro_estudante_ra_nao_numerico():
+    """Cobre a validação de erro de RA contendo letras no auth_router.py."""
+    dados = {"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Letras", "username": "letrasra", "senha": "123", "senha_confirma": "123", "ra": "ABCDEF"}
+    response = client.post("/cadastro", data=dados)
+    assert "RA inválido" in response.text
+
+def test_fraude_de_escopos_cross_router():
+    """Testa se as verificações de escopo expulsam intrusos também nas renderizações de telas."""
+    client.cookies.set("sessao_usuario", "caio") # Austrália tentando acessar CACo e BOTC
+    assert client.post("/caco/votar", data={"opcao": "APROVAR"}, follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/iniciar", follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/encerrar", follow_redirects=False).status_code in [302, 307]
+    assert client.get("/caco/resultados", follow_redirects=False).status_code in [403, 302, 307]
+    assert client.get("/caco/assembleia", follow_redirects=False).status_code in [302, 307] # NOVO
+    
+    assert client.post("/botc/registrar", data={"nomeado": "x", "num_votos": 1}, follow_redirects=False).status_code in [302, 307, 403]
+    assert client.post("/botc/apurar", follow_redirects=False).status_code in [302, 307, 403]
+    assert client.get("/botc/partida", follow_redirects=False).status_code in [302, 307] # NOVO
+    
+    client.cookies.set("sessao_usuario", "julia") # CACo tentando acessar Austrália
+    assert client.post("/australia/votar", data={"posicao_Candidato A": "1"}, follow_redirects=False).status_code in [302, 307]
+    assert client.get("/australia/votar", follow_redirects=False).status_code in [302, 307] # NOVO
+    client.cookies.clear()
+    
+# Testes caco_router.py
+def test_caco_acesso_deslogado():
+    """Tentativa de acessar a tela da assembleia sem login."""
+    client.cookies.clear()
+    response = client.get("/caco/assembleia", follow_redirects=False)
+    assert response.status_code == 302 # Redireciona para login
+
+def test_caco_acoes_gestao():
+    """Testa os botões de Iniciar, Encerrar e Resultados acessados por alguém da Gestão."""
+    client.cookies.set("sessao_usuario", "julia")
+
+    res_iniciar = client.post("/caco/iniciar")
+    assert res_iniciar.status_code == 200
+
+    res_resultados = client.get("/caco/resultados")
+    # Verifica a nova interface de barras de progresso
+    assert "Total de Votos Registrados" in res_resultados.text 
+
+    res_encerrar = client.post("/caco/encerrar")
+    assert "Votação da Assembleia encerrada" in res_encerrar.text
+    client.cookies.clear()
+
+def test_caco_acoes_gestao_bloqueadas():
+    """Garante que um Estudante ou Eleitor da Austrália não pode iniciar a assembleia."""
+    client.cookies.set("sessao_usuario", "caio") # EleitorAustrália
+    # O sistema redireciona intrusos para a página de login (302/307)
+    response = client.post("/caco/iniciar", follow_redirects=False)
+    assert response.status_code in [302, 307] 
+    client.cookies.clear()
+
+def test_cadastro_todos_os_tipos_restantes_e_autorizacao_caco():
+    """Cadastra os tipos restantes e testa a gestão."""
+    tipos_restantes = [
+        ("CACO_GESTAO", "novo_gestor_caco"), 
+        ("AUSTRALIA_CANDIDATO", "novo_candidato_aus"), 
+        ("BOTC_STORYTELLER", "novo_mestre_botc")
+    ]
+    for tipo, user in tipos_restantes:
+        dados = {
+            "tipo_conta": tipo,
+            "nome_real": f"Teste {user}",
+            "username": user,
+            "senha": "123",
+            "senha_confirma": "123"
+        }
+        client.post("/cadastro", data=dados)
+
+    client.post("/login", data={"username": "novo_gestor_caco", "senha": "123"})
+    client.cookies.set("sessao_usuario", "novo_gestor_caco")
+    
+    # Tenta iniciar a eleição para ter certeza que foi reconhecido
+    # Se ele foi bem cadastrado, iniciar a eleição não vai dar 403 nem 302, mas 200.
+    res_caco = client.post("/caco/iniciar")
+    assert res_caco.status_code == 200
+    client.cookies.clear()
+
+def test_caco_router_excecoes_internas():
+    """Aciona os blocos 'except Exception' do caco_router."""
+    client.cookies.set("sessao_usuario", "julia")
+    # Inicia e tenta iniciar de novo (Cai no except e retorna o template com erro ou redireciona)
+    client.post("/caco/iniciar")
+    res_iniciar2 = client.post("/caco/iniciar")
+    # A página retorna 200 OK porque é renderizado o template caco.html com o card de erro
+    assert res_iniciar2.status_code == 200 
+    
+    # Cria um gestor novo para não cair na trava de "você já votou"
+    client.post("/cadastro", data={"tipo_conta": "CACO_GESTAO", "nome_real": "Exception Maker", "username": "gestor_exc", "senha": "12", "senha_confirma": "12"})
+    client.post("/login", data={"username": "gestor_exc", "senha": "12"})
+    client.cookies.set("sessao_usuario", "gestor_exc")
+    # Tenta votar com enum quebrado (Gera KeyError na classe)
+    res_voto_errado = client.post("/caco/votar", data={"opcao": "FRAUDE"})
+    assert res_voto_errado.status_code == 200
+    
+    # Fazemos backup da eleição real
+    eleicao_backup = app.state.eleicao_caco
+    
+    # Criamos uma classe dummy que obrigatoriamente explode ao tentar encerrar
+    class MockEleicaoParaErro:
+        class MockEstado:
+            name = "TESTE"
+        estado = MockEstado()
+        
+        def encerrar_votacao(self):
+            raise RuntimeError("Explosão programada para o Coverage!")
+            
+    # Injeta a eleição sabotada no estado da aplicação
+    app.state.eleicao_caco = MockEleicaoParaErro()
+    
+    # Aciona a rota. O try chama o mock, explode, e desce direto para a exceção
+    client.post("/caco/encerrar")
+    
+    # Restaura a sanidade do sistema
+    app.state.eleicao_caco = eleicao_backup
+    client.cookies.clear()
+
+def test_caco_voto_invalido_gera_erro():
+    """Evita duplicidade de nome na suite e acerta o assert."""
+    # Garante que a votação está iniciada usando a conta Gestão
+    client.cookies.set("sessao_usuario", "novo_gestor")
+    client.post("/caco/iniciar")
+
+    # Usuário tenta votar uma opção falsa
+    client.cookies.set("sessao_usuario", "julia")
+    response = client.post("/caco/votar", data={"opcao": "NADA"})
+    assert response.status_code == 200
+    client.cookies.clear()
+
+def test_caco_estudante_tenta_acessar_gestao():
+    """Cobre a barreira de GESTAO para Estudantes Comuns do CACo no caco_router."""
+    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Est", "username": "estudante_comum", "senha": "123", "senha_confirma": "123", "ra": "111111"})
+    client.cookies.set("sessao_usuario", "estudante_comum")
+    assert client.post("/caco/iniciar", follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/encerrar", follow_redirects=False).status_code in [302, 307]
+    assert client.get("/caco/resultados", follow_redirects=False).status_code == 403
+    client.cookies.clear()
+
+def test_caco_votar_duas_vezes():
+    """Cobre o bloco if de voto duplo na assembleia do caco_router isolando o estado global."""
+    client.cookies.set("sessao_usuario", "julia")
+    
+    if not hasattr(app.state, "eleitores_caco_votaram"):
+        app.state.eleitores_caco_votaram = set()
+        
+    # Recupera o ID interno da julia do banco mockado
+    id_julia = app.state.banco_auth._mapa_usernames["julia"]
+    
+    # Adiciona artificialmente para simular que ela já votou antes
+    app.state.eleitores_caco_votaram.add(id_julia)
+    
+    # Submete o voto
+    res_duplo = client.post("/caco/votar", data={"opcao": "REJEITAR"})
+    
+    # A trava do router intercepta
+    assert "VOTO NEGADO" in res_duplo.text
+    
+    # Limpeza do estado para não poluir testes futuros
+    app.state.eleitores_caco_votaram.remove(id_julia)
+    client.cookies.clear()
+
+def test_caco_acessar_tela_assembleia_estudante():
+    """ Cobre o caso de acessar a tela da Assembleia como Estudante"""
+    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Estudante Sweep", "username": "estudante_sweep", "senha": "123", "senha_confirma": "123", "ra": "888888"})
+    client.post("/login", data={"username": "estudante_sweep", "senha": "123"})
+    client.cookies.set("sessao_usuario", "estudante_sweep")
+    
+    res_caco_get = client.get("/caco/assembleia")
+    assert res_caco_get.status_code == 200
+    # Como é estudante, a tela não deve ter os Controles da Gestão
+    assert "Controles da Gestão" not in res_caco_get.text
+    client.cookies.clear()
+    
+def test_caco_erro_em_resultados():
+    """Testa disparar o HTTPException 403 explicitamente na rota de resultados."""    
+    client.post("/cadastro", data={"tipo_conta": "CACO_ESTUDANTE", "nome_real": "Sniper CACo", "username": "sniper_caco", "senha": "123", "senha_confirma": "123", "ra": "999999"})
+    client.post("/login", data={"username": "sniper_caco", "senha": "123"})
+    client.cookies.set("sessao_usuario", "sniper_caco")
+    
+    res_403 = client.get("/caco/resultados", follow_redirects=False)
+    # A rota resultados devolve raise HTTPException(403) para quem não é gestão
+    assert res_403.status_code == 403
+    client.cookies.clear()    
+    
+# Testes botc_router.py
+def test_botc_acesso_deslogado():
+    client.cookies.clear()
+    response = client.get("/botc/partida", follow_redirects=False)
+    assert response.status_code == 302 # Redireciona
+
+def test_botc_acoes_storyteller():
+    """Testa o registro de votos e a apuração da forca feitos pelo mestre."""
+    client.cookies.set("sessao_usuario", "leo") # leo é Jogador, precisaremos de um storyteller
+    # Cadastrando um Mestre temporário para o teste
+    dados_mestre = {
+        "tipo_conta": "BOTC_STORYTELLER",
+        "nome_real": "Mestre Supremo",
+        "username": "mestresup",
+        "senha": "123",
+        "senha_confirma": "123"
+    }
+    client.post("/cadastro", data=dados_mestre)
+    client.cookies.set("sessao_usuario", "mestresup")
+    
+    res_registro = client.post("/botc/registrar", data={"nomeado": "Leo", "num_votos": 3})
+    assert "3 votos registrados" in res_registro.text
+    
+    res_apurar = client.post("/botc/apurar")
+    assert "executado" in res_apurar.text
+    client.cookies.clear()
+
+def test_botc_acoes_storyteller_bloqueadas():
+    """Um jogador não pode apurar votos do BoTC."""
+    # Cadastrando um jogador temporário para garantir que ele existe no banco do teste
+    dados_jogador = {
+        "tipo_conta": "BOTC_JOGADOR",
+        "nome_real": "Leo Jogador",
+        "username": "leojogador",
+        "senha": "123",
+        "senha_confirma": "123"
+    }
+    client.post("/cadastro", data=dados_jogador)
+    client.cookies.set("sessao_usuario", "leojogador") 
+    
+    response = client.post("/botc/apurar")
+    assert response.status_code == 403
+    assert "Apenas o Storyteller pode" in response.text
+    client.cookies.clear()
+
+def test_botc_router_excecoes_internas():
+    """Aciona os blocos 'except Exception' do botc_router garantindo que o autor é Storyteller."""
+    # Cadastra um Mestre dinamicamente para não depender da ordem em que os testes rodam
+    client.post("/cadastro", data={
+        "tipo_conta": "BOTC_STORYTELLER",
+        "nome_real": "Mestre Isolado",
+        "username": "mestre_teste_isolado",
+        "senha": "123",
+        "senha_confirma": "123"
+    })
+    
+    # Faz o login para obter as credenciais reais
+    client.post("/login", data={"username": "mestre_teste_isolado", "senha": "123"})
+    client.cookies.set("sessao_usuario", "mestre_teste_isolado") 
+    
+    # Manda um voto absurdo (Cai no ValueError da classe e renderiza a tela com o card de erro)
+    dados = {"nomeado": "Fantasma", "num_votos": 9999}
+    response = client.post("/botc/registrar", data=dados)
+    
+    # Agora sim, como ele é Storyteller, a requisição passa pelo 403 e chega no try/except (200 OK HTML)
+    assert response.status_code == 200
+    # Verifica apenas se a página carregou adequadamente para lidar com o erro
+    assert "voltar ao dashboard" in response.text.lower() or "botc" in response.text.lower()
+    client.cookies.clear()
+
+def test_botc_jogador_tenta_registrar_votos():
+    """Cobre a linha do botc_router onde um jogador comum (não storyteller) tenta registrar votos."""
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Invasor", "username": "jogador_invasor", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "jogador_invasor")
+    response = client.post("/botc/registrar", data={"nomeado": "X", "num_votos": 1})
+    assert response.status_code == 403
+    client.cookies.clear()
+
+def test_botc_apurar_sem_voto():
+    """Cobre o caso de apurar sem nenhum voto da cidade em botc"""
+    # Cadastra o storyteller e garante a sessão limpa
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Mestre Sweep", "username": "mestre_sweep", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "mestre_sweep", "senha": "123"})
+    client.cookies.set("sessao_usuario", "mestre_sweep")
+    
+    res_botc = client.post("/botc/apurar")
+    # Testa a string exata gerada pelo 'else' da variável 'mensagem' no botc_router.py
+    assert "Ninguém foi executado" in res_botc.text
+    client.cookies.clear()
+    
+def test_botc_renderiza_tela_com_voto():
+    """Testa renderizar a tela de partida quando já existem votos"""    
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Sniper BoTC", "username": "sniper_botc", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "sniper_botc", "senha": "123"})
+    client.cookies.set("sessao_usuario", "sniper_botc")
+    
+    # Registra um voto válido para forçar o sistema a criar o atributo
+    client.post("/botc/registrar", data={"nomeado": "Alvo", "num_votos": 1})
+    # Agora acessa a partida (vai engatilhar a leitura dos votos)
+    assert client.get("/botc/partida").status_code == 200
+    client.cookies.clear()    
+    
+# Testes australia_router.py
+def test_australia_acesso_deslogado():
+    client.cookies.clear()
+    response = client.get("/australia/votar", follow_redirects=False)
+    assert response.status_code == 302 # Redireciona
+
+def test_australia_router_excecoes_internas():
+    """Aciona os blocos 'except ValueError' do australia_router."""
+    client.cookies.set("sessao_usuario", "caio")
+    # Vota em um único candidato (Gera ValueError por tamanho, caindo no except)
+    dados = {"posicao_Candidato A": "1"}
+    response = client.post("/australia/votar", data=dados)
+    # Backend retorna 200 OK com o template australia.html + erro na tela
+    assert response.status_code == 200
+    client.cookies.clear()
+
+def test_australia_rejeita_posicoes_repetidas():
+    """Garante que a rota da Austrália barra cédulas com números repetidos (ex: tudo 1)."""
+    # Cria um eleitor novo
+    client.post("/cadastro", data={
+        "tipo_conta": "AUSTRALIA_ELEITOR",
+        "nome_real": "Eleitor Repetido",
+        "username": "eleitor_repetido",
+        "senha": "123",
+        "senha_confirma": "123"
+    })
+    
+    # Faz o login com ele
+    client.post("/login", data={"username": "eleitor_repetido", "senha": "123"})
+    client.cookies.set("sessao_usuario", "eleitor_repetido")
+
+    # Vota colocando dois candidatos em 1º lugar 
+    dados_voto = {
+        "posicao_Candidato A": "1",
+        "posicao_Candidato B": "1",
+        "posicao_Candidato C": "2"
+    }
+    response = client.post("/australia/votar", data=dados_voto)
+    
+    assert response.status_code == 200
+    assert "repetir" in response.text.lower() or "inválidas" in response.text.lower()
+    client.cookies.clear()
+
+def test_australia_votar_duas_vezes():
+    """Cobre o bloco if de voto duplo na eleição do australia_router."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Duplo Aus", "username": "voto_duplo_aus", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "voto_duplo_aus")
+    
+    # Vota a 1ª vez corretamente
+    dados_voto = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Candidato C": "3"}
+    client.post("/australia/votar", data=dados_voto)
+    
+    # Tenta submeter de novo
+    res_duplo = client.post("/australia/votar", data=dados_voto)
+    assert "já registrou seu voto nesta eleição" in res_duplo.text
+    client.cookies.clear()
+
+def test_australia_votar_sem_digito():
+    """ Cobre a condição Falsa do 'valor.strip().isdigit()' e o 'startswith"""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Sweep", "username": "aus_sweep", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "aus_sweep", "senha": "123"})
+    client.cookies.set("sessao_usuario", "aus_sweep")
+    
+    # Envia lixo proposital: um campo com outro nome e um campo numérico com 'letras'
+    dados_aus = {"campo_hacker": "1", "posicao_Candidato A": "nao_sou_numero"}
+    res_aus = client.post("/australia/votar", data=dados_aus)
+    assert res_aus.status_code == 200
+    assert "erro" in res_aus.text.lower()
+    client.cookies.clear()

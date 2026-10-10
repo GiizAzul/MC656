@@ -19,8 +19,8 @@ def test_presenca_duplicada():
         match="não pode ser registrada mais de uma vez"
     ):
         EleicaoAssembleia(
-            alunos_cadastrados=alunos,
-            eleitores=eleitores,
+            alunos_cadastrados_ids=alunos,
+            eleitores_ids=eleitores,
             duracao_ciclo=60
         )
 
@@ -37,7 +37,7 @@ def test_eleitor_nao_aluno():
 
     with pytest.raises(
         ValueError,
-        match="O eleitor 'PessoaFalsa' não está cadastrado como aluno."
+        match="O User_ID 'PessoaFalsa' não está cadastrado como aluno."
     ):
         EleicaoAssembleia(alunos, eleitores, 60)
 
@@ -184,6 +184,14 @@ def test_voto_unico():
     ):
         eleicao.registrar_voto('Juh', OpcaoVoto.REJEITAR)
 
+def test_eleitor_nao_autorizado():
+    """Verifica se o sistema impede votos de alunos que não estão na lista de eleitores daquela pauta."""
+    eleicao = criar_eleicao()
+    eleicao.iniciar_votacao()
+    
+    # 'Ana' é uma aluna cadastrada, mas não foi passada na lista de eleitores no criar_eleicao()
+    with pytest.raises(ValueError, match="Usuário não autorizado a votar nesta assembleia."):
+        eleicao.registrar_voto('Ana', OpcaoVoto.APROVAR)
 
 # Testa se barra votos antes do ínico da votacão
 def test_voto_antes_do_inicio():

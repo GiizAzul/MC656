@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="header-context caco-theme">
+    <h2>Assembleia do CACo</h2>
+    <p>Status atual: <strong>{{ estado_eleicao }}</strong></p>
+</header>
+<main class="box-content text-center">
+    <p>Aprovação do novo estatuto de representação discente.</p>
+
+    {% if erro %}
+        <div class="alert alert-danger">{{ erro }}</div>
+    {% endif %}
+
+    <!-- OPÇÕES DA GESTÃO -->
+    {% if is_gestao %}
+        <div class="controles-gestao">
+            <h4>Controles da Gestão</h4>
+            <div class="botoes-gestao">
+                <form action="/caco/iniciar" method="POST" class="form-gestao">
+                    <button type="submit" class="btn-success" {% if estado_eleicao != 'AGUARDANDO' %}disabled{% endif %}>Iniciar Votação</button>
+                </form>
+                <form action="/caco/encerrar" method="POST" class="form-gestao">
+                    <button type="submit" class="btn-danger" {% if estado_eleicao != 'VOTACAO' %}disabled{% endif %}>Encerrar Votação</button>
+                </form>
+                <form action="/caco/resultados" method="GET" class="form-gestao">
+                    <button type="submit" class="btn-primary">Ver Resultados</button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- OPÇÕES DO ELEITOR -->
+    {% if estado_eleicao == 'VOTACAO' %}
+        <form action="/caco/votar" method="POST" class="botoes-votacao mt-2 mb-2">
+            <button type="submit" name="opcao" value="APROVAR" class="btn-success">A Favor</button>
+            <button type="submit" name="opcao" value="REJEITAR" class="btn-danger">Contra</button>
+            <button type="submit" name="opcao" value="ABSTER" class="btn-neutral">Abster-se</button>
+        </form>
+    {% elif estado_eleicao == 'AGUARDANDO' %}
+        <p class="status-mensagem">Aguarde a gestão iniciar a votação.</p>
+    {% else %}
+        <p class="status-mensagem">A votação já foi encerrada.</p>
+    {% endif %}
+
+    <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
+</main>
+{% endblock %}

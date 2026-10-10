@@ -1,0 +1,12 @@
+# Tests
+pytest
+pytest-cov
+
+# lint
+ruff
+
+# Front-end
+fastapi[standard]
+jinja2 
+python-multipart 
+httpx2

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="header-context text-center">
+    <h2>Resultados da Assembleia</h2>
+    <p>Status: <strong>{{ estado }}</strong></p>
+</header>
+
+<main class="box-content">
+    <h3 class="total-votos text-center">Total de Votos Registrados: {{ total_votos }}</h3>
+
+    <div class="resultados-container">
+        <div class="resultado-item">
+            <div class="resultado-header">
+                <strong>A Favor (Aprovar)</strong>
+                <span>{{ contadores['APROVAR'] }} votos</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill fill-success" style="width: {% if total_votos > 0 %}{{ (contadores['APROVAR'] / total_votos) * 100 }}{% else %}0{% endif %}%;"></div>
+            </div>
+        </div>
+
+        <div class="resultado-item">
+            <div class="resultado-header">
+                <strong>Contra (Rejeitar)</strong>
+                <span>{{ contadores['REJEITAR'] }} votos</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill fill-danger" style="width: {% if total_votos > 0 %}{{ (contadores['REJEITAR'] / total_votos) * 100 }}{% else %}0{% endif %}%;"></div>
+            </div>
+        </div>
+
+        <div class="resultado-item">
+            <div class="resultado-header">
+                <strong>Abstenções</strong>
+                <span>{{ contadores['ABSTER'] }} votos</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill fill-neutral" style="width: {% if total_votos > 0 %}{{ (contadores['ABSTER'] / total_votos) * 100 }}{% else %}0{% endif %}%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <a href="/caco/assembleia" class="btn-primary mt-2">Voltar à Assembleia</a>
+</main>
+{% endblock %}
