@@ -19,43 +19,62 @@ class Estado(Enum):
 class EleicaoAssembleia(SistemaEleitoral):
     """"Classe para apuração utilizando modelo baseado nas assembleias do CACo."""
 
-    def __init__(self, alunos_cadastrados: list[str], eleitores: list[str], duracao_ciclo: float): #talvez checar duplicatas
+    def __init__(
+        self,
+        alunos_cadastrados_ids: list[str],
+        eleitores_ids: list[str],
+        duracao_ciclo: float,
+    ):
+        """Inicializa uma eleição da Assembleia do CACo."""
 
-        # verifica quorum mínimo
-        num_alunos = len(alunos_cadastrados)
-        quorum = math.ceil(num_alunos/10)
-        num_eleitores = len(eleitores)
+        alunos = set(alunos_cadastrados_ids)
+
+        # Verifica se há eleitores duplicados.
+        if len(eleitores_ids) != len(set(eleitores_ids)):
+            raise ValueError(
+                "A presença de um participante não pode ser "
+                "registrada mais de uma vez."
+            )
+
+        # Verifica se todos os eleitores são alunos cadastrados.
+        for eleitor_id in eleitores_ids:
+            if eleitor_id not in alunos:
+                raise ValueError(
+                    f"O User_ID '{eleitor_id}' não está cadastrado como aluno."
+                )
+
+        # Verifica o quórum mínimo.
+        num_alunos = len(alunos)
+        quorum = math.ceil(num_alunos / 10)
+        num_eleitores = len(eleitores_ids)
 
         if num_eleitores < quorum:
-            raise RuntimeError(f"Quórum mínimo não foi satisfeito: "f"são necessários pelo menos {quorum} eleitores.") 
-        
-        # verifica se todos os eleitores são alunos cadastrados
-        alunos = set(alunos_cadastrados)
+            raise RuntimeError(
+                f"Quórum mínimo não foi satisfeito: "
+                f"são necessários pelo menos {quorum} eleitores."
+            )
 
-        for eleitor in eleitores:
-            if eleitor not in alunos:
-                raise ValueError(f"O eleitor '{eleitor}' não está cadastrado como aluno.")
-
+        # Verifica se a duração do ciclo é válida.
         if duracao_ciclo <= 0:
             raise ValueError("A duração do ciclo deve ser maior que zero.")
 
         self.alunos_cadastrados = alunos
-        self.eleitores = set(eleitores)
+        self.eleitores = set(eleitores_ids)
         self.duracao_ciclo = duracao_ciclo
 
-        # inicializa registro de quem já votou
+        # Inicializa o registro de quem já votou.
         self.votantes: set[str] = set()
 
-        # inicializa contadores
+        # Inicializa os contadores.
         self.contadores: dict[OpcaoVoto, int] = {
-                OpcaoVoto.APROVAR: 0,
-                OpcaoVoto.REJEITAR: 0,
-                OpcaoVoto.ABSTER: 0
+            OpcaoVoto.APROVAR: 0,
+            OpcaoVoto.REJEITAR: 0,
+            OpcaoVoto.ABSTER: 0,
         }
-        
-        # controle de estados e temporização
+
+        # Controla o estado e a temporização.
         self.estado = Estado.AGUARDANDO
-        self.inicio_votacao : float | None = None
+        self.inicio_votacao: float | None = None
 
     def iniciar_votacao(self) -> None:
         """Inicia ciclo de votação."""
@@ -82,7 +101,7 @@ class EleicaoAssembleia(SistemaEleitoral):
 
         return tempo_decorrido >= self.duracao_ciclo
  
-    def registrar_voto(self, eleitor:str, opcao: OpcaoVoto) -> None:
+    def registrar_voto(self, eleitor_id:str, opcao: OpcaoVoto) -> None:
         """Registra o voto de um eleitor"""
 
         # verifica se está em estado de votação
@@ -90,11 +109,14 @@ class EleicaoAssembleia(SistemaEleitoral):
             raise RuntimeError("Não existe um ciclo de votação ativo.")
 
         # garante voto único
-        if eleitor in self.votantes:
+        if eleitor_id in self.votantes:
             raise ValueError("O eleitor já registrou um voto nesta votação.") # value error?
 
+        if eleitor_id not in self.eleitores:
+            raise ValueError("Usuário não autorizado a votar nesta assembleia.")
+
         self.contadores[opcao] += 1
-        self.votantes.add(eleitor)
+        self.votantes.add(eleitor_id)
 
     def encerrar_votacao(self) -> None:
         """Encerra ciclo de votação."""

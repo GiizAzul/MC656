@@ -44,7 +44,6 @@ def decidir_tipo(escolha: str) -> TipoConta | None:
 
 def construir_usuario(
     tipo: TipoConta,
-    id_: int,
     username: str,
     senha: str,
     nome_real: str,
@@ -54,19 +53,19 @@ def construir_usuario(
     if tipo == TipoConta.CACO_ESTUDANTE:
         if ra is None:
             raise ValueError("RA é obrigatório para contas de estudante do CACo.")
-        return EstudanteCACo(id_, username, senha, nome_real, ra)
+        return EstudanteCACo(username, senha, nome_real, ra)
     if tipo == TipoConta.CACO_GESTAO:
-        return GestaoCACo(id_, username, senha, nome_real)
+        return GestaoCACo(username, senha, nome_real)
     if tipo == TipoConta.AUSTRALIA_ELEITOR:
-        return EleitorAustralia(id_, username, senha, nome_real)
+        return EleitorAustralia(username, senha, nome_real)
     if tipo == TipoConta.AUSTRALIA_CANDIDATO:
-        return CandidatoAustralia(id_, username, senha, nome_real)
+        return CandidatoAustralia(username, senha, nome_real)
     if tipo == TipoConta.BOTC_JOGADOR:
-        return JogadorBOTC(id_, username, senha, nome_real)
-    return StoryTellerBOTC(id_, username, senha, nome_real)
+        return JogadorBOTC(username, senha, nome_real)
+    return StoryTellerBOTC(username, senha, nome_real)
 
 
-def tela_cadastro(servico: ServicoAutenticacao, proximo_id: int) -> Usuario | None:
+def tela_cadastro(servico: ServicoAutenticacao) -> Usuario | None:
     """Cria uma nova conta: escolhe o tipo, coleta os dados e registra."""
     cli_utils.imprimir_titulo("Criar conta")
     cli_utils.imprimir_menu([(tipo.value, _NOMES_TIPO[tipo]) for tipo in TipoConta])
@@ -108,7 +107,7 @@ def tela_cadastro(servico: ServicoAutenticacao, proximo_id: int) -> Usuario | No
                 continue
             break
 
-    novo_usuario = construir_usuario(tipo, proximo_id, username, senha, nome_real, ra)
+    novo_usuario = construir_usuario(tipo, username, senha, nome_real, ra)
 
     try:
         servico.registrar(novo_usuario)

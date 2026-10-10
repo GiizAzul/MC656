@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="header-context botc-theme">
+    <h2>Blood on the Clocktower - Partida #12</h2>
+</header>
+<main class="box-content">
+    <h3 class="text-center">Nomeação: Jogador X</h3>
+    
+    <div class="roda-jogadores">
+        {% for jog in jogadores %}
+        <div class="jogador-card {% if 'Morto' in jog.status %}morto{% endif %}">
+            <span>{{ jog.nome }}</span>
+            <small>{{ jog.status }}</small>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if erro %}
+        <div class="alert alert-danger">{{ erro }}</div>
+    {% endif %}
+    
+    <form action="/botc/votar" method="POST" class="botoes-votacao text-center mt-2">
+        <button type="submit" name="acao" value="levantar_mao" class="btn-primary">Levantar a Mão</button>
+        <button type="submit" name="acao" value="abaixar_mao" class="btn-secondary">Abaixar a Mão</button>
+    </form>
+    <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
+</main>
+{% endblock %}

@@ -1,0 +1,213 @@
+:root {
+    --bg-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --text-main: #333333;
+    --primary: #1a1a1a;
+    --primary-hover: #404040;
+    --success: #28a745;
+    --danger: #dc3545;
+    --neutral: #ffc107;
+    --border-radius: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; padding: 2rem; }
+
+.container { width: 100%; max-width: 600px; }
+
+/* Box genérica para login e telas */
+.login-box, .box-content { background: var(--card-bg); padding: 2rem; border-radius: var(--border-radius); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+h1, h2, h3 { text-align: center; margin-bottom: 1.5rem; }
+.text-center { text-align: center; }
+.mt-2 { margin-top: 1rem; }
+
+/* Botões */
+button, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-neutral {
+    display: inline-block; width: 100%; padding: 0.8rem; border: none; border-radius: var(--border-radius);
+    font-size: 1rem; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; transition: 0.2s;
+}
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-secondary { background: #e0e0e0; color: var(--text-main); }
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-neutral { background: var(--neutral); color: var(--text-main); }
+
+/* Austrália List */
+.lista-candidatos { list-style: none; margin-bottom: 1.5rem; }
+.candidato-item { display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #ddd; border-radius: var(--border-radius); margin-bottom: 0.5rem; background: #fafafa; }
+.posicao-input { width: 60px; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; text-align: center; }
+
+/* BoTC Roda */
+.roda-jogadores { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin: 2rem 0; }
+.jogador-card { border: 2px solid var(--primary); padding: 1rem; border-radius: 50%; width: 100px; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 0.9rem; }
+.jogador-card.morto { border-color: var(--danger); opacity: 0.6; background-color: #ffe6e6; }
+
+/* CACo Assembleia e Controles */
+.botoes-votacao { display: flex; gap: 1rem; justify-content: space-between; flex-direction: column; }
+@media(min-width: 500px) { .botoes-votacao { flex-direction: row; } }
+
+.controles-gestao { 
+    margin: 1.5rem 0; 
+    padding: 1rem; 
+    border: 1px dashed #ccc; 
+    border-radius: var(--border-radius); 
+}
+.botoes-gestao { 
+    display: flex; 
+    gap: 1rem; 
+    justify-content: center; 
+    margin-top: 1rem; 
+}
+.form-gestao { flex: 1; }
+
+.status-mensagem { 
+    margin: 2rem 0; 
+    color: #777; 
+}
+
+/* Resultados e Barras de Progresso */
+
+.total-votos {
+    margin-bottom: 2rem;
+    color: var(--text-main);
+}
+
+.resultados-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.resultado-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.resultado-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+    color: var(--text-main);
+}
+
+.progress-bar-bg {
+    background-color: #eee;
+    border-radius: var(--border-radius);
+    height: 20px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: var(--border-radius);
+    /* Adiciona uma animação suave quando a barra cresce */
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fill-success {
+    background-color: var(--success);
+}
+
+.fill-danger {
+    background-color: var(--danger);
+}
+
+.fill-neutral {
+    background-color: var(--neutral);
+}
+
+/* Utilitários de Margem */
+.mb-2 { margin-bottom: 2rem; }
+
+/* Estado Desabilitado para Botões Globais */
+button:disabled { 
+    opacity: 0.5; 
+    cursor: not-allowed; 
+}
+
+/* Estilo para os inputs de texto e senha */
+.form-control, input[type="text"], input[type="password"], input[type="number"], select {
+    width: 100%;
+    padding: 0.8rem;
+    margin-top: 0.3rem;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    background-color: #fafafa;
+}
+
+.form-control:focus, input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: #fff;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.form-group label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Estilo para as abas (Tabs) Entrar / Cadastrar */
+.tabs-container {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #eee;
+}
+
+.btn-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 0.8rem;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    color: #777;
+}
+
+.btn-tab.active {
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    background-color: #f9f9f9;
+}
+
+.btn-tab.inactive:hover {
+    background-color: #f0f0f0;
+}
+
+/* Alertas de Erro e Sucesso */
+.alert {
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid transparent;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}

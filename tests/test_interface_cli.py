@@ -145,13 +145,12 @@ def test_sessao_valores_padrao() -> None:
     assert sessao.candidatos_australia == []
     assert sessao.cedulas_australia == []
     assert sessao.sistema_botc is None
-    assert sessao.proximo_id_usuario == 100
     assert sessao.esta_logado() is False
 
 
 def test_sessao_logar_e_deslogar() -> None:
     sessao = Sessao()
-    usuario = JogadorBOTC(1, "jogador", "senha", "Jogador Um")
+    usuario = JogadorBOTC("jogador", "senha", "Jogador Um")
 
     sessao.logar(usuario)
     assert sessao.esta_logado() is True
@@ -201,7 +200,7 @@ def test_tela_boas_vindas_repete_ate_opcao_valida(
 @pytest.fixture
 def servico_com_jogador() -> ServicoAutenticacao:
     servico = ServicoAutenticacao()
-    servico.registrar(JogadorBOTC(1, "joao", "senha123", "João"))
+    servico.registrar(JogadorBOTC("joao", "senha123", "João"))
     return servico
 
 
@@ -273,20 +272,20 @@ def test_decidir_tipo_invalido() -> None:
 def test_construir_usuario_tipos_sem_ra(
     tipo: TipoConta, classe_esperada: type, escopo_esperado: str
 ) -> None:
-    usuario = construir_usuario(tipo, 1, "user", "senha", "Nome Completo")
+    usuario = construir_usuario(tipo, "user", "senha", "Nome Completo")
     assert isinstance(usuario, classe_esperada)
     assert usuario.escopo == escopo_esperado
 
 
 def test_construir_usuario_estudante_caco_com_ra() -> None:
-    usuario = construir_usuario(TipoConta.CACO_ESTUDANTE, 2, "aluno", "senha", "Aluno", ra=123456)
+    usuario = construir_usuario(TipoConta.CACO_ESTUDANTE, "aluno", "senha", "Aluno", ra=123456)
     assert isinstance(usuario, EstudanteCACo)
     assert usuario.ra == 123456
 
 
 def test_construir_usuario_estudante_caco_sem_ra_falha() -> None:
     with pytest.raises(ValueError, match="RA é obrigatório"):
-        construir_usuario(TipoConta.CACO_ESTUDANTE, 2, "aluno", "senha", "Aluno")
+        construir_usuario(TipoConta.CACO_ESTUDANTE, "aluno", "senha", "Aluno")
 
 
 def test_tela_cadastro_tipo_invalido(
@@ -295,7 +294,7 @@ def test_tela_cadastro_tipo_invalido(
     servico = ServicoAutenticacao()
     _patch_inputs(monkeypatch, ["99"])
 
-    resultado = tela_cadastro(servico, 100)
+    resultado = tela_cadastro(servico)
 
     assert resultado is None
     assert "Tipo de conta inválido." in capsys.readouterr().out
@@ -327,7 +326,7 @@ def test_tela_cadastro_fluxo_completo_estudante_com_retries(
         # 3ª tentativa: senhas batem -> segue
     )
 
-    usuario = tela_cadastro(servico, 100)
+    usuario = tela_cadastro(servico)
 
     saida = capsys.readouterr().out
     assert "A senha não pode ser vazia." in saida
@@ -339,7 +338,7 @@ def test_tela_cadastro_fluxo_completo_estudante_com_retries(
     assert usuario is not None
     assert isinstance(usuario, EstudanteCACo)
     assert usuario.ra == 123456
-    assert usuario.id == 100
+    assert isinstance(usuario.id, str)
     # o serviço realmente registrou o novo usuário
     assert servico.login("novo_user", "123456").nome_real == "Fulano de Tal"
 
@@ -348,12 +347,12 @@ def test_tela_cadastro_username_duplicado(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     servico = ServicoAutenticacao()
-    servico.registrar(GestaoCACo(1, "existente", "senha", "Já Existe"))
+    servico.registrar(GestaoCACo("existente", "senha", "Já Existe"))
 
     _patch_inputs(monkeypatch, ["2", "existente", "Outra Pessoa"])
     _patch_getpass(monkeypatch, "src.cli.telas.cadastro.getpass", ["senha123", "senha123"])
 
-    resultado = tela_cadastro(servico, 200)
+    resultado = tela_cadastro(servico)
 
     assert resultado is None
     assert "[ERRO]" in capsys.readouterr().out
@@ -368,7 +367,7 @@ def test_tela_cadastro_conta_nao_estudante_nao_pede_ra(
     _patch_inputs(monkeypatch, ["2", "gestor_novo", "Gestor Novo"])
     _patch_getpass(monkeypatch, "src.cli.telas.cadastro.getpass", ["senha123", "senha123"])
 
-    usuario = tela_cadastro(servico, 300)
+    usuario = tela_cadastro(servico)
 
     assert isinstance(usuario, GestaoCACo)
     assert not hasattr(usuario, "ra")
@@ -413,7 +412,7 @@ def test_decidir_opcao_invalida() -> None:
 def test_tela_selecao_contexto_repete_ate_opcao_valida(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    aluno = EstudanteCACo(1, "aluno", "senha", "Aluno Teste", 123456)
+    aluno = EstudanteCACo("aluno", "senha", "Aluno Teste", 123456)
     _patch_inputs(monkeypatch, ["9", "1"])
 
     resultado = tela_selecao_contexto(aluno)
@@ -423,7 +422,7 @@ def test_tela_selecao_contexto_repete_ate_opcao_valida(
 
 
 def test_tela_selecao_contexto_logout(monkeypatch: pytest.MonkeyPatch) -> None:
-    eleitor = EleitorAustralia(1, "eleitor", "senha", "Eleitor Teste")
+    eleitor = EleitorAustralia("eleitor", "senha", "Eleitor Teste")
     _patch_inputs(monkeypatch, ["0"])
 
     assert tela_selecao_contexto(eleitor) == OpcaoContexto.LOGOUT
@@ -478,7 +477,8 @@ def test_tela_caco_fluxo_completo_gestao(
     capsys: pytest.CaptureFixture[str],
     eleicao_caco: EleicaoAssembleia,
 ) -> None:
-    gestor = GestaoCACo(1, "gestor", "senha", "Gestor Um")
+    gestor = GestaoCACo("gestor", "senha", "Gestor Um")
+    gestor._id = "a"
     _patch_inputs(
         monkeypatch,
         [
@@ -509,7 +509,7 @@ def test_tela_caco_votar_opcao_invalida(
     capsys: pytest.CaptureFixture[str],
     eleicao_caco: EleicaoAssembleia,
 ) -> None:
-    aluno = EstudanteCACo(1, "a", "senha", "Aluno A", 111111)
+    aluno = EstudanteCACo("a", "senha", "Aluno A", 111111)
     eleicao_caco.iniciar_votacao()
     _patch_inputs(monkeypatch, ["1", "9", "0"])  # votar -> opção de voto inválida -> voltar
 
@@ -523,7 +523,7 @@ def test_tela_caco_iniciar_duas_vezes_mostra_erro(
     capsys: pytest.CaptureFixture[str],
     eleicao_caco: EleicaoAssembleia,
 ) -> None:
-    gestor = GestaoCACo(1, "gestor", "senha", "Gestor Um")
+    gestor = GestaoCACo("gestor", "senha", "Gestor Um")
     eleicao_caco.iniciar_votacao()  # já iniciada por fora
     _patch_inputs(monkeypatch, ["3", "0"])  # tenta iniciar de novo -> voltar
 
@@ -539,7 +539,7 @@ def test_tela_caco_estudante_nao_ve_opcoes_de_gestao(
 ) -> None:
     """Como INICIAR não está nas ações do estudante,
     escolher "3" deve ser tratado como inválido."""
-    aluno = EstudanteCACo(1, "a", "senha", "Aluno A", 111111)
+    aluno = EstudanteCACo("a", "senha", "Aluno A", 111111)
     _patch_inputs(monkeypatch, ["3", "0"])
 
     tela_caco(eleicao_caco, aluno)
@@ -600,7 +600,7 @@ def test_tela_australia_fluxo_completo(
 ) -> None:
     candidatos = ["Ana", "Beto", "Caio"]
     cedulas: list[list[str]] = []
-    usuario = EleitorAustralia(1, "eleitor", "senha", "Eleitor Um")
+    usuario = EleitorAustralia("eleitor", "senha", "Eleitor Um")
 
     _patch_inputs(
         monkeypatch,
@@ -635,7 +635,7 @@ def test_tela_australia_apurar_com_cedulas_invalidas_mostra_erro(
     lança `ValueError` na apuração e a tela deve tratá-lo mostrando uma mensagem de erro."""
     candidatos = ["Ana", "Beto", "Caio"]
     cedulas_invalidas = [["Ana", "Ninguem", "Caio"]]
-    usuario = EleitorAustralia(1, "eleitor", "senha", "Eleitor Um")
+    usuario = EleitorAustralia("eleitor", "senha", "Eleitor Um")
 
     _patch_inputs(monkeypatch, ["3", "0"])  # apurar -> voltar
 
@@ -679,7 +679,7 @@ def test_tela_botc_fluxo_completo_storyteller(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     sistema = SistemaEleitoralBotC(jogadores_vivos=5)
-    narrador = StoryTellerBOTC(1, "narrador", "senha", "Narrador")
+    narrador = StoryTellerBOTC("narrador", "senha", "Narrador")
 
     _patch_inputs(
         monkeypatch,
@@ -711,7 +711,7 @@ def test_tela_botc_registrar_votos_alem_do_limite_mostra_erro(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     sistema = SistemaEleitoralBotC(jogadores_vivos=5)
-    narrador = StoryTellerBOTC(1, "narrador", "senha", "Narrador")
+    narrador = StoryTellerBOTC("narrador", "senha", "Narrador")
 
     _patch_inputs(monkeypatch, ["1", "Fulano", "10", "0"])  # 10 > 5 jogadores vivos
 
@@ -726,7 +726,7 @@ def test_tela_botc_jogador_nao_pode_registrar(
     """Como REGISTRAR não está entre as ações de um jogador comum, a chave "1" deve
     ser tratada como opção inválida (o menu nem oferece essa ação para esse escopo)."""
     sistema = SistemaEleitoralBotC(jogadores_vivos=5)
-    jogador = JogadorBOTC(2, "jogador", "senha", "Jogador Um")
+    jogador = JogadorBOTC("jogador", "senha", "Jogador Um")
 
     _patch_inputs(monkeypatch, ["1", "0"])
 
@@ -856,7 +856,7 @@ def test_executar_app_login_falha_sem_tentar_novamente(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     servico = ServicoAutenticacao()
-    servico.registrar(GestaoCACo(1, "g", "s", "Gestor"))
+    servico.registrar(GestaoCACo("g", "s", "Gestor"))
 
     _patch_inputs(monkeypatch, ["1", "g", "n"])  # login -> usuário -> "tentar de novo? n"
     _patch_getpass(monkeypatch, "src.cli.telas.login.getpass", ["senhaerrada"])
@@ -872,7 +872,7 @@ def test_executar_app_login_falha_e_tenta_novamente(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     servico = ServicoAutenticacao()
-    servico.registrar(GestaoCACo(1, "g", "s", "Gestor"))
+    servico.registrar(GestaoCACo("g", "s", "Gestor"))
 
     # login -> usuário -> "tentar de novo? s" -> volta pra boas-vindas -> sair
     _patch_inputs(monkeypatch, ["1", "g", "s", "0"])
@@ -904,10 +904,11 @@ def test_executar_app_fluxo_completo_caco(
 ) -> None:
     """Login com sucesso -> vota na Assembleia do CACo -> apura -> logout -> sai."""
     servico = ServicoAutenticacao()
-    servico.registrar(GestaoCACo(1, "gestor", "senha123", "Gestor Geral"))
+    gestor = GestaoCACo("gestor", "senha123", "Gestor Geral")
+    servico.registrar(gestor)
 
     eleicao_caco = EleicaoAssembleia(
-        ["gestor", "a", "b", "c", "d", "e", "f", "g", "h", "i"], ["gestor"], duracao_ciclo=100.0
+        [gestor.id, "a", "b", "c", "d", "e", "f", "g", "h", "i"], [gestor.id], duracao_ciclo=100.0
     )
     sessao = Sessao(eleicao_caco=eleicao_caco)
 
@@ -941,7 +942,7 @@ def test_executar_app_fluxo_completo_australia(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     servico = ServicoAutenticacao()
-    servico.registrar(EleitorAustralia(1, "eleitor", "senha123", "Eleitor Um"))
+    servico.registrar(EleitorAustralia("eleitor", "senha123", "Eleitor Um"))
     sessao = Sessao(candidatos_australia=["Ana", "Beto"])
 
     _patch_inputs(
@@ -973,7 +974,7 @@ def test_executar_app_fluxo_completo_botc(
     `Estado.VOTACAO_BOTC` precisa ser tratado em `executar_app` para que o usuário
     consiga efetivamente chegar em `tela_botc` (ver Estado no app.py)."""
     servico = ServicoAutenticacao()
-    servico.registrar(StoryTellerBOTC(1, "narrador", "senha123", "Narrador"))
+    servico.registrar(StoryTellerBOTC("narrador", "senha123", "Narrador"))
     sessao = Sessao(sistema_botc=SistemaEleitoralBotC(jogadores_vivos=5))
 
     _patch_inputs(
