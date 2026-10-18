@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from src.main import app
 
 # Inicializa o cliente de testes simulando um navegador
-client = TestClient(app)
+client = TestClient(app, base_url="https://testserver")
 
 # Testes padrões de interface
 def test_renderizacao_telas_get():
