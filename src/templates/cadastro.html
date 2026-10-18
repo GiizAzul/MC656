@@ -33,9 +33,9 @@
         </div>
 
         <!-- Campo condicional para RA. Usaremos JS no futuro para esconder se não for estudante -->
-        <div class="form-group" id="campo-ra">
-            <label>RA (Apenas para estudantes CACo)</label>
-            <input type="number" name="ra" placeholder="123456" value="{{ ra_digitado | default('') }}" >
+        <div class="form-group">
+            <label for="ra">RA (Apenas para estudantes CACo)</label>
+            <input type="number" id="ra" name="ra" placeholder="123456" value="{{ ra_digitado | default('') }}">
         </div>
 
         <div class="form-group">
