@@ -1,3 +1,6 @@
+import os
+import uvicorn
+
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -66,3 +69,7 @@ app.include_router(caco_router.router)
 async def root(request: Request):
     # Redireciona a raiz direto para o login
     return templates.TemplateResponse(request=request, name="login.html", context={})
+    
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("src.main:app", host="0.0.0.0", port=port)
