@@ -28,16 +28,18 @@
         <h3>Blood on the Clocktower - Controle do StoryTeller</h3>
         <p>Registre os votos da cidade ou apure a execução atual.</p>
         
-        <form action="/botc/registrar" method="POST" class="mt-2">
-            <div class="form-group">
-                <input type="text" name="nomeado" placeholder="Nome do jogador na forca" required>
-            </div>
-            <div class="form-group mt-2">
-                <input type="number" name="num_votos" placeholder="Quantidade de votos (mãos)" min="0" required>
-            </div>
-            <button type="submit" class="btn-primary mt-2">Registrar Votos</button>
-        </form>
-
+            <form action="/botc/registrar" method="POST" class="mt-2">
+                <div class="form-group">
+                    <label for="input-nomeado">Jogador Nomeado</label>
+                    <input type="text" id="input-nomeado" name="nomeado" placeholder="Nome do jogador na forca" required>
+                </div>
+                <div class="form-group">
+                    <label for="input-num-votos">Quantidade de Votos</label>
+                    <input type="number" id="input-num-votos" name="num_votos" placeholder="Quantidade de votos (mãos)" min="0" required>
+                </div>
+                <button type="submit" class="btn-primary mt-2">Registrar Votos na Forca</button>
+            </form>
+            
         <form action="/botc/apurar" method="POST" class="mt-2">
             <button type="submit" class="btn-danger">Apurar Execução (Fim do Dia)</button>
         </form>
