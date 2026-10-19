@@ -1,8 +1,7 @@
 import os
-import uvicorn
-
 from pathlib import Path
 
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
