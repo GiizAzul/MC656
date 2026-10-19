@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
 
-import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -69,6 +67,3 @@ async def root(request: Request):
     # Redireciona a raiz direto para o login
     return templates.TemplateResponse(request=request, name="login.html", context={})
     
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("src.main:app", host="0.0.0.0", port=port)
