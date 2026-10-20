@@ -33,11 +33,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --all-extras --dev || uv pip install -r requirements.txt pytest-cov
+          uv venv .venv
+          uv sync --all-extras --dev || uv pip install -r requirements.txt pytest-cov --no-build
 
       - name: Run tests with XML coverage
         run: |
-          uv run pytest tests/ --cov=src --cov-report=xml:coverage.xml
+          .venv/bin/pytest tests/ --cov=src --cov-report=xml:coverage.xml
 
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v3
