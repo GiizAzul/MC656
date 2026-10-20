@@ -11,44 +11,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout do código
-      uses: actions/checkout@v4
+      # actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
 
     - name: Instalar o uv
-      uses: astral-sh/setup-uv@v3
+      # astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+
       with:
         enable-cache: true # Faz cache das dependências para rodar ainda mais rápido
         cache-dependency-glob: "requirements.txt"
 
     - name: Configurar Python
-      uses: actions/setup-python@v5
+      # actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+
       with:
         python-version: "3.11"
 
     - name: Build (Instalar dependências)
       run: |
         uv venv .venv  # Cria o ambiente virtual na pasta .venv
-        uv pip install -r requirements.txt # Instala as dependências lendo o requirements.txt usando o uv
+        # A flag --no-build impede a execução de scripts arbitrários 
+        uv pip install -r requirements.txt --no-build # Instala as dependências lendo o requirements.txt usando o uv
 
   lint:
     runs-on: ubuntu-latest
     needs: build # Faz o lint só começar se o build passar
     steps:
     - name: Checkout do código
-      uses: actions/checkout@v4
+      # actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
     - name: Instalar o uv
-      uses: astral-sh/setup-uv@v3
+      # astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+
       with:
         enable-cache: true
         cache-dependency-glob: "requirements.txt"
     - name: Configurar Python
-      uses: actions/setup-python@v5
+      # actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+
       with:
         python-version: "3.11"
     - name: Análise Estática com Ruff
       run: |
         uv venv .venv
-        uv pip install -r requirements.txt
-        # Roda o ruff chamando direto da pasta do ambiente virtual
+        uv pip install -r requirements.txt --no-build
+        # Roda o ruff chamando direto da pasta do ambiente virtual sem deixar baixar scripts usando a flag --no-build
         # Falha o pipeline ao encontrar erros de sintaxe ou más práticas
         .venv/bin/ruff check src/ tests/
 
@@ -57,21 +70,26 @@ jobs:
     needs: build # Faz o teste só começar se o build passar
     steps:
     - name: Checkout do código
-      uses: actions/checkout@v4
+      # actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
     - name: Instalar o uv
-      uses: astral-sh/setup-uv@v3
+      # astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+
       with:
         enable-cache: true
         cache-dependency-glob: "requirements.txt"
     - name: Configurar Python
-      uses: actions/setup-python@v5
+      # actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+
       with:
         python-version: "3.11"
     - name: Testes Automatizados e Cobertura
       run: |
         uv venv .venv
-        uv pip install -r requirements.txt
+        uv pip install -r requirements.txt --no-build
         # Roda o pytest chamando direto da pasta do ambiente virtual
         # Exibe a porcentagem de código testado no log
         .venv/bin/pytest --cov=src --cov-report=term
-
