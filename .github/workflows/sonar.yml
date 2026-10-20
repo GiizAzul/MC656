@@ -21,6 +21,25 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for accurate blame information
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          uv venv .venv
+          uv sync --all-extras --dev || uv pip install -r requirements.txt pytest-cov --no-build
+
+      - name: Run tests with XML coverage
+        run: |
+          .venv/bin/pytest tests/ --cov=src --cov-report=xml:coverage.xml
+
       - name: SonarQube Cloud Scan
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v3
         env:
