@@ -66,3 +66,4 @@ app.include_router(caco_router.router)
 async def root(request: Request):
     # Redireciona a raiz direto para o login
     return templates.TemplateResponse(request=request, name="login.html", context={})
+    

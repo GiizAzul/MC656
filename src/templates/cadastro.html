@@ -10,42 +10,43 @@
 
     <form action="/cadastro" method="POST">
         <div class="form-group">
-            <label>Tipo de Conta</label>
-            <select name="tipo_conta" required>
-                <option value="CACO_ESTUDANTE" {% if tipo_conta_selecionada == 'CACO_ESTUDANTE' %}selected{% endif %}>Estudante (CACo)</option>
-                <option value="CACO_GESTAO" {% if tipo_conta_selecionada == 'CACO_GESTAO' %}selected{% endif %}>Gestão (CACo)</option>
+            <label for="tipo_conta">Tipo de Conta</label>
+            <select id="tipo_conta" name="tipo_conta" required>
+                <option value="" disabled {% if not tipo_conta_selecionada %}selected{% endif %}>Selecione seu perfil...</option>
+                <option value="CACO_ESTUDANTE" {% if tipo_conta_selecionada == 'CACO_ESTUDANTE' %}selected{% endif %}>Estudante Unicamp (CACo)</option>
+                <option value="CACO_GESTAO" {% if tipo_conta_selecionada == 'CACO_GESTAO' %}selected{% endif %}>Membro da Gestão (CACo)</option>
                 <option value="AUSTRALIA_ELEITOR" {% if tipo_conta_selecionada == 'AUSTRALIA_ELEITOR' %}selected{% endif %}>Eleitor (Austrália)</option>
-                <option value="AUSTRALIA_CANDIDATO" {% if tipo_conta_selecionada == 'AUSTRALIA_CANDIDATO' %}selected{% endif %}>Candidato (Austrália)</option>  
+                <option value="AUSTRALIA_CANDIDATO" {% if tipo_conta_selecionada == 'AUSTRALIA_CANDIDATO' %}selected{% endif %}>Candidato Federal (Austrália)</option>
                 <option value="BOTC_JOGADOR" {% if tipo_conta_selecionada == 'BOTC_JOGADOR' %}selected{% endif %}>Jogador (Blood on the Clocktower)</option>
-                <option value="BOTC_STORYTELLER" {% if tipo_conta_selecionada == 'BOTC_STORYTELLER' %}selected{% endif %}>Mestre (Blood on the Clocktower)</option>
+                <option value="BOTC_STORYTELLER" {% if tipo_conta_selecionada == 'BOTC_STORYTELLER' %}selected{% endif %}>Storyteller / Mestre (BoTC)</option>
             </select>
-        </div>        
+        </div>     
 
         <div class="form-group">
-            <label>Nome Completo</label>
-            <input type="text" name="nome_real" value="{{ nome_real_digitado | default('') }}" required>
+            <label for="nome_real">Nome Completo</label>
+            <input type="text" id="nome_real" name="nome_real" value="{{ nome_real_digitado | default('') }}" required>
         </div>
 
         <div class="form-group">
-            <label>Username (Login)</label>
-            <input type="text" name="username" value="{{ username_digitado | default('') }}" required>
+            <label for="username">Username (Login)</label>
+            <input type="text" id="username" name="username" value="{{ username_digitado | default('') }}" required>
         </div>
 
         <!-- Campo condicional para RA. Usaremos JS no futuro para esconder se não for estudante -->
-        <div class="form-group" id="campo-ra">
-            <label>RA (Apenas para estudantes CACo)</label>
-            <input type="number" name="ra" placeholder="123456" value="{{ ra_digitado | default('') }}" >
+        <div class="form-group">
+            <label for="ra">RA (Apenas para estudantes CACo)</label>
+            <input type="number" id="ra" name="ra" placeholder="123456" value="{{ ra_digitado | default('') }}">
         </div>
 
         <div class="form-group">
-            <label>Senha</label>
+            <label for="senha">Senha</label>
             <!-- Senhas são limpas por segurança -->
-            <input type="password" name="senha" required>
+            <input type="password" id="senha" name="senha" required>
         </div>
 
         <div class="form-group">
-            <label>Confirme a Senha</label>
-            <input type="password" name="senha_confirma" required>
+            <label for="senha_confirma">Confirme a Senha</label>
+            <input type="password" id="senha_confirma" name="senha_confirma" required>
         </div>
 
         <button type="submit" class="btn-primary mt-2">Registrar e Entrar</button>
