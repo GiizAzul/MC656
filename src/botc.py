@@ -146,12 +146,118 @@ class SistemaEleitoralBotC(SistemaEleitoral):
     dos jogadores vivos. Em caso de empate no maior número de votos, ninguém é executado.
     """
 
-    def __init__(self, jogadores_vivos: int):
-        if jogadores_vivos <= 0:
-            raise ValueError("O número de jogadores vivos deve ser maior que zero.")
-        self.jogadores_vivos = jogadores_vivos
-        # Dicionário mapeia User_ID do candidato -> quantidade de votos
+    def __init__(
+        self,
+        jogadores_vivos: int | None = None,
+        jogadores: list[JogadorBotC] | None = None,
+    ):
+        self.jogadores: dict[str, JogadorBotC] = {}
+        # Dicionário mapeia User_ID do candidato -> quantidade total ponderada de votos
         self.votos: dict[str, int] = {}
+        # Rastreia quem já votou em cada candidato na nomeação atual
+        self.votantes_por_candidato: dict[str, set[str]] = {}
+
+        if jogadores is not None:
+            if not jogadores:
+                raise ValueError("A lista de jogadores não pode ser vazia.")
+            for jog in jogadores:
+                self.adicionar_jogador(jog)
+        elif jogadores_vivos is not None:
+            if jogadores_vivos <= 0:
+                raise ValueError("O número de jogadores vivos deve ser maior que zero.")
+            for i in range(jogadores_vivos):
+                id_jog = f"jogador_{i+1}"
+                self.adicionar_jogador(
+                    JogadorBotC(id_jogador=id_jog, nome=f"Jogador {i+1}", status=StatusJogador.VIVO)
+                )
+        else:
+            raise ValueError("É necessário informar o número de jogadores vivos ou uma lista de jogadores.")
+
+    @property
+    def jogadores_vivos(self) -> int:
+        """Contagem dinâmica de jogadores com status VIVO."""
+        vivos = len([j for j in self.jogadores.values() if j.status == StatusJogador.VIVO])
+        return vivos if vivos > 0 else 1
+
+    @jogadores_vivos.setter
+    def jogadores_vivos(self, valor: int):
+        if valor <= 0:
+            raise ValueError("O número de jogadores vivos deve ser maior que zero.")
+        vivos_atuais = len([j for j in self.jogadores.values() if j.status == StatusJogador.VIVO])
+        if valor > vivos_atuais:
+            for i in range(vivos_atuais, valor):
+                id_jog = f"jogador_{i+1}"
+                if id_jog not in self.jogadores:
+                    self.adicionar_jogador(
+                        JogadorBotC(id_jog, f"Jogador {i+1}", StatusJogador.VIVO)
+                    )
+
+    def adicionar_jogador(self, jogador: JogadorBotC):
+        """Cadastra um novo jogador na partida."""
+        if not isinstance(jogador, JogadorBotC):
+            raise TypeError("Instância de jogador inválida.")
+        self.jogadores[jogador.id_jogador] = jogador
+
+    def obter_jogador(self, id_jogador: str) -> JogadorBotC | None:
+        """Recupera um jogador pelo identificador ou pelo nome."""
+        if id_jogador in self.jogadores:
+            return self.jogadores[id_jogador]
+        for jog in self.jogadores.values():
+            if jog.nome == id_jogador:
+                return jog
+        return None
+
+    def alterar_status_jogador(self, id_jogador: str, novo_status: StatusJogador):
+        """Altera o status de vida / voto fantasma de um jogador."""
+        jogador = self.obter_jogador(id_jogador)
+        if not jogador:
+            raise ValueError(f"Jogador '{id_jogador}' não encontrado.")
+        jogador.status = novo_status
+
+    def aplicar_modificador(self, id_jogador: str, modificador: ComponenteVoto):
+        """Aplica um modificador de voto ao jogador especificado."""
+        jogador = self.obter_jogador(id_jogador)
+        if not jogador:
+            raise ValueError(f"Jogador '{id_jogador}' não encontrado.")
+        jogador.aplicar_modificador(modificador)
+
+    def registrar_voto_jogador(self, candidato_id: str, votante_id: str) -> int:
+        """
+        Registra o voto de um jogador específico em um candidato.
+        Valida elegibilidade (rejeita se MORTO_SEM_FANTASMA).
+        Aplica modificadores de peso.
+        Consome o voto fantasma caso seja MORTO_COM_FANTASMA.
+        Retorna o peso efetivo adicionado.
+        """
+        if not candidato_id or not isinstance(candidato_id, str):
+            raise ValueError("O identificador do candidato deve ser um User_ID válido.")
+
+        votante = self.obter_jogador(votante_id)
+        if not votante:
+            raise ValueError(f"Votante '{votante_id}' não encontrado.")
+
+        if not votante.pode_votar():
+            raise ValueError(f"O jogador {votante.nome} está morto e não possui mais voto fantasma.")
+
+        if candidato_id not in self.votantes_por_candidato:
+            self.votantes_por_candidato[candidato_id] = set()
+
+        if votante.id_jogador in self.votantes_por_candidato[candidato_id]:
+            raise ValueError(f"O jogador {votante.nome} já votou nesta nomeação.")
+
+        peso = votante.calcular_peso_voto()
+        votante.consumir_voto_fantasma()
+
+        self.votantes_por_candidato[candidato_id].add(votante.id_jogador)
+        self.votos[candidato_id] = self.votos.get(candidato_id, 0) + peso
+        return peso
+
+    def registrar_votos_jogadores(self, candidato_id: str, votantes_ids: list[str]) -> int:
+        """Registra votos de uma lista de votantes para um candidato."""
+        total_adicionado = 0
+        for vid in votantes_ids:
+            total_adicionado += self.registrar_voto_jogador(candidato_id, vid)
+        return total_adicionado
 
     def registrar_votacao(self, candidato_id: str, num_votos: int):
         """Registra votos utilizando o User_ID imutável do candidato."""
@@ -159,7 +265,8 @@ class SistemaEleitoralBotC(SistemaEleitoral):
             raise ValueError("O identificador do candidato deve ser um User_ID válido.")
         if num_votos < 0:
             raise ValueError("O número de votos não pode ser negativo.")
-        if num_votos > self.jogadores_vivos:
+        total_jogadores = len(self.jogadores) if self.jogadores else self.jogadores_vivos
+        if num_votos > total_jogadores:
             raise ValueError("O número de votos não pode ser maior que a quantidade de jogadores.")
         self.votos[candidato_id] = num_votos
 
