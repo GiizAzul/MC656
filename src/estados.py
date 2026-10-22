@@ -10,12 +10,12 @@ class EstadoVotacao(ABC):
 
     def iniciar_votacao(self) -> "EstadoVotacao":
         raise RuntimeError(
-            "Não é possível iniciar a votação neste estado."
+            "A votação já foi iniciada."
         )
     
     def apurar_voto(self, sistema: SistemaEleitoral, eleitor_id: str, voto: object) -> None:
         raise RuntimeError(
-            "Não é possível votar neste estado."
+            "Não existe um ciclo de votação ativo."
         )
 
     def encerrar_votacao(self) -> "EstadoVotacao":
@@ -43,3 +43,5 @@ class EmVotacao(EstadoVotacao):
 
 class Encerrada(EstadoVotacao):
     """Estado de votação finalizada."""
+    def iniciar_votacao(self) -> EstadoVotacao:
+        raise RuntimeError("A votação já foi encerrada.")
