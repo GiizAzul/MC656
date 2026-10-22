@@ -82,7 +82,7 @@ async def processar_voto_caco(request: Request, usuario: Annotated [Usuario, Dep
     try:
         opcao_enum = OpcaoVoto[opcao]
         
-        eleicao.registrar_voto(usuario.id, opcao_enum)
+        eleicao.apurar_voto(usuario.id, opcao_enum)
         
         # Assina a lista de presença marcando que o ID já votou
         request.app.state.eleitores_caco_votaram.add(usuario.id)
