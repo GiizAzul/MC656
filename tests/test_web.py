@@ -544,6 +544,108 @@ def test_botc_renderiza_tela_com_voto():
     # Agora acessa a partida (vai engatilhar a leitura dos votos)
     assert client.get("/botc/partida").status_code == 200
     client.cookies.clear()    
+
+def test_botc_jogador_morto_sem_voto_bloqueado():
+    """Testa bloqueio de votação na UI e backend para mortos sem voto fantasma (Issue #71)."""
+    # Cadastra jogador e loga
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Morto Sem Voto", "username": "morto_sem_voto", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "morto_sem_voto", "senha": "123"})
+    client.cookies.set("sessao_usuario", "morto_sem_voto")
+
+    # Acessa a tela inicial para registrar o jogador no sistema
+    res_tela = client.get("/botc/partida")
+    assert res_tela.status_code == 200
+
+    from src.botc import StatusJogador
+    from src.main import app
+
+    sistema = app.state.sistema_botc
+    jogador = sistema.obter_jogador("Morto Sem Voto")
+    assert jogador is not None
+    jogador.status = StatusJogador.MORTO_SEM_FANTASMA
+
+    # Ao recarregar a tela, a UI deve alertar que a votação está bloqueada
+    res_bloqueado = client.get("/botc/partida")
+    assert "bloqueada para você" in res_bloqueado.text.lower() or "voto indisponível" in res_bloqueado.text.lower()
+
+    # Tentativa de votar via POST deve ser rejeitada
+    res_voto = client.post("/botc/votar", data={"acao": "levantar_mao"})
+    assert res_voto.status_code == 200
+    assert "já utilizou seu voto fantasma" in res_voto.text.lower()
+    client.cookies.clear()
+
+def test_botc_storyteller_gerencia_status_jogador():
+    """Testa storyteller alterando status de jogadores e bloqueio para não-mestres (Issue #71)."""
+    # Cadastra jogador comum
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Alvo Status", "username": "alvo_status", "senha": "123", "senha_confirma": "123"})
+
+    # Tenta alterar status sem permissão (como jogador comum)
+    client.cookies.set("sessao_usuario", "alvo_status")
+    res_bloqueada = client.post("/botc/status-jogador", data={"id_jogador": "Alvo Status", "novo_status": "Morto (Com Voto)"})
+    assert res_bloqueada.status_code == 403
+
+    # Agora loga como storyteller
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Mestre Status", "username": "mestre_status", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "mestre_status")
+
+    # Garante que o jogador alvo está no sistema
+    from src.botc import JogadorBotC, StatusJogador
+    from src.main import app
+    app.state.sistema_botc.adicionar_jogador(JogadorBotC("alvo_status_id", "Alvo Status", StatusJogador.VIVO))
+
+    res_sucesso = client.post("/botc/status-jogador", data={"id_jogador": "alvo_status_id", "novo_status": "Morto (Com Voto)"})
+    assert res_sucesso.status_code == 200
+    assert "alterado para Morto (Com Voto)" in res_sucesso.text
+
+    # Status inválido
+    res_invalido = client.post("/botc/status-jogador", data={"id_jogador": "alvo_status_id", "novo_status": "StatusQueNaoExiste"})
+    assert res_invalido.status_code == 400
+    client.cookies.clear()
+
+def test_botc_storyteller_aplica_modificadores_voto():
+    """Testa aplicação de modificadores com padrão Decorator via interface (Issue #70)."""
+    # Cadastra storyteller
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Mestre Mod", "username": "mestre_mod", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "mestre_mod")
+
+    from src.botc import JogadorBotC, StatusJogador
+    from src.main import app
+    jogador = JogadorBotC("alvo_mod_id", "Alvo Modificador", StatusJogador.VIVO)
+    app.state.sistema_botc.adicionar_jogador(jogador)
+
+    # 1. Multiplicador com Negativador -> deve resultar em -3
+    res_mult_neg = client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "multiplicador_negativo", "fator": 3})
+    assert res_mult_neg.status_code == 200
+    assert jogador.calcular_peso_voto() == -3
+
+    # 2. Multiplicador simples (x3)
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "padrao"})
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "multiplicador", "fator": 3})
+    assert jogador.calcular_peso_voto() == 3
+
+    # 3. Negativo simples (-1)
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "padrao"})
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "negativo"})
+    assert jogador.calcular_peso_voto() == -1
+
+    # 4. Anulador (0)
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "nulo"})
+    assert jogador.calcular_peso_voto() == 0
+
+    # 5. Jogador inexistente (404)
+    res_404 = client.post("/botc/modificador", data={"id_jogador": "jogador_fantasma_inexistente", "tipo_modificador": "multiplicador"})
+    assert res_404.status_code == 404
+
+    # 6. Modificador desconhecido (400)
+    res_400 = client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "desconhecido"})
+    assert res_400.status_code == 400
+
+    # 7. Jogador comum bloqueado (403)
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Comum Mod", "username": "comum_mod", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "comum_mod")
+    res_403 = client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "multiplicador"})
+    assert res_403.status_code == 403
+    client.cookies.clear()
     
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
