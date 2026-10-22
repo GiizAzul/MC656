@@ -101,7 +101,7 @@ class EleicaoAssembleia(SistemaEleitoral):
 
         return tempo_decorrido >= self.duracao_ciclo
  
-    def registrar_voto(self, eleitor_id:str, opcao: OpcaoVoto) -> None:
+    def apurar_voto(self, eleitor_id:str, opcao: OpcaoVoto) -> None:
         """Registra o voto de um eleitor"""
 
         # verifica se está em estado de votação

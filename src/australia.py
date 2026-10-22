@@ -63,3 +63,6 @@ class EleicaoAustralia(SistemaEleitoral):
                 return ativos[0]
             elif len(ativos) == 0:
                 return None
+            
+    def apurar_voto(self, eleitor_id: str, voto: object) -> None:
+        raise NotImplementedError("Registro ainda não implementado.")
