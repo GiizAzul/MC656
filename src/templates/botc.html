@@ -46,13 +46,14 @@
 
         <!-- Gerenciar Status de Vida e Voto Fantasma (Issue #71) -->
         <form action="/botc/status-jogador" method="POST" class="mt-2">
-            <label for="status-jogador-id"><strong>Alterar Status do Jogador:</strong></label>
+            <label for="status-jogador-id"><strong>Jogador:</strong></label>
             <select name="id_jogador" id="status-jogador-id" class="candidato-item" style="width: 100%;">
                 {% for jog in jogadores %}
                 <option value="{{ jog.id }}">{{ jog.nome }} ({{ jog.status }})</option>
                 {% endfor %}
             </select>
-            <select name="novo_status" class="candidato-item" style="width: 100%;">
+            <label for="novo-status-id" class="mt-2" style="display: block;"><strong>Novo Status:</strong></label>
+            <select name="novo_status" id="novo-status-id" class="candidato-item" style="width: 100%;">
                 <option value="Vivo">Vivo</option>
                 <option value="Morto (Com Voto)">Morto (Com Voto Fantasma)</option>
                 <option value="Morto (Sem Voto)">Morto (Sem Voto Fantasma)</option>
@@ -62,13 +63,14 @@
 
         <!-- Configurar Modificadores Ocultos de Voto (Issue #70 / Padrão Decorator) -->
         <form action="/botc/modificador" method="POST" class="mt-2">
-            <label for="modificador-jogador-id"><strong>Configurar Modificador Oculto de Voto:</strong></label>
+            <label for="modificador-jogador-id"><strong>Jogador Alvo:</strong></label>
             <select name="id_jogador" id="modificador-jogador-id" class="candidato-item" style="width: 100%;">
                 {% for jog in jogadores %}
                 <option value="{{ jog.id }}">{{ jog.nome }} - Peso atual: {{ jog.peso }}</option>
                 {% endfor %}
             </select>
-            <select name="tipo_modificador" class="candidato-item" style="width: 100%;">
+            <label for="tipo-modificador-id" class="mt-2" style="display: block;"><strong>Tipo de Modificador:</strong></label>
+            <select name="tipo_modificador" id="tipo-modificador-id" class="candidato-item" style="width: 100%;">
                 <option value="multiplicador">Multiplicador (Voto triplo / x3)</option>
                 <option value="negativo">Negativador (Voto negativo / -1)</option>
                 <option value="multiplicador_negativo">Multiplicador com Negativador (Voto triplo negativo / -3)</option>
@@ -80,9 +82,10 @@
 
         <!-- Registro de Votação e Apuração da Forca -->
         <form action="/botc/registrar" method="POST" class="mt-2">
-            <label for="nomeado"><strong>Registrar Votos para Nomeado:</strong></label>
+            <label for="nomeado"><strong>Nome do Nomeado:</strong></label>
             <input type="text" id="nomeado" name="nomeado" placeholder="Nome do acusado" required class="candidato-item" style="width: 100%;">
-            <input type="number" name="num_votos" placeholder="Quantidade de votos" min="0" required class="candidato-item" style="width: 100%;">
+            <label for="num-votos" class="mt-2" style="display: block;"><strong>Quantidade de Votos:</strong></label>
+            <input type="number" id="num-votos" name="num_votos" placeholder="Quantidade de votos" min="0" required class="candidato-item" style="width: 100%;">
             <button type="submit" class="btn-primary mt-2">Registrar Votação</button>
         </form>
 
