@@ -360,21 +360,22 @@ def test_caco_router_excecoes_internas():
     # Criamos uma classe dummy que obrigatoriamente explode ao tentar encerrar
     class MockEleicaoParaErro:
         class MockEstado:
-            name = "TESTE"
+            nome = "TESTE"
         estado = MockEstado()
         
         def encerrar_votacao(self):
             raise RuntimeError("Explosão programada para o Coverage!")
             
-    # Injeta a eleição sabotada no estado da aplicação
-    app.state.eleicao_caco = MockEleicaoParaErro()
-    
-    # Aciona a rota. O try chama o mock, explode, e desce direto para a exceção
-    client.post("/caco/encerrar")
-    
-    # Restaura a sanidade do sistema
-    app.state.eleicao_caco = eleicao_backup
-    client.cookies.clear()
+
+    # Injeta a eleição sabotada e garante a restauração,
+    # mesmo se ocorrer uma exceção durante o teste.
+    try:
+        app.state.eleicao_caco = MockEleicaoParaErro()
+        client.post("/caco/encerrar")
+    finally:
+        app.state.eleicao_caco = eleicao_backup
+        client.cookies.clear()
+
 
 def test_caco_voto_invalido_gera_erro():
     """Evita duplicidade de nome na suite e acerta o assert."""

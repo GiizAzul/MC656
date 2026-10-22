@@ -7,6 +7,15 @@ if TYPE_CHECKING:
 
 class EstadoVotacao(ABC):
     """Define as transições possíveis em cada estado."""
+    
+    @property
+    def nome(self) -> str:
+        """Retorna o nome do estado para exibição."""
+        return {
+            AguardandoVotacao: "AGUARDANDO",
+            EmVotacao: "VOTACAO",
+            Encerrada: "ENCERRADA",
+        }[type(self)]
 
     def iniciar_votacao(self) -> "EstadoVotacao":
         raise RuntimeError(
