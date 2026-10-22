@@ -13,9 +13,9 @@ class EstadoVotacao(ABC):
             "Não é possível iniciar a votação neste estado."
         )
     
-    def apurar_voto(self, eleitor_id: str, voto: object) -> None:
+    def apurar_voto(self, sistema: SistemaEleitoral, eleitor_id: str, voto: object) -> None:
         raise RuntimeError(
-            "Não é possível iniciar a votação neste estado."
+            "Não é possível votar neste estado."
         )
 
     def encerrar_votacao(self) -> "EstadoVotacao":
