@@ -46,5 +46,5 @@ class SistemaEleitoralBotC(SistemaEleitoral):
             
         return vencedores[0]
     
-    def apurar_voto(self, eleitor_id: str, voto: object) -> None:
+    def registrar_voto(self, eleitor_id: str, voto: object) -> None:
         raise NotImplementedError("Registro ainda não implementado.")

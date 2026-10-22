@@ -1,8 +1,9 @@
+from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING
 """Evita dependencia circular entre classes"""
 if TYPE_CHECKING:
-    from src.interfaces import SistemaEleitoral
+    from .interfaces import SistemaEleitoral
 
 class EstadoVotacao(ABC):
     """Define as transições possíveis em cada estado."""
@@ -12,7 +13,7 @@ class EstadoVotacao(ABC):
             "Não é possível iniciar a votação neste estado."
         )
     
-    def registrar_voto(self, eleitor_id: str, voto: object) -> None:
+    def apurar_voto(self, eleitor_id: str, voto: object) -> None:
         raise RuntimeError(
             "Não é possível iniciar a votação neste estado."
         )
@@ -33,8 +34,8 @@ class AguardandoVotacao(EstadoVotacao):
 class EmVotacao(EstadoVotacao):
     """Estado em que os votos podem ser registrados."""
 
-    def registrar_voto(self, sistema: SistemaEleitoral, eleitor_id: str, voto: object) -> None:
-        sistema.apurar_voto(eleitor_id, voto)
+    def apurar_voto(self, sistema: SistemaEleitoral, eleitor_id: str, voto: object) -> None:
+        sistema.registrar_voto(eleitor_id, voto)
 
     def encerrar_votacao(self) -> EstadoVotacao:
         return Encerrada()

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.estados import AguardandoVotacao, EstadoVotacao
+from .estados import AguardandoVotacao, EstadoVotacao
 
 class SistemaEleitoral(ABC):
     """Interface e contexto State dos motores eleitorais."""
@@ -11,9 +11,9 @@ class SistemaEleitoral(ABC):
         """Inicia a votação por meio do estado atual."""
         self.estado = self.estado.iniciar_votacao()
 
-    def registrar_voto(self, eleitor_id: str, voto: object) -> None:
+    def apurar_voto(self, eleitor_id: str, voto: object) -> None:
         """Verifica permissao de votacao"""
-        self.estado.registrar_voto(self, eleitor_id, voto)
+        self.estado.apurar_voto(self, eleitor_id, voto)
 
     def encerrar_votacao(self) -> None:
         """Encerra a votação por meio do estado atual."""
@@ -24,5 +24,5 @@ class SistemaEleitoral(ABC):
         """Executa a lógica matemática da eleição e retorna o vencedor."""
 
     @abstractmethod
-    def apurar_voto(self, eleitor_id: str, voto: object) -> None:
+    def registrar_voto(self, eleitor_id: str, voto: object) -> None:
         """Registra voto individual."""
