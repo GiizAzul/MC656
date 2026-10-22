@@ -202,6 +202,15 @@ def test_decorador_componente_nulo_invalido():
         ModificadorMultiplicador(None)
 
 
+def test_decorador_base_delegacao_direta():
+    """Garante que a classe base do Decorador repasse a chamada de cálculo por delegação."""
+    from src.botc import DecoradorModificadorVoto
+    voto_base = VotoPadrao(valor=2)
+    decorador_base = DecoradorModificadorVoto(voto_base)
+    assert decorador_base.calcular_peso() == 2
+    assert decorador_base.componente is voto_base
+
+
 def test_jogador_modificadores_helpers():
     jogador = JogadorBotC("j1", "Leo")
     assert jogador.calcular_peso_voto() == 1
