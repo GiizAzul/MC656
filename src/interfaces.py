@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 from .estados import AguardandoVotacao, EstadoVotacao
+
 
 class SistemaEleitoral(ABC):
     """Interface e contexto State dos motores eleitorais."""

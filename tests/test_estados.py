@@ -1,7 +1,7 @@
 import pytest
 
-from src.interfaces import SistemaEleitoral
 from src.estados import AguardandoVotacao, EmVotacao, Encerrada
+from src.interfaces import SistemaEleitoral
 
 
 class SistemaEleitoralTeste(SistemaEleitoral):
