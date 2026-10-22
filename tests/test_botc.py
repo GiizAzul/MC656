@@ -313,3 +313,25 @@ def test_metodos_auxiliares_sistema():
 
     with pytest.raises(ValueError, match="maior que zero"):
         sistema.jogadores_vivos = 0
+
+
+def test_registrar_votos_jogadores_multiplos():
+    jogadores = [JogadorBotC(f"j{i}", f"Jogador {i}", StatusJogador.VIVO) for i in range(1, 4)]
+    sistema = SistemaEleitoralBotC(jogadores=jogadores)
+    total = sistema.registrar_votos_jogadores("cand_x", ["j1", "j2"])
+    assert total == 2
+    assert sistema.votos["cand_x"] == 2
+
+
+def test_jogador_aplicar_modificador_nulo():
+    jogador = JogadorBotC("j1", "Leo")
+    with pytest.raises(ValueError, match="modificador não pode ser nulo"):
+        jogador.aplicar_modificador(None)
+
+
+def test_sistema_votante_e_candidato_validacoes_extras():
+    sistema = SistemaEleitoralBotC(3)
+    with pytest.raises(ValueError, match="Votante 'nao_existe' não encontrado"):
+        sistema.registrar_voto_jogador("cand", "nao_existe")
+    with pytest.raises(ValueError, match="identificador do candidato deve ser um User_ID válido"):
+        sistema.registrar_voto_jogador("", "jogador_1")
