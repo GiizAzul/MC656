@@ -81,7 +81,7 @@ class EleicaoAustralia(SistemaEleitoral):
         Use `apurar_voto` para respeitar o estado da votação; este método só registra.
         """
         if not isinstance(voto, list):
-            raise ValueError("Erro de cédula inválida: o voto deve ser uma lista ordenada de candidatos.")
+            raise TypeError("Erro de cédula inválida: o voto deve ser uma lista ordenada de candidatos.")
 
         # Garante voto único
         if eleitor_id in self.votantes:
