@@ -128,7 +128,7 @@ def test_registrar_voto_rejeita_candidato_falso_ou_duplicado():
 
 def test_registrar_voto_rejeita_voto_que_nao_e_lista():
     eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
-    with pytest.raises(ValueError, match="lista ordenada"):
+    with pytest.raises(TypeError, match="lista ordenada"):
         eleicao.registrar_voto('eleitor1', 'Caio')
 
 def test_apuracao_com_votos_registrados_via_estado():
