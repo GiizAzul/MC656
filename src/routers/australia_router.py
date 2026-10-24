@@ -53,11 +53,11 @@ async def processar_voto_australia(request: Request, usuario: Annotated [Usuario
 
     form_data = await request.form()
     
-    # Coleta e ordena os candidatos com base nos números digitados
+    # Traduz o formulário (posicao_<candidato> = número) em uma lista ordenada de candidatos
     tuplas_posicao = []
     for chave, valor in form_data.items():
         if chave.startswith("posicao_") and valor.strip().isdigit():
-            nome_candidato = chave.replace("posicao_", "")
+            nome_candidato = chave.replace("posicao_", "", 1)
             tuplas_posicao.append((int(valor), nome_candidato))
             
     # Ordena a lista pela nota (1, 2, 3...)
@@ -65,18 +65,13 @@ async def processar_voto_australia(request: Request, usuario: Annotated [Usuario
     cedula_ordenada = [candidato for posicao, candidato in tuplas_posicao]
     
     try:
-        # O usuário não pode pular candidatos
-        if len(cedula_ordenada) != len(eleicao.candidatos):
-            raise ValueError(f"Erro: Você ranqueou {len(cedula_ordenada)} candidatos. Você deve ranquear exatamente todos os {len(candidatos_reais)} candidatos.")
-
-        posicoes_originais = [pos for pos, cand in tuplas_posicao]
-        posicoes_esperadas = list(range(1, len(candidatos_reais) + 1))
-
-        if sorted(posicoes_originais) != posicoes_esperadas:
-                    raise ValueError("As posições informadas são inválidas. Não é permitido repetir números ou pular posições.\nInsira um número diferente para cada candidato.")
+        # Os números digitados devem ser 1..N sem repetir nem pular posições
+        posicoes_digitadas = [pos for pos, cand in tuplas_posicao]
+        if posicoes_digitadas != list(range(1, len(posicoes_digitadas) + 1)):
+            raise ValueError("As posições informadas são inválidas. Não é permitido repetir números ou pular posições.\nInsira um número diferente para cada candidato.")
         
-        # Deposita a cédula na urna
-        eleicao.cedulas.append(cedula_ordenada) 
+        # O motor valida a cédula (todos os candidatos, sem duplicatas) e respeita o estado da votação
+        eleicao.apurar_voto(usuario.id, cedula_ordenada)
 
         # Marca que este usuário já votou
         request.app.state.eleitores_australia_votaram.add(usuario.id)
@@ -86,7 +81,7 @@ async def processar_voto_australia(request: Request, usuario: Annotated [Usuario
             name="sucesso.html", 
             context={"mensagem": "Voto registrado com sucesso na Eleição Federal!"}
         )
-    except ValueError as e:
+    except (RuntimeError, ValueError) as e:
         return templates.TemplateResponse(
             request=request, 
             name="australia.html",  
