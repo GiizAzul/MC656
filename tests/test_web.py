@@ -1,10 +1,19 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from src.australia import EleicaoAustralia
+from src.estados import AguardandoVotacao
 from src.main import app
 
 # Inicializa o cliente de testes simulando um navegador
 client = TestClient(app, base_url="https://testserver")
+
+@pytest.fixture(autouse=True)
+def votacao_australia_aberta():
+    """A eleição não é mais iniciada no main.py: os testes abrem a votação."""
+    eleicao = app.state.eleicao_australia
+    if isinstance(eleicao.estado, AguardandoVotacao):
+        eleicao.iniciar_votacao()
 
 # Testes padrões de interface
 def test_renderizacao_telas_get():
