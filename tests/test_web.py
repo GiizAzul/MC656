@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from src.australia import EleicaoAustralia
 from src.main import app
 
 # Inicializa o cliente de testes simulando um navegador
@@ -153,14 +154,16 @@ def test_rota_votar_australia():
     
     # Simula o formulário web onde o usuário digitou as posições 1, 2 e 3
     dados_voto = {
-        "posicao_Ana": "1",
-        "posicao_Beto": "2",
-        "posicao_Caio": "3"
+        "posicao_Candidato A": "1",
+        "posicao_Candidato B": "2",
+        "posicao_Candidato C": "3"
     }
     response = client.post("/australia/votar", data=dados_voto)
     
     assert response.status_code == 200
     assert "voto registrado" in response.text.lower()
+    # A cédula deve ter sido gravada pelo motor, na ordem escolhida
+    assert app.state.eleicao_australia.cedulas[-1] == ["Candidato A", "Candidato B", "Candidato C"]
     client.cookies.clear()
     
 def test_rota_votar_caco():
@@ -615,3 +618,36 @@ def test_australia_votar_sem_digito():
     assert res_aus.status_code == 200
     assert "erro" in res_aus.text.lower()
     client.cookies.clear()
+
+def test_australia_rejeita_candidato_inexistente():
+    """O motor (e não o router) barra cédulas com candidatos que não existem."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Falso", "username": "aus_falso", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "aus_falso")
+    total_antes = len(app.state.eleicao_australia.cedulas)
+
+    dados = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Fantasma": "3"}
+    res = client.post("/australia/votar", data=dados)
+
+    assert res.status_code == 200
+    assert "duplicados ou não registrados" in res.text
+    assert len(app.state.eleicao_australia.cedulas) == total_antes
+    client.cookies.clear()
+
+def test_australia_votacao_nao_iniciada_bloqueia_voto():
+    """Com a votação fora do estado EmVotacao (padrão State), o router não grava a cédula."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Cedo", "username": "aus_cedo", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "aus_cedo")
+
+    # Usa uma eleição isolada (ainda aguardando) para não afetar os demais testes
+    original = app.state.eleicao_australia
+    nova = EleicaoAustralia(["Candidato A", "Candidato B", "Candidato C"], [])
+    app.state.eleicao_australia = nova
+    try:
+        dados = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Candidato C": "3"}
+        res = client.post("/australia/votar", data=dados)
+        assert res.status_code == 200
+        assert "Não existe um ciclo de votação ativo" in res.text
+        assert nova.cedulas == []
+    finally:
+        app.state.eleicao_australia = original
+        client.cookies.clear()
