@@ -1,9 +1,20 @@
+import pytest
 from fastapi.testclient import TestClient
 
+from src.australia import EleicaoAustralia
+from src.autenticacao.base import Usuario
+from src.estados import AguardandoVotacao, EmVotacao, Encerrada
 from src.main import app
 
 # Inicializa o cliente de testes simulando um navegador
 client = TestClient(app, base_url="https://testserver")
+
+@pytest.fixture(autouse=True)
+def votacao_australia_aberta():
+    """A eleição não é mais iniciada no main.py: os testes abrem a votação."""
+    eleicao = app.state.eleicao_australia
+    if isinstance(eleicao.estado, AguardandoVotacao):
+        eleicao.iniciar_votacao()
 
 # Testes padrões de interface
 def test_renderizacao_telas_get():
@@ -153,14 +164,16 @@ def test_rota_votar_australia():
     
     # Simula o formulário web onde o usuário digitou as posições 1, 2 e 3
     dados_voto = {
-        "posicao_Ana": "1",
-        "posicao_Beto": "2",
-        "posicao_Caio": "3"
+        "posicao_Candidato A": "1",
+        "posicao_Candidato B": "2",
+        "posicao_Candidato C": "3"
     }
     response = client.post("/australia/votar", data=dados_voto)
     
     assert response.status_code == 200
     assert "voto registrado" in response.text.lower()
+    # A cédula deve ter sido gravada pelo motor, na ordem escolhida
+    assert app.state.eleicao_australia.cedulas[-1] == ["Candidato A", "Candidato B", "Candidato C"]
     client.cookies.clear()
     
 def test_rota_votar_caco():
@@ -717,3 +730,132 @@ def test_australia_votar_sem_digito():
     assert res_aus.status_code == 200
     assert "erro" in res_aus.text.lower()
     client.cookies.clear()
+
+def test_australia_rejeita_candidato_inexistente():
+    """O motor (e não o router) barra cédulas com candidatos que não existem."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Falso", "username": "aus_falso", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "aus_falso")
+    total_antes = len(app.state.eleicao_australia.cedulas)
+
+    dados = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Fantasma": "3"}
+    res = client.post("/australia/votar", data=dados)
+
+    assert res.status_code == 200
+    assert "duplicados ou não registrados" in res.text
+    assert len(app.state.eleicao_australia.cedulas) == total_antes
+    client.cookies.clear()
+
+def test_australia_votacao_nao_iniciada_bloqueia_voto():
+    """Com a votação fora do estado EmVotacao (padrão State), o router não grava a cédula."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Cedo", "username": "aus_cedo", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "aus_cedo")
+
+    # Usa uma eleição isolada (ainda aguardando) para não afetar os demais testes
+    original = app.state.eleicao_australia
+    nova = EleicaoAustralia(["Candidato A", "Candidato B", "Candidato C"], [])
+    app.state.eleicao_australia = nova
+    try:
+        dados = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Candidato C": "3"}
+        res = client.post("/australia/votar", data=dados)
+        assert res.status_code == 200
+        assert "Não existe um ciclo de votação ativo" in res.text
+        assert nova.cedulas == []
+    finally:
+        app.state.eleicao_australia = original
+        client.cookies.clear()
+
+
+class _GestaoAustraliaTeste(Usuario):
+    """Usuário de gestão da Austrália, definido só para os testes."""
+    @property
+    def escopo(self) -> str:
+        return "AUSTRALIA_GESTAO"
+
+
+@pytest.fixture
+def gestor_australia():
+    """Garante um usuário com escopo AUSTRALIA_GESTAO e devolve o username dele."""
+    username = "gestor_aus_teste"
+    if username not in app.state.banco_auth._mapa_usernames:
+        app.state.banco_auth.registrar(_GestaoAustraliaTeste(username, "123", "Gestor Aus Teste"))
+    return username
+
+
+@pytest.fixture
+def eleicao_isolada():
+    """Troca a eleição global por uma nova (ainda aguardando) para testar o ciclo de vida
+    sem encerrar a eleição usada pelos demais testes."""
+    original = app.state.eleicao_australia
+    nova = EleicaoAustralia(["Candidato A", "Candidato B", "Candidato C"], [])
+    app.state.eleicao_australia = nova
+    try:
+        yield nova
+    finally:
+        app.state.eleicao_australia = original
+        client.cookies.clear()
+
+
+def test_australia_eleitor_nao_inicia_nem_encerra(eleicao_isolada):
+    """Quem não é da gestão é redirecionado e o estado da eleição não muda."""
+    client.cookies.set("sessao_usuario", "caio")
+
+    res_iniciar = client.post("/australia/iniciar", follow_redirects=False)
+    res_encerrar = client.post("/australia/encerrar", follow_redirects=False)
+
+    assert res_iniciar.status_code in [302, 307]
+    assert res_encerrar.status_code in [302, 307]
+    assert isinstance(eleicao_isolada.estado, AguardandoVotacao)
+
+
+def test_australia_gestao_inicia_votacao(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+
+    res = client.post("/australia/iniciar")
+
+    assert res.status_code == 200
+    assert "Eleição iniciada com sucesso" in res.text
+    assert isinstance(eleicao_isolada.estado, EmVotacao)
+
+
+def test_australia_iniciar_duas_vezes_mostra_erro(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+    client.post("/australia/iniciar")
+
+    res = client.post("/australia/iniciar")
+
+    assert res.status_code == 200
+    assert "A votação já foi iniciada" in res.text
+    assert isinstance(eleicao_isolada.estado, EmVotacao)
+
+
+def test_australia_gestao_encerra_votacao(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+    client.post("/australia/iniciar")
+
+    res = client.post("/australia/encerrar")
+
+    assert res.status_code == 200
+    assert "Eleição encerrada" in res.text
+    assert isinstance(eleicao_isolada.estado, Encerrada)
+
+
+def test_australia_encerrar_antes_de_iniciar_mostra_erro(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+
+    res = client.post("/australia/encerrar")
+
+    assert res.status_code == 200
+    assert "Não é possível encerrar a votação neste estado" in res.text
+    assert isinstance(eleicao_isolada.estado, AguardandoVotacao)
+
+
+def test_australia_nao_reinicia_votacao_encerrada(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+    client.post("/australia/iniciar")
+    client.post("/australia/encerrar")
+
+    res = client.post("/australia/iniciar")
+
+    assert res.status_code == 200
+    assert "A votação já foi encerrada" in res.text
+    assert isinstance(eleicao_isolada.estado, Encerrada)
