@@ -1,6 +1,6 @@
 # MC656
 
-Repositório para o projeto da disciplina MC656 – Engenharia de Software
+Repositório para o projeto da disciplina MC656 – Engenharia de Software (UNICAMP).
 
 ## Membros
 
@@ -14,9 +14,9 @@ Repositório para o projeto da disciplina MC656 – Engenharia de Software
 
 ## Sobre o projeto
 
-O projeto simula um sistema de votação capaz de operar em três contextos
-eleitorais diferentes, cada um com suas próprias regras de apuração e perfis
-de usuário:
+O projeto é um sistema de votação **web** (FastAPI + templates Jinja2) capaz de
+operar em três contextos eleitorais diferentes, cada um com suas próprias regras
+de apuração e perfis de usuário:
 
 - **Assembleia do CACo** — votação de pauta por Aprovar / Rejeitar / Abster-se,
   com quórum mínimo de eleitores e um ciclo de votação com duração definida.
@@ -26,88 +26,89 @@ de usuário:
 
 ## Organização do repositório
 
-O repositório reúne o código da aplicação (na raiz) e a documentação das
-atividades da disciplina (em `docs/`):
+O repositório reúne o código da aplicação e a documentação das atividades da
+disciplina (em `docs/`):
 
-- **Raiz (`main.py`, `src/`, `tests/`)** — o projeto descrito neste README
-  (Atividade 2): código-fonte, testes e o ponto de entrada da aplicação.
+- **`src/` e `tests/`** — a aplicação web (motores de votação, autenticação,
+  rotas e telas) e sua suíte de testes.
 - **`docs/A1_report/`** — relatório da Atividade 1 (LaTeX e PDF) com a definição
   do processo de desenvolvimento, incluindo diagramas (casos de uso, domínio,
   processo) e protótipos de telas.
-- **`docs/A3_report/`** — relatório da Atividade 3 (LaTeX): elicitação e análise
-  de requisitos, épicos, histórias de usuário e backlog priorizado. **Em
-  andamento.**
-- **`.github/workflows/ci.yml`** — pipeline de integração contínua (ver
-  [Integração contínua](#integração-contínua)).
-
-As seções abaixo (estrutura, como rodar, testes) se referem ao conteúdo da
-pasta `A2/`.
-
+- **`docs/A3_report/`** — relatório da Atividade 3 (LaTeX e PDF): elicitação e
+  análise de requisitos, épicos, histórias de usuário com critérios de aceitação
+  e backlog priorizado.
+- **`docs/A4_report/`** — relatório da Atividade 4 (LaTeX e PDF): projeto e arquitetura de software, com identificação de problemas e code smells, além da documentação da refatoração.
+- **`.github/workflows/`** — pipelines de CI (`ci.yml`) e de análise estática de qualidade (`sonar.yml`). 
 ## Estrutura do projeto
-
-> ⚠️ **Status: prévia inicial.** Esta versão cobre a lógica central dos três
-> contextos e uma interface de linha de comando (CLI) para navegar por ela.
-> Veja [Status do projeto e próximos passos](#status-do-projeto-e-próximos-passos).
 
 ```
 .
-├── main.py                        # ponto de entrada da aplicação
-├── requirements.txt               # dependências de teste/lint
+├── requirements.txt               # dependências da aplicação, de testes e de lint
+├── sonar-project.properties       # configuração do SonarQube Cloud
 ├── src/
+│   ├── main.py                    # ponto de entrada: app FastAPI, dados de demonstração e registro das rotas
+│   ├── interfaces.py              # SistemaEleitoral: interface comum aos motores (contexto do padrão State)
+│   ├── estados.py                 # estados da votação: Aguardando, Em votação, Encerrada
 │   ├── caco.py                    # motor da Assembleia do CACo
 │   ├── australia.py               # motor da Eleição Austrália (voto transferível)
-│   ├── botc.py                    # motor do Blood on the Clocktower
-│   ├── interfaces.py              # interface comum aos motores de votação
-│   ├── autenticacao/              # usuários, perfis (escopos) e serviço de login
-│   └── cli/                       # loop principal e telas do terminal
-│       ├── app.py                 
-│       ├── sessao.py              
-│       ├── cli_utils.py
-│       └── telas/                 # uma tela por fluxo (login, cadastro, cada contexto, etc.)
-├── tests/                         # testes automatizados (pytest) de domínio, autenticação e interface
+│   ├── botc.py                    # motor do Blood on the Clocktower (votos com modificadores)
+│   ├── autenticacao/              # usuários, perfis (escopos), cadastro (factory) e controle de acesso
+│   ├── routers/                   # rotas web: auth, caco, australia e botc
+│   ├── templates/                 # telas HTML (Jinja2): login, cadastro, dashboard, admin e uma por contexto
+│   └── static/                    # estilos (CSS)
+├── tests/                         # testes automatizados (pytest): motores, autenticação, estados e rotas web
 ├── docs/
 │   ├── A1_report/                 # Atividade 1: processo de desenvolvimento
 │   └── A3_report/                 # Atividade 3: requisitos
-└── .github/workflows/ci.yml       # CI: build, lint (ruff) e testes (pytest + cobertura)
+│   └── A4_report/                 # Atividade 4: projeto e arquitetura de software
+└── .github/workflows/             # CI: build, lint (ruff) e testes (pytest + cobertura)
 ```
 
 ## Requisitos
 
 - Python 3.10 ou superior.
-- Não há dependências externas para rodar a aplicação. O `requirements.txt` lista somente ferramentas de desenvolvimento (testes e lint).
+- Dependências listadas em `requirements.txt`: FastAPI (`fastapi[standard]`) e
+  Jinja2 para a aplicação, e pytest, pytest-cov e ruff para testes e lint.
 
 ## Como rodar
 
-A partir da raiz do repositório:
+A partir da raiz do repositório, crie um ambiente virtual e instale as dependências:
 
 ```bash
-python3 main.py
+python3 -m venv .venv
+source .venv/bin/activate      # no Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-
-Ao iniciar, é possível **criar uma conta nova** ou **entrar** com um dos
-usuários de demonstração já cadastrados em `main.py`:
-
-| Usuário       | Senha         | Perfil                          |
-|---------------|---------------|----------------------------------|
-| `gestao_caco` | `gestao123`   | Gestão do CACo                  |
-| `estudante1`  | `senha123`    | Estudante do CACo                |
-| `narrador`    | `narrador123` | Storyteller (BotC)                |
-| `jogador1`    | `senha123`    | Jogador (BotC)                   |
-| `candidato1`  | `senha123`    | Candidato (Eleição Austrália)     |
-| `eleitor1`    | `senha123`    | Eleitor (Eleição Austrália)       |
-
-## Como rodar os testes
-
-Também a partir da raiz do repositório:
-
-
-## Como rodar os testes
-
-Também a partir da raiz do repositório:
+Suba o servidor:
 
 ```bash
-pip install -r requirements.txt
+fastapi dev src/main.py
+```
+
+Também é possível usar `uvicorn src.main:app --reload`. Depois, acesse
+<http://127.0.0.1:8000>, que abre a tela de login. A documentação interativa da
+API fica em <http://127.0.0.1:8000/docs>.
+
+Os dados ficam **em memória**: ao reiniciar o servidor, usuários cadastrados e
+votos são perdidos.
+
+Na tela inicial é possível **criar uma conta nova** (escolhendo o perfil) ou
+**entrar** com um dos usuários de demonstração pré-cadastrados em `src/main.py`:
+
+| Usuário | Senha     | Perfil                          |
+|---------|-----------|---------------------------------|
+| `caio`  | `senha123`| Eleitor (Eleição Austrália)     |
+| `julia` | `admin`   | Gestão do CACo                  |
+| `leo`   | `botc123` | Jogador (BotC)                  |
+
+Para cada contexto também já existem dados iniciais de demonstração.
+
+## Como rodar os testes
+
+Também a partir da raiz do repositório, com as dependências instaladas:
+
+```bash
 pytest
 ```
 
@@ -125,15 +126,6 @@ ruff check src/ tests/
 
 ## Status do projeto e próximos passos
 
-Esta entrega tem como elicitar requisitos para guiar o desenvolvimento do projeto.
-
-Os próximos passos estão organizados no quadro do GitHub Projects:
+Os próximos passos estão organizados no quadro do GitHub Projects: 
 
 **[Projeto MC656 no GitHub Projects](https://github.com/users/GiizAzul/projects/1)**
-
-- **Issues:** as issues com a label `Atividade3` vieram do levantamento de
-  requisitos da Atividade 3 (épicos e histórias de usuário com critérios de
-  aceitação) e formam o backlog priorizado do projeto.
-- **Documentação:** o processo de elicitação, a análise, os requisitos, os
-  épicos, as histórias e a priorização estão explicados em detalhe em
-  [`docs/A3_report/`](docs/A3_report).

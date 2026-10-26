@@ -37,7 +37,7 @@ async def iniciar_votacao_caco(request: Request, usuario: Annotated [Usuario, De
             name="caco.html",
             context={
                 "erro": str(e),
-                "estado_eleicao": eleicao.estado.name,
+                "estado_eleicao": eleicao.estado.nome,
                 "is_gestao": True
             }
         )
@@ -54,7 +54,7 @@ async def tela_assembleia(request: Request, usuario: Annotated [Usuario, Depends
         name="caco.html", 
         request=request,
         context={
-            "estado_eleicao": eleicao.estado.name,
+            "estado_eleicao": eleicao.estado.nome,
             "is_gestao": is_gestao
         }
     )
@@ -74,7 +74,7 @@ async def processar_voto_caco(request: Request, usuario: Annotated [Usuario, Dep
             name="caco.html",
             context={
                 "erro": "VOTO NEGADO: Você já registrou seu voto nesta pauta.",
-                "estado_eleicao": eleicao.estado.name,
+                "estado_eleicao": eleicao.estado.nome,
                 "is_gestao": "GESTAO" in usuario.escopo
             }
         )
@@ -82,7 +82,7 @@ async def processar_voto_caco(request: Request, usuario: Annotated [Usuario, Dep
     try:
         opcao_enum = OpcaoVoto[opcao]
         
-        eleicao.registrar_voto(usuario.id, opcao_enum)
+        eleicao.apurar_voto(usuario.id, opcao_enum)
         
         # Assina a lista de presença marcando que o ID já votou
         request.app.state.eleitores_caco_votaram.add(usuario.id)
@@ -98,7 +98,7 @@ async def processar_voto_caco(request: Request, usuario: Annotated [Usuario, Dep
             name="caco.html",
             context={
                 "erro": str(e),
-                "estado_eleicao": eleicao.estado.name,
+                "estado_eleicao": eleicao.estado.nome,
                 "is_gestao": "GESTAO" in usuario.escopo
             }
         )
@@ -125,7 +125,7 @@ async def encerrar_votacao_caco(request: Request, usuario: Annotated [Usuario, D
             name="caco.html",
             context={
                 "erro": str(e),
-                "estado_eleicao": eleicao.estado.name,
+                "estado_eleicao": eleicao.estado.nome,
                 "is_gestao": True
             }
         )
@@ -147,6 +147,6 @@ async def resultados_caco(request: Request, usuario: Annotated [Usuario, Depends
         context={
             "contadores": contadores,
             "total_votos": total_votos,
-            "estado": eleicao.estado.name
+            "estado": eleicao.estado.nome
         }
     )

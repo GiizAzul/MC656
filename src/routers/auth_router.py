@@ -104,7 +104,13 @@ async def processar_login(
         resposta = RedirectResponse(url="/dashboard", status_code=302)
         
         # Salva o ID/Username no Cookie do navegador
-        resposta.set_cookie(key="sessao_usuario", value=usuario.username, httponly=True)
+        resposta.set_cookie(
+            key="sessao_usuario", 
+            value=usuario.username, 
+            httponly=True,
+            secure=True,
+            samesite="lax"
+        )
         return resposta
         
     except ValueError as erro:

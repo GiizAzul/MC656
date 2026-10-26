@@ -15,9 +15,15 @@
         <ul class="lista-candidatos">
             {% for candidato in candidatos %}
             <li class="candidato-item">
-                <span class="drag-handle">☰</span>
-                <span class="nome">{{ candidato }}</span>
-                <input type="number" name="posicao_{{ candidato }}" class="posicao-input" min="1" max="{{ candidatos|length }}" placeholder="Posição" required>
+                <label for="posicao_{{ loop.index }}"><strong>{{ candidato }}</strong></label>
+                <input type="number" 
+                       id="posicao_{{ loop.index }}" 
+                       name="posicao_{{ candidato }}" 
+                       class="posicao-input" 
+                       min="1" 
+                       max="{{ candidatos|length }}" 
+                       placeholder="Posição" 
+                       required>
             </li>
             {% endfor %}
         </ul>

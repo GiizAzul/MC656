@@ -26,6 +26,8 @@ class EleicaoAssembleia(SistemaEleitoral):
         duracao_ciclo: float,
     ):
         """Inicializa uma eleição da Assembleia do CACo."""
+        # Inicia no estado AguardandoVotacao
+        super().__init__() 
 
         alunos = set(alunos_cadastrados_ids)
 
@@ -72,23 +74,13 @@ class EleicaoAssembleia(SistemaEleitoral):
             OpcaoVoto.ABSTER: 0,
         }
 
-        # Controla o estado e a temporização.
-        self.estado = Estado.AGUARDANDO
+        # Controla a temporização.
         self.inicio_votacao: float | None = None
 
     def iniciar_votacao(self) -> None:
         """Inicia ciclo de votação."""
-    
-        # não permite iniciar uma votação já encerrada
-        if self.estado == Estado.ENCERRADA:
-            raise RuntimeError("A votação já foi encerrada.")
-    
-        # não permite iniciar uma votação duas vezes
-        if self.estado == Estado.VOTACAO:
-            raise RuntimeError("A votação já está em andamento.")
-    
-        self.estado = Estado.VOTACAO
-        self.inicio_votacao = time.monotonic()
+        super().iniciar_votacao() # utiliza o metodo iniciar_votacao de SistemaEleitoral
+        self.inicio_votacao = time.monotonic() # implementa temporizacao
 
     def tempo_acabou(self) -> bool:
         """Verifica se o tempo da votação terminou."""
@@ -104,10 +96,6 @@ class EleicaoAssembleia(SistemaEleitoral):
     def registrar_voto(self, eleitor_id:str, opcao: OpcaoVoto) -> None:
         """Registra o voto de um eleitor"""
 
-        # verifica se está em estado de votação
-        if self.estado != Estado.VOTACAO:
-            raise RuntimeError("Não existe um ciclo de votação ativo.")
-
         # garante voto único
         if eleitor_id in self.votantes:
             raise ValueError("O eleitor já registrou um voto nesta votação.") # value error?
@@ -120,12 +108,7 @@ class EleicaoAssembleia(SistemaEleitoral):
 
     def encerrar_votacao(self) -> None:
         """Encerra ciclo de votação."""
-        
-        # Só encerra se ainda estiver acontecendo
-        if self.estado == Estado.ENCERRADA:
-            return
-    
-        self.estado = Estado.ENCERRADA
+        super().encerrar_votacao()
         self.inicio_votacao = None
                 
     def obter_contadores(self) -> dict[str, int]:

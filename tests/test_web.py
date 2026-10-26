@@ -1,9 +1,20 @@
+import pytest
 from fastapi.testclient import TestClient
 
+from src.australia import EleicaoAustralia
+from src.autenticacao.base import Usuario
+from src.estados import AguardandoVotacao, EmVotacao, Encerrada
 from src.main import app
 
 # Inicializa o cliente de testes simulando um navegador
-client = TestClient(app)
+client = TestClient(app, base_url="https://testserver")
+
+@pytest.fixture(autouse=True)
+def votacao_australia_aberta():
+    """A eleição não é mais iniciada no main.py: os testes abrem a votação."""
+    eleicao = app.state.eleicao_australia
+    if isinstance(eleicao.estado, AguardandoVotacao):
+        eleicao.iniciar_votacao()
 
 # Testes padrões de interface
 def test_renderizacao_telas_get():
@@ -153,14 +164,16 @@ def test_rota_votar_australia():
     
     # Simula o formulário web onde o usuário digitou as posições 1, 2 e 3
     dados_voto = {
-        "posicao_Ana": "1",
-        "posicao_Beto": "2",
-        "posicao_Caio": "3"
+        "posicao_Candidato A": "1",
+        "posicao_Candidato B": "2",
+        "posicao_Candidato C": "3"
     }
     response = client.post("/australia/votar", data=dados_voto)
     
     assert response.status_code == 200
     assert "voto registrado" in response.text.lower()
+    # A cédula deve ter sido gravada pelo motor, na ordem escolhida
+    assert app.state.eleicao_australia.cedulas[-1] == ["Candidato A", "Candidato B", "Candidato C"]
     client.cookies.clear()
     
 def test_rota_votar_caco():
@@ -360,21 +373,22 @@ def test_caco_router_excecoes_internas():
     # Criamos uma classe dummy que obrigatoriamente explode ao tentar encerrar
     class MockEleicaoParaErro:
         class MockEstado:
-            name = "TESTE"
+            nome = "TESTE"
         estado = MockEstado()
         
         def encerrar_votacao(self):
             raise RuntimeError("Explosão programada para o Coverage!")
             
-    # Injeta a eleição sabotada no estado da aplicação
-    app.state.eleicao_caco = MockEleicaoParaErro()
-    
-    # Aciona a rota. O try chama o mock, explode, e desce direto para a exceção
-    client.post("/caco/encerrar")
-    
-    # Restaura a sanidade do sistema
-    app.state.eleicao_caco = eleicao_backup
-    client.cookies.clear()
+
+    # Injeta a eleição sabotada e garante a restauração,
+    # mesmo se ocorrer uma exceção durante o teste.
+    try:
+        app.state.eleicao_caco = MockEleicaoParaErro()
+        client.post("/caco/encerrar")
+    finally:
+        app.state.eleicao_caco = eleicao_backup
+        client.cookies.clear()
+
 
 def test_caco_voto_invalido_gera_erro():
     """Evita duplicidade de nome na suite e acerta o assert."""
@@ -544,6 +558,108 @@ def test_botc_renderiza_tela_com_voto():
     # Agora acessa a partida (vai engatilhar a leitura dos votos)
     assert client.get("/botc/partida").status_code == 200
     client.cookies.clear()    
+
+def test_botc_jogador_morto_sem_voto_bloqueado():
+    """Testa bloqueio de votação na UI e backend para mortos sem voto fantasma (Issue #71)."""
+    # Cadastra jogador e loga
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Morto Sem Voto", "username": "morto_sem_voto", "senha": "123", "senha_confirma": "123"})
+    client.post("/login", data={"username": "morto_sem_voto", "senha": "123"})
+    client.cookies.set("sessao_usuario", "morto_sem_voto")
+
+    # Acessa a tela inicial para registrar o jogador no sistema
+    res_tela = client.get("/botc/partida")
+    assert res_tela.status_code == 200
+
+    from src.botc import StatusJogador
+    from src.main import app
+
+    sistema = app.state.sistema_botc
+    jogador = sistema.obter_jogador("Morto Sem Voto")
+    assert jogador is not None
+    jogador.status = StatusJogador.MORTO_SEM_FANTASMA
+
+    # Ao recarregar a tela, a UI deve alertar que a votação está bloqueada
+    res_bloqueado = client.get("/botc/partida")
+    assert "bloqueada para você" in res_bloqueado.text.lower() or "voto indisponível" in res_bloqueado.text.lower()
+
+    # Tentativa de votar via POST deve ser rejeitada
+    res_voto = client.post("/botc/votar", data={"acao": "levantar_mao"})
+    assert res_voto.status_code == 200
+    assert "já utilizou seu voto fantasma" in res_voto.text.lower()
+    client.cookies.clear()
+
+def test_botc_storyteller_gerencia_status_jogador():
+    """Testa storyteller alterando status de jogadores e bloqueio para não-mestres (Issue #71)."""
+    # Cadastra jogador comum
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Alvo Status", "username": "alvo_status", "senha": "123", "senha_confirma": "123"})
+
+    # Tenta alterar status sem permissão (como jogador comum)
+    client.cookies.set("sessao_usuario", "alvo_status")
+    res_bloqueada = client.post("/botc/status-jogador", data={"id_jogador": "Alvo Status", "novo_status": "Morto (Com Voto)"})
+    assert res_bloqueada.status_code == 403
+
+    # Agora loga como storyteller
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Mestre Status", "username": "mestre_status", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "mestre_status")
+
+    # Garante que o jogador alvo está no sistema
+    from src.botc import JogadorBotC, StatusJogador
+    from src.main import app
+    app.state.sistema_botc.adicionar_jogador(JogadorBotC("alvo_status_id", "Alvo Status", StatusJogador.VIVO))
+
+    res_sucesso = client.post("/botc/status-jogador", data={"id_jogador": "alvo_status_id", "novo_status": "Morto (Com Voto)"})
+    assert res_sucesso.status_code == 200
+    assert "alterado para Morto (Com Voto)" in res_sucesso.text
+
+    # Status inválido
+    res_invalido = client.post("/botc/status-jogador", data={"id_jogador": "alvo_status_id", "novo_status": "StatusQueNaoExiste"})
+    assert res_invalido.status_code == 400
+    client.cookies.clear()
+
+def test_botc_storyteller_aplica_modificadores_voto():
+    """Testa aplicação de modificadores com padrão Decorator via interface (Issue #70)."""
+    # Cadastra storyteller
+    client.post("/cadastro", data={"tipo_conta": "BOTC_STORYTELLER", "nome_real": "Mestre Mod", "username": "mestre_mod", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "mestre_mod")
+
+    from src.botc import JogadorBotC, StatusJogador
+    from src.main import app
+    jogador = JogadorBotC("alvo_mod_id", "Alvo Modificador", StatusJogador.VIVO)
+    app.state.sistema_botc.adicionar_jogador(jogador)
+
+    # 1. Multiplicador com Negativador -> deve resultar em -3
+    res_mult_neg = client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "multiplicador_negativo", "fator": 3})
+    assert res_mult_neg.status_code == 200
+    assert jogador.calcular_peso_voto() == -3
+
+    # 2. Multiplicador simples (x3)
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "padrao"})
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "multiplicador", "fator": 3})
+    assert jogador.calcular_peso_voto() == 3
+
+    # 3. Negativo simples (-1)
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "padrao"})
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "negativo"})
+    assert jogador.calcular_peso_voto() == -1
+
+    # 4. Anulador (0)
+    client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "nulo"})
+    assert jogador.calcular_peso_voto() == 0
+
+    # 5. Jogador inexistente (404)
+    res_404 = client.post("/botc/modificador", data={"id_jogador": "jogador_fantasma_inexistente", "tipo_modificador": "multiplicador"})
+    assert res_404.status_code == 404
+
+    # 6. Modificador desconhecido (400)
+    res_400 = client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "desconhecido"})
+    assert res_400.status_code == 400
+
+    # 7. Jogador comum bloqueado (403)
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Comum Mod", "username": "comum_mod", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "comum_mod")
+    res_403 = client.post("/botc/modificador", data={"id_jogador": "alvo_mod_id", "tipo_modificador": "multiplicador"})
+    assert res_403.status_code == 403
+    client.cookies.clear()
     
 # Testes australia_router.py
 def test_australia_acesso_deslogado():
@@ -614,3 +730,132 @@ def test_australia_votar_sem_digito():
     assert res_aus.status_code == 200
     assert "erro" in res_aus.text.lower()
     client.cookies.clear()
+
+def test_australia_rejeita_candidato_inexistente():
+    """O motor (e não o router) barra cédulas com candidatos que não existem."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Falso", "username": "aus_falso", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "aus_falso")
+    total_antes = len(app.state.eleicao_australia.cedulas)
+
+    dados = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Fantasma": "3"}
+    res = client.post("/australia/votar", data=dados)
+
+    assert res.status_code == 200
+    assert "duplicados ou não registrados" in res.text
+    assert len(app.state.eleicao_australia.cedulas) == total_antes
+    client.cookies.clear()
+
+def test_australia_votacao_nao_iniciada_bloqueia_voto():
+    """Com a votação fora do estado EmVotacao (padrão State), o router não grava a cédula."""
+    client.post("/cadastro", data={"tipo_conta": "AUSTRALIA_ELEITOR", "nome_real": "Aus Cedo", "username": "aus_cedo", "senha": "123", "senha_confirma": "123"})
+    client.cookies.set("sessao_usuario", "aus_cedo")
+
+    # Usa uma eleição isolada (ainda aguardando) para não afetar os demais testes
+    original = app.state.eleicao_australia
+    nova = EleicaoAustralia(["Candidato A", "Candidato B", "Candidato C"], [])
+    app.state.eleicao_australia = nova
+    try:
+        dados = {"posicao_Candidato A": "1", "posicao_Candidato B": "2", "posicao_Candidato C": "3"}
+        res = client.post("/australia/votar", data=dados)
+        assert res.status_code == 200
+        assert "Não existe um ciclo de votação ativo" in res.text
+        assert nova.cedulas == []
+    finally:
+        app.state.eleicao_australia = original
+        client.cookies.clear()
+
+
+class _GestaoAustraliaTeste(Usuario):
+    """Usuário de gestão da Austrália, definido só para os testes."""
+    @property
+    def escopo(self) -> str:
+        return "AUSTRALIA_GESTAO"
+
+
+@pytest.fixture
+def gestor_australia():
+    """Garante um usuário com escopo AUSTRALIA_GESTAO e devolve o username dele."""
+    username = "gestor_aus_teste"
+    if username not in app.state.banco_auth._mapa_usernames:
+        app.state.banco_auth.registrar(_GestaoAustraliaTeste(username, "123", "Gestor Aus Teste"))
+    return username
+
+
+@pytest.fixture
+def eleicao_isolada():
+    """Troca a eleição global por uma nova (ainda aguardando) para testar o ciclo de vida
+    sem encerrar a eleição usada pelos demais testes."""
+    original = app.state.eleicao_australia
+    nova = EleicaoAustralia(["Candidato A", "Candidato B", "Candidato C"], [])
+    app.state.eleicao_australia = nova
+    try:
+        yield nova
+    finally:
+        app.state.eleicao_australia = original
+        client.cookies.clear()
+
+
+def test_australia_eleitor_nao_inicia_nem_encerra(eleicao_isolada):
+    """Quem não é da gestão é redirecionado e o estado da eleição não muda."""
+    client.cookies.set("sessao_usuario", "caio")
+
+    res_iniciar = client.post("/australia/iniciar", follow_redirects=False)
+    res_encerrar = client.post("/australia/encerrar", follow_redirects=False)
+
+    assert res_iniciar.status_code in [302, 307]
+    assert res_encerrar.status_code in [302, 307]
+    assert isinstance(eleicao_isolada.estado, AguardandoVotacao)
+
+
+def test_australia_gestao_inicia_votacao(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+
+    res = client.post("/australia/iniciar")
+
+    assert res.status_code == 200
+    assert "Eleição iniciada com sucesso" in res.text
+    assert isinstance(eleicao_isolada.estado, EmVotacao)
+
+
+def test_australia_iniciar_duas_vezes_mostra_erro(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+    client.post("/australia/iniciar")
+
+    res = client.post("/australia/iniciar")
+
+    assert res.status_code == 200
+    assert "A votação já foi iniciada" in res.text
+    assert isinstance(eleicao_isolada.estado, EmVotacao)
+
+
+def test_australia_gestao_encerra_votacao(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+    client.post("/australia/iniciar")
+
+    res = client.post("/australia/encerrar")
+
+    assert res.status_code == 200
+    assert "Eleição encerrada" in res.text
+    assert isinstance(eleicao_isolada.estado, Encerrada)
+
+
+def test_australia_encerrar_antes_de_iniciar_mostra_erro(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+
+    res = client.post("/australia/encerrar")
+
+    assert res.status_code == 200
+    assert "Não é possível encerrar a votação neste estado" in res.text
+    assert isinstance(eleicao_isolada.estado, AguardandoVotacao)
+
+
+def test_australia_nao_reinicia_votacao_encerrada(eleicao_isolada, gestor_australia):
+    client.cookies.set("sessao_usuario", gestor_australia)
+    client.post("/australia/iniciar")
+    client.post("/australia/encerrar")
+
+    res = client.post("/australia/iniciar")
+
+    assert res.status_code == 200
+    assert "A votação já foi encerrada" in res.text
+    assert isinstance(eleicao_isolada.estado, Encerrada)
