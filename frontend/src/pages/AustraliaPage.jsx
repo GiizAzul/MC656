@@ -13,6 +13,20 @@ export default function AustraliaPage({ candidatosIniciais = ['Ana', 'Beto', 'Ca
     setDraggedIdx(index);
   };
 
+  const controlarEleicaoAustralia = async (acao) => {
+    setErro('');
+    setMensagemSucesso('');
+    const res = await fetch(`/australia/${acao}`, { method: 'POST' });
+    const html = await res.text();
+    if (html.includes('iniciada com sucesso')) {
+      setMensagemSucesso('Eleição Federal da Austrália iniciada com sucesso!');
+    } else if (html.includes('Eleição encerrada')) {
+      setMensagemSucesso('Eleição Federal da Austrália encerrada.');
+    } else {
+      setErro('Para iniciar/encerrar, vincule o escopo "Comissão Eleitoral / Gestão (Austrália)" no Painel.');
+    }
+  };
+
   const handleDragOver = (e, index) => {
     e.preventDefault();
     if (index !== dragOverIdx) {
@@ -76,6 +90,15 @@ export default function AustraliaPage({ candidatosIniciais = ['Ana', 'Beto', 'Ca
       <div className="australia-banner">
         <h1>🇦🇺 Eleição Preferencial Australiana (IRV)</h1>
         <p>Arraste e solte os candidatos para definir sua ordem de preferência (1º ao {candidatos.length}º).</p>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <button type="button" className="btn-primary" onClick={() => controlarEleicaoAustralia('iniciar')}>
+          ▶ Iniciar Votação (Comissão Australiana)
+        </button>
+        <button type="button" className="btn-secondary" onClick={() => controlarEleicaoAustralia('encerrar')}>
+          ⏹ Encerrar Votação
+        </button>
       </div>
 
       <div className="australia-instructions">
