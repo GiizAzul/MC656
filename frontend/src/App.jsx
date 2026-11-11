@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import CadastroPage from './pages/CadastroPage';
 import DashboardPage from './pages/DashboardPage';
+import AdminPage from './pages/AdminPage';
 import AustraliaPage from './pages/AustraliaPage';
 import BotCPage from './pages/BotCPage';
 import CACoPage from './pages/CACoPage';
@@ -47,6 +48,14 @@ export default function App() {
             element={
               usuario ? <DashboardPage usuario={usuario} onScopeAdded={carregarSessao} /> : <Navigate to="/" />
             }
+          />
+          <Route
+            path="/admin"
+            element={usuario ? <AdminPage usuario={usuario} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/caco/resultados"
+            element={usuario ? <CACoPage usuario={usuario} /> : <Navigate to="/" />}
           />
           <Route
             path="/australia/votar"
