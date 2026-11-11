@@ -86,12 +86,12 @@ async def processar_voto_botc(
         request.app.state.maos_botc = {}
     
     mao_levantada = acao == "levantar_mao"
-    request.app.state.maos_botc[usuario.username] = mao_levantada
-
-
     
     sistema = request.app.state.sistema_botc
+
     if usuario is not None and "BOTC" in usuario.escopo:
+        request.app.state.maos_botc[usuario.username] = mao_levantada
+        request.app.state.maos_botc[usuario.id] = mao_levantada
         jogador = _obter_ou_criar_jogador(sistema, usuario)
         # Se a requisição vier via fetch/React (Accept: application/json), responde sem trocar de tela!
         if "application/json" in request.headers.get("accept", ""):
@@ -257,3 +257,52 @@ async def apurar_execucao_botc(
         request=request,
         context={"mensagem": mensagem},
     )
+
+@router.get("/api/estado")
+async def estado_roda_botc(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+):
+    sistema = request.app.state.sistema_botc
+    if not hasattr(request.app.state, "maos_botc"):
+        request.app.state.maos_botc = {}
+
+    jogador_atual = _obter_ou_criar_jogador(sistema, usuario)
+
+    # Garante jogadores mínimos de demonstração na roda se houver menos de 4
+    nomes_demo = ["Alice", "Bruno", "Carla", "Diego", "Elena"]
+    if len(sistema.jogadores) < 4:
+        for nome in nomes_demo:
+            if not sistema.obter_jogador(nome):
+                sistema.adicionar_jogador(
+                    JogadorBotC(id_jogador=nome.lower(), nome=nome, status=StatusJogador.VIVO)
+                )
+
+    jogadores_roda = []
+    for jog in sistema.jogadores.values():
+        mao = request.app.state.maos_botc.get(jog.nome, False) or request.app.state.maos_botc.get(jog.id_jogador, False)
+        jogadores_roda.append({
+            "id": jog.id_jogador,
+            "nome": jog.nome,
+            "status": jog.status.value,
+            "peso": jog.calcular_peso_voto(),
+            "pode_votar": jog.pode_votar(),
+            "mao_levantada": bool(mao),
+        })
+
+    jogador_atual = _obter_ou_criar_jogador(sistema, usuario)
+    minha_mao = request.app.state.maos_botc.get(usuario.username, False)
+
+    return JSONResponse({
+        "usuario_atual": {
+            "username": usuario.username,
+            "nome": jogador_atual.nome,
+            "id": jogador_atual.id_jogador,
+            "status": jogador_atual.status.value,
+            "pode_votar": jogador_atual.pode_votar(),
+            "mao_levantada": bool(minha_mao),
+            "is_storyteller": "STORYTELLER" in usuario.escopo,
+        },
+        "jogadores": jogadores_roda,
+        "votos_forca": getattr(sistema, "votos", {}),
+    })
