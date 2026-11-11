@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -267,6 +268,103 @@ async def apurar_execucao_botc(
         context={"mensagem": mensagem},
     )
 
+def _atualizar_progresso_giro(app_state, sistema) -> dict:
+    """Atualiza o ponteiro do Storyteller no servidor (1.5s por jogador) e trava as mãos."""
+    if not hasattr(app_state, "giro_botc"):
+        app_state.giro_botc = {
+            "ativo": False,
+            "nomeado_id": None,
+            "nomeado_nome": None,
+            "ordem_ids": [],
+            "inicio_ts": 0.0,
+            "passo_atual": -1,
+            "trancados": {},
+            "trancados_nomes": set(),
+            "votos_computados": 0,
+            "mensagem_final": "",
+        }
+
+    giro = app_state.giro_botc
+    if not giro["ativo"]:
+        return giro
+
+    decorrido = time.time() - giro["inicio_ts"]
+    passo_calculado = int(decorrido // 1.5)  # 1.5 segundo em cada jogador (fluido e visível)
+    ordem = giro["ordem_ids"]
+    maos = getattr(app_state, "maos_botc", {})
+
+    # Trava todos os jogadores pelos quais o ponteiro já passou
+    for idx in range(min(passo_calculado, len(ordem))):
+        jid = ordem[idx]
+        if jid not in giro["trancados"]:
+            jog = sistema.obter_jogador(jid)
+            if jog:
+                mao_no_momento = bool(maos.get(jog.nome, False) or maos.get(jog.id_jogador, False))
+                giro["trancados"][jid] = mao_no_momento
+                giro["trancados_nomes"].add(jog.nome)
+                if mao_no_momento and jog.pode_votar():
+                    giro["votos_computados"] += jog.calcular_peso_voto()
+                    if jog.status == StatusJogador.MORTO_COM_FANTASMA:
+                        jog.status = StatusJogador.MORTO_SEM_FANTASMA
+
+    if passo_calculado >= len(ordem):
+        giro["ativo"] = False
+        giro["passo_atual"] = -1
+        nome_alvo = giro["nomeado_nome"] or giro["nomeado_id"]
+        try:
+            sistema.registrar_votacao(nome_alvo, giro["votos_computados"])
+        except ValueError:
+            pass
+        giro["mensagem_final"] = (
+            f"Contagem concluída! {giro['votos_computados']} voto(s) computado(s) para {nome_alvo}."
+        )
+    else:
+        giro["passo_atual"] = passo_calculado
+
+    return giro
+
+
+@router.post("/api/iniciar-giro")
+async def iniciar_giro_storyteller(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    nomeado_id: str = Form(...),
+):
+    if "BOTC_STORYTELLER" not in usuario.escopo:
+        raise HTTPException(status_code=403, detail="Apenas o Storyteller pode iniciar o ponteiro.")
+
+    sistema = request.app.state.sistema_botc
+    lista_jogadores = list(sistema.jogadores.values())
+    if not lista_jogadores:
+        raise HTTPException(status_code=400, detail="Não há jogadores na roda.")
+
+    idx_nomeado = next(
+        (i for i, j in enumerate(lista_jogadores) if j.id_jogador == nomeado_id or j.nome == nomeado_id),
+        0,
+    )
+    nomeado_obj = lista_jogadores[idx_nomeado]
+
+    # Ordem começa no jogador imediatamente à direita (sentido horário) e termina no próprio nomeado
+    ordem_ids = [
+        lista_jogadores[(idx_nomeado + offset) % len(lista_jogadores)].id_jogador
+        for offset in range(1, len(lista_jogadores) + 1)
+    ]
+
+    request.app.state.giro_botc = {
+        "ativo": True,
+        "nomeado_id": nomeado_obj.id_jogador,
+        "nomeado_nome": nomeado_obj.nome,
+        "ordem_ids": ordem_ids,
+        "inicio_ts": time.time(),
+        "passo_atual": 0,
+        "trancados": {},
+        "trancados_nomes": set(),
+        "votos_computados": 0,
+        "mensagem_final": "",
+    }
+    return JSONResponse({"status": "iniciado", "nomeado": nomeado_obj.nome})
+
+
 @router.get("/api/estado")
 async def estado_roda_botc(
     request: Request,
@@ -276,9 +374,8 @@ async def estado_roda_botc(
     if not hasattr(request.app.state, "maos_botc"):
         request.app.state.maos_botc = {}
 
-    jogador_atual = _obter_ou_criar_jogador(sistema, usuario)
+    _obter_ou_criar_jogador(sistema, usuario)
 
-    # Garante jogadores mínimos de demonstração na roda se houver menos de 4
     nomes_demo = ["Alice", "Bruno", "Carla", "Diego", "Elena"]
     if len(sistema.jogadores) < 4:
         for nome in nomes_demo:
@@ -287,20 +384,39 @@ async def estado_roda_botc(
                     JogadorBotC(id_jogador=nome.lower(), nome=nome, status=StatusJogador.VIVO)
                 )
 
+    giro = _atualizar_progresso_giro(request.app.state, sistema)
+
     jogadores_roda = []
     for jog in sistema.jogadores.values():
         mao = request.app.state.maos_botc.get(jog.nome, False) or request.app.state.maos_botc.get(jog.id_jogador, False)
+        trancado = jog.id_jogador in giro["trancados"]
+        mao_exibida = giro["trancados"][jog.id_jogador] if trancado else bool(mao)
         jogadores_roda.append({
             "id": jog.id_jogador,
             "nome": jog.nome,
             "status": jog.status.value,
             "peso": jog.calcular_peso_voto(),
             "pode_votar": jog.pode_votar(),
-            "mao_levantada": bool(mao),
+            "mao_levantada": mao_exibida,
+            "trancado": trancado,
         })
 
     jogador_atual = _obter_ou_criar_jogador(sistema, usuario)
-    minha_mao = request.app.state.maos_botc.get(usuario.username, False)
+    meu_trancado = jogador_atual.id_jogador in giro["trancados"]
+    minha_mao = (
+        giro["trancados"][jogador_atual.id_jogador]
+        if meu_trancado
+        else bool(
+            request.app.state.maos_botc.get(usuario.username, False)
+            or request.app.state.maos_botc.get(jogador_atual.nome, False)
+        )
+    )
+
+    id_ponteiro_atual = (
+        giro["ordem_ids"][giro["passo_atual"]]
+        if giro["ativo"] and 0 <= giro["passo_atual"] < len(giro["ordem_ids"])
+        else None
+    )
 
     return JSONResponse({
         "usuario_atual": {
@@ -309,9 +425,17 @@ async def estado_roda_botc(
             "id": jogador_atual.id_jogador,
             "status": jogador_atual.status.value,
             "pode_votar": jogador_atual.pode_votar(),
-            "mao_levantada": bool(minha_mao),
+            "mao_levantada": minha_mao,
+            "trancado": meu_trancado,
             "is_storyteller": "STORYTELLER" in usuario.escopo,
         },
         "jogadores": jogadores_roda,
-        "votos_forca": getattr(sistema, "votos", {}),
+        "giro": {
+            "ativo": giro["ativo"],
+            "nomeado_id": giro["nomeado_id"],
+            "nomeado_nome": giro["nomeado_nome"],
+            "id_ponteiro_atual": id_ponteiro_atual,
+            "votos_computados": giro["votos_computados"],
+            "mensagem_final": giro["mensagem_final"],
+        },
     })
