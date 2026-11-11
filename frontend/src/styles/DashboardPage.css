@@ -1,0 +1,42 @@
+.dashboard-header {
+  margin-bottom: 1.75rem;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.context-card {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.6rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.context-card.aus { border-top: 5px solid var(--aus-green); }
+.context-card.caco { border-top: 5px solid var(--caco-purple); }
+.context-card.botc { border-top: 5px solid var(--botc-crimson); }
+
+.scope-linker-card {
+  background: #ffffff;
+  border: 2px dashed #94a3b8;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.scope-linker-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-top: 1rem;
+}

@@ -1,0 +1,90 @@
+:root {
+  --bg-page: #f4f6fb;
+  --surface: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+
+  /* Paleta por Domínio (baseada em docs/A1_report/imagens) */
+  --primary-blue: #1d4ed8;
+  --primary-blue-hover: #1e40af;
+  --aus-green: #047857;
+  --aus-gold: #f59e0b;
+  --caco-purple: #6d28d9;
+  --botc-crimson: #991b1b;
+  --botc-dark: #111827;
+
+  --danger-bg: #fef2f2;
+  --danger-text: #b91c1c;
+  --success-bg: #ecfdf5;
+  --success-text: #047857;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.alert-banner {
+  padding: 0.9rem 1.15rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.25rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.alert-error {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid #fecaca;
+}
+
+.alert-success {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid #a7f3d0;
+}
+
+.btn-primary {
+  background-color: var(--primary-blue);
+  color: #ffffff;
+  border: none;
+  padding: 0.75rem 1.4rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-blue-hover);
+}
+
+.btn-secondary {
+  background-color: #e2e8f0;
+  color: var(--text-primary);
+  border: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
