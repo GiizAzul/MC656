@@ -25,7 +25,6 @@ def _contexto_cedula(eleicao, usuario: Usuario, **extra) -> dict:
         **extra,
     }
 
-
 @router.get("/votar", response_class=HTMLResponse)
 async def tela_votacao(
     request: Request, 
@@ -165,3 +164,19 @@ async def processar_voto_australia(
             name="australia.html",
             context=_contexto_cedula(eleicao, usuario, erro=str(e)),
         )
+
+@router.get("/api/estado")
+async def estado_australia_json(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+):
+    from fastapi.responses import JSONResponse
+
+    eleicao = request.app.state.eleicao_australia
+    return JSONResponse({
+        "candidatos": list(eleicao.candidatos),
+        "estado_eleicao": eleicao.estado.nome,
+        "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
+        "ja_votou": usuario.id in request.app.state.eleitores_australia_votaram,
+        "total_votos": len(eleicao.cedulas),
+    })
