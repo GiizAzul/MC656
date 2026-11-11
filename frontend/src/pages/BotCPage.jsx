@@ -1,16 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/BotCPage.css';
 
 export default function BotCPage() {
   const navigate = useNavigate();
+  const [partidaId, setPartidaId] = useState('principal');
+  const [partidasDisponiveis, setPartidasDisponiveis] = useState([]);
+  const [partidaAtualInfo, setPartidaAtualInfo] = useState({
+    id: 'principal',
+    nome: 'Partida Principal',
+    storyteller_id: null,
+    storyteller_nome: 'Aguardando Storyteller',
+  });
+  const [novoNomeSala, setNovoNomeSala] = useState('');
+
   const [jogadores, setJogadores] = useState([]);
   const [meuStatus, setMeuStatus] = useState({
     pode_votar: true,
     mao_levantada: false,
     trancado: false,
     status: 'vivo',
-    is_storyteller: false,
+    is_storyteller_desta_partida: false,
+    tem_escopo_storyteller: false,
   });
   const [giro, setGiro] = useState({
     ativo: false,
@@ -25,29 +36,32 @@ export default function BotCPage() {
   const [erro, setErro] = useState('');
   const [veredito, setVeredito] = useState('');
 
+  // Ângulo cumulativo contínuo para o ponteiro NUNCA girar para trás ao cruzar o topo da roda
+  const anguloAcumuladoRef = useRef(null);
+
   const carregarRoda = useCallback(async () => {
     try {
-      const res = await fetch('/botc/api/estado');
+      const res = await fetch(`/botc/api/estado?partida_id=${encodeURIComponent(partidaId)}`);
       if (res.ok) {
         const data = await res.json();
         setJogadores(data.jogadores || []);
         setMeuStatus(data.usuario_atual || {});
         setGiro(data.giro || {});
+        setPartidaAtualInfo(data.partida_atual || {});
+        setPartidasDisponiveis(data.partidas_disponiveis || []);
         setNomeadoSelecionado((prev) => prev || data.giro?.nomeado_id || data.jogadores?.[0]?.id || '');
       }
     } catch {
-      // ignora erro de rede temporário
+      // ignora oscilação temporária
     }
-  }, []);
+  }, [partidaId]);
 
-  // Polling rápido (400ms) para todos verem o ponteiro e as mãos em tempo real
   useEffect(() => {
     carregarRoda();
     const poll = setInterval(carregarRoda, 400);
     return () => clearInterval(poll);
   }, [carregarRoda]);
 
-  // Bloqueia fechamento/recarregamento da aba enquanto a votação está ocorrendo
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (giro.ativo) {
@@ -59,6 +73,63 @@ export default function BotCPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [giro.ativo]);
 
+  // Calcula o ângulo sempre avançando em sentido horário (delta >= 0)
+  const idxPonteiro = jogadores.findIndex((j) => j.id === giro.id_ponteiro_atual);
+  let anguloPonteiro = null;
+  if (giro.ativo && idxPonteiro >= 0 && jogadores.length > 0) {
+    const anguloAlvoBase = (idxPonteiro * 360) / jogadores.length - 90;
+    if (anguloAcumuladoRef.current === null) {
+      anguloAcumuladoRef.current = anguloAlvoBase;
+    } else {
+      const atualMod = ((anguloAcumuladoRef.current % 360) + 360) % 360;
+      const alvoMod = ((anguloAlvoBase % 360) + 360) % 360;
+      let delta = alvoMod - atualMod;
+      if (delta < -0.01) {
+        delta += 360; // força a continuar girando para a frente (sentido horário)
+      }
+      anguloAcumuladoRef.current += delta;
+    }
+    anguloPonteiro = anguloAcumuladoRef.current;
+  } else {
+    anguloAcumuladoRef.current = null;
+  }
+
+  const assumirCentroDaRoda = async () => {
+    setErro('');
+    const form = new URLSearchParams();
+    form.append('partida_id', partidaId);
+    const res = await fetch('/botc/api/assumir-storyteller', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setErro(d.detail || 'Não foi possível assumir como Storyteller.');
+    } else {
+      await carregarRoda();
+    }
+  };
+
+  const criarNovaPartida = async (e) => {
+    e.preventDefault();
+    if (!novoNomeSala.trim()) return;
+    const form = new URLSearchParams();
+    form.append('nome_sala', novoNomeSala);
+    form.append('assumir_storyteller', String(meuStatus.tem_escopo_storyteller));
+
+    const res = await fetch('/botc/api/criar-partida', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    if (res.ok) {
+      const d = await res.json();
+      setNovoNomeSala('');
+      setPartidaId(d.partida_id);
+    }
+  };
+
   const iniciarGiroStoryteller = async () => {
     if (!nomeadoSelecionado) return;
     setErro('');
@@ -66,6 +137,7 @@ export default function BotCPage() {
 
     const form = new URLSearchParams();
     form.append('nomeado_id', nomeadoSelecionado);
+    form.append('partida_id', partidaId);
 
     const res = await fetch('/botc/api/iniciar-giro', {
       method: 'POST',
@@ -74,15 +146,20 @@ export default function BotCPage() {
     });
 
     if (!res.ok) {
-      setErro('Apenas o Storyteller pode iniciar o giro do ponteiro.');
+      const d = await res.json().catch(() => ({}));
+      setErro(d.detail || 'Apenas o Storyteller titular desta partida pode iniciar o ponteiro.');
     } else {
       await carregarRoda();
     }
   };
 
   const alternarMinhaMao = async () => {
+    if (meuStatus.is_storyteller_desta_partida) {
+      setErro('O Storyteller fica no centro da roda e não vota na partida que conduz!');
+      return;
+    }
     if (meuStatus.trancado) {
-      setErro('🔒 O ponteiro já passou por você! Seu voto foi computado e sua mão não pode mais ser alterada.');
+      setErro('🔒 O ponteiro já passou por você! Seu voto foi computado e sua mão está travada.');
       return;
     }
     if (!meuStatus.pode_votar) {
@@ -94,6 +171,7 @@ export default function BotCPage() {
     const novaAcao = !meuStatus.mao_levantada ? 'levantar_mao' : 'abaixar_mao';
     const formData = new URLSearchParams();
     formData.append('acao', novaAcao);
+    formData.append('partida_id', partidaId);
 
     const res = await fetch('/botc/votar', {
       method: 'POST',
@@ -119,40 +197,52 @@ export default function BotCPage() {
     setVeredito(match ? match[0] : 'Apuração concluída.');
   };
 
-  const idxPonteiro = jogadores.findIndex((j) => j.id === giro.id_ponteiro_atual);
-  const anguloPonteiro =
-    giro.ativo && idxPonteiro >= 0 && jogadores.length > 0
-      ? (idxPonteiro * 360) / jogadores.length - 90
-      : null;
-
   return (
     <div className="botc-page">
       <div className="botc-header">
         <div className="botc-title">
-          <h1>🩸 Blood on the Clocktower — Roda da Cidade</h1>
+          <h1>🩸 {partidaAtualInfo.nome}</h1>
           <p>
-            Seu status: <strong>{meuStatus.status?.toUpperCase()}</strong> |{' '}
+            Seu papel nesta sala: <strong>{meuStatus.status?.toUpperCase()}</strong> |{' '}
             {giro.nomeado_nome
               ? `Nomeado na Forca: 🎯 ${giro.nomeado_nome}`
               : 'Aguardando o Storyteller nomear um jogador'}
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={giro.ativo}
-          title={giro.ativo ? 'Aguarde o término da contagem na roda para sair' : 'Voltar ao Painel'}
-          onClick={() => {
-            if (giro.ativo) {
-              setErro('⚠️ Você não pode sair da partida enquanto o ponteiro de votação está girando!');
-              return;
-            }
-            navigate('/dashboard');
-          }}
-        >
-          {giro.ativo ? '🔒 Votação em Andamento' : 'Voltar ao Painel'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
+            aria-label="Selecionar Sala de Partida"
+            className="form-control"
+            disabled={giro.ativo}
+            value={partidaId}
+            onChange={(e) => {
+              setNomeadoSelecionado('');
+              setPartidaId(e.target.value);
+            }}
+          >
+            {partidasDisponiveis.map((p) => (
+              <option key={p.id} value={p.id}>
+                🎲 {p.nome} (Mestre: {p.storyteller_nome || 'Livre'})
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={giro.ativo}
+            onClick={() => {
+              if (giro.ativo) {
+                setErro('⚠️ Você não pode sair da partida enquanto o ponteiro de votação está girando!');
+                return;
+              }
+              navigate('/dashboard');
+            }}
+          >
+            {giro.ativo ? '🔒 Votação em Andamento' : 'Voltar ao Painel'}
+          </button>
+        </div>
       </div>
 
       {erro && <div className="alert-banner alert-error">{erro}</div>}
@@ -162,7 +252,7 @@ export default function BotCPage() {
       {veredito && <div className="alert-banner alert-success">⚖️ {veredito}</div>}
 
       <div className="botc-layout">
-        {/* RODA CIRCULAR DE BOLAS */}
+        {/* RODA CIRCULAR COM O STORYTELLER NO CENTRO E JOGADORES NAS BOLAS AO REDOR */}
         <div className="wheel-wrapper">
           <div className="town-wheel">
             {anguloPonteiro !== null && (
@@ -172,12 +262,18 @@ export default function BotCPage() {
               />
             )}
 
+            {/* CENTRO DA RODA: STORYTELLER + CONTADOR */}
             <div className="wheel-center">
-              <small style={{ color: '#94a3b8', fontSize: '0.7rem' }}>VOTOS COMPUTADOS</small>
-              <strong style={{ fontSize: '2rem', color: '#f87171' }}>{giro.votos_computados || 0}</strong>
-              <span style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
-                {giro.ativo ? '🔄 Ponteiro girando...' : 'Roda livre'}
+              <span style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: 700 }}>
+                🎩 STORYTELLER
               </span>
+              <strong style={{ fontSize: '0.82rem', color: '#f8fafc', marginBottom: '0.2rem' }}>
+                {partidaAtualInfo.storyteller_nome}
+              </strong>
+              <small style={{ color: '#94a3b8', fontSize: '0.65rem' }}>VOTOS NA FORCA</small>
+              <strong style={{ fontSize: '1.65rem', color: '#f87171', lineHeight: 1.1 }}>
+                {giro.votos_computados || 0}
+              </strong>
             </div>
 
             {jogadores.map((jog, index) => {
@@ -214,40 +310,58 @@ export default function BotCPage() {
           </div>
         </div>
 
-        {/* COLUNA LATERAL: JOGADOR + GRIMÓRIO EXCLUSIVO DO STORYTELLER */}
+        {/* COLUNA LATERAL DE CONTROLES */}
         <div className="controls-column">
-          <div className="botc-panel-box">
-            <h3>Seu Controle de Mão ({meuStatus.nome})</h3>
-            <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.3rem' }}>
-              {meuStatus.trancado
-                ? '🔒 O ponteiro já passou por você nesta nomeação! Seu voto foi computado e sua mão está travada.'
-                : 'Enquanto o ponteiro não passar pela sua bola na roda, você pode levantar ou abaixar a mão livremente:'}
-            </p>
-
-            <button
-              type="button"
-              onClick={alternarMinhaMao}
-              disabled={meuStatus.trancado || !meuStatus.pode_votar}
-              className={`btn-hand-toggle ${meuStatus.mao_levantada ? 'raised' : 'lowered'}`}
-            >
-              {meuStatus.trancado
-                ? `🔒 VOTO TRANCADO (${meuStatus.mao_levantada ? 'MÃO LEVANTADA' : 'MÃO ABAIXADA'})`
-                : meuStatus.mao_levantada
-                ? '✋ MÃO LEVANTADA (Clique para Abaixar)'
-                : '👇 MÃO ABAIXADA (Clique para Levantar)'}
-            </button>
-          </div>
-
-          {meuStatus.is_storyteller ? (
+          {!meuStatus.is_storyteller_desta_partida ? (
             <div className="botc-panel-box">
-              <h3>📜 Grimório do Storyteller (Exclusivo Mestre)</h3>
-              <p style={{ fontSize: '0.84rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                Indique o jogador nomeado e inicie o ponteiro (começa à direita do nomeado e avança de 1 em 1).
+              <h3>Seu Assento de Jogador ({meuStatus.nome})</h3>
+              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.3rem' }}>
+                {meuStatus.trancado
+                  ? '🔒 O ponteiro já passou pela sua bola! Seu voto foi computado e sua mão está travada.'
+                  : 'Enquanto o ponteiro não passar por você, alterne sua mão livremente:'}
               </p>
 
+              <button
+                type="button"
+                onClick={alternarMinhaMao}
+                disabled={meuStatus.trancado || !meuStatus.pode_votar}
+                className={`btn-hand-toggle ${meuStatus.mao_levantada ? 'raised' : 'lowered'}`}
+              >
+                {meuStatus.trancado
+                  ? `🔒 VOTO TRANCADO (${meuStatus.mao_levantada ? 'MÃO LEVANTADA' : 'MÃO ABAIXADA'})`
+                  : meuStatus.mao_levantada
+                  ? '✋ MÃO LEVANTADA (Clique para Abaixar)'
+                  : '👇 MÃO ABAIXADA (Clique para Levantar)'}
+              </button>
+            </div>
+          ) : (
+            <div className="botc-panel-box">
+              <h3>🎩 Você está no Centro da Roda (Storyteller)</h3>
+              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
+                Como Storyteller titular desta partida, você conduz a execução no centro da roda e{' '}
+                <strong>não possui poder de voto</strong> nesta sala.
+              </p>
+            </div>
+          )}
+
+          {meuStatus.tem_escopo_storyteller && !partidaAtualInfo.storyteller_id && (
+            <div className="botc-panel-box">
+              <h3>🎩 Assumir Centro da Roda</h3>
+              <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.75rem' }}>
+                Esta partida ainda não possui Storyteller. Deseja assumir o centro da roda (máx. 1 por partida)?
+              </p>
+              <button type="button" className="btn-primary" onClick={assumirCentroDaRoda}>
+                Assumir como Único Storyteller desta Partida
+              </button>
+            </div>
+          )}
+
+          {meuStatus.is_storyteller_desta_partida && (
+            <div className="botc-panel-box">
+              <h3>📜 Grimório do Storyteller (Condução da Roda)</h3>
               <div className="form-group" style={{ marginTop: '0.85rem' }}>
                 <label htmlFor="select-nomeado" style={{ color: '#e2e8f0' }}>
-                  Jogador Nomeado para a Forca
+                  Indicar Jogador Nomeado para a Forca
                 </label>
                 <select
                   id="select-nomeado"
@@ -286,15 +400,25 @@ export default function BotCPage() {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="botc-panel-box">
-              <h3>👁️ Acompanhamento da Cidade</h3>
-              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
-                Apenas o <strong>Storyteller</strong> pode nomear jogadores e iniciar o giro do ponteiro. Fique atento
-                à posição do ponteiro dourado na roda!
-              </p>
-            </div>
           )}
+
+          <div className="botc-panel-box">
+            <h3>➕ Criar Nova Sala / Partida Separada</h3>
+            <form onSubmit={criarNovaPartida} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nome da nova sala (ex: Mesa 2)"
+                value={novoNomeSala}
+                onChange={(e) => setNovoNomeSala(e.target.value)}
+                disabled={giro.ativo}
+                required
+              />
+              <button type="submit" className="btn-secondary" disabled={giro.ativo}>
+                Criar Sala
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
