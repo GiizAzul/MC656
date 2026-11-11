@@ -111,6 +111,7 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
               onChange={(e) => setNovoTipo(e.target.value)}
             >
               <option value="AUSTRALIA_ELEITOR">Eleitor (Austrália)</option>
+              <option value="AUSTRALIA_GESTAO">Comissão Eleitoral / Gestão (Austrália)</option>
               <option value="CACO_ESTUDANTE">Estudante Unicamp (CACo)</option>
               <option value="CACO_GESTAO">Gestão (CACo)</option>
               <option value="BOTC_JOGADOR">Jogador (BoTC)</option>

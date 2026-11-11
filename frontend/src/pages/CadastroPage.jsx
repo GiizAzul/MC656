@@ -90,8 +90,9 @@ export default function CadastroPage({ onAuthSuccess }) {
               }}
               required
             >
-              <option value="AUSTRALIA_ELEITOR">Eleitor (Austrália)</option>
               <option value="AUSTRALIA_CANDIDATO">Candidato Federal (Austrália)</option>
+              <option value="AUSTRALIA_ELEITOR">Eleitor (Austrália)</option>
+              <option value="AUSTRALIA_GESTAO">Comissão Eleitoral / Gestão (Austrália)</option>
               <option value="CACO_ESTUDANTE">Estudante Unicamp (CACo)</option>
               <option value="CACO_GESTAO">Membro da Gestão (CACo)</option>
               <option value="BOTC_JOGADOR">Jogador (Blood on the Clocktower)</option>
