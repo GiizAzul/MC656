@@ -24,23 +24,22 @@
 
 .botc-layout {
   display: grid;
-  grid-template-columns: 1.35fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 2rem;
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .botc-layout {
     grid-template-columns: 1fr;
   }
 }
 
-/* === RODA CIRCULAR DOS JOGADORES === */
 .wheel-wrapper {
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -48,11 +47,11 @@
 
 .town-wheel {
   position: relative;
-  width: 420px;
-  height: 420px;
+  width: 480px;
+  height: 480px;
   border-radius: 50%;
   border: 3px dashed rgba(248, 113, 113, 0.35);
-  margin: 1.25rem auto;
+  margin: 1rem auto;
   background: radial-gradient(circle, rgba(153, 27, 27, 0.18) 0%, transparent 70%);
 }
 
@@ -61,67 +60,74 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 150px;
-  height: 150px;
+  width: 146px;
+  height: 146px;
   border-radius: 50%;
   background: #0f172a;
-  border: 2px solid #ef4444;
+  border: 3px solid #ef4444;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 0.75rem;
-  z-index: 2;
-  box-shadow: 0 0 25px rgba(239, 68, 68, 0.3);
+  padding: 0.65rem;
+  z-index: 3;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.35);
 }
 
 .wheel-pointer-arm {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 145px;
-  height: 4px;
+  width: 175px;
+  height: 5px;
   background: linear-gradient(90deg, #ef4444 0%, #fbbf24 100%);
   transform-origin: 0% 50%;
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  z-index: 1;
+  transition: transform 0.65s ease-in-out;
+  z-index: 2;
   border-radius: 4px;
-  box-shadow: 0 0 12px #fbbf24;
+  box-shadow: 0 0 14px #fbbf24;
 }
 
 .wheel-pointer-arm::after {
   content: '➤';
   position: absolute;
-  right: -12px;
+  right: -14px;
   top: -11px;
   color: #fbbf24;
-  font-size: 1.15rem;
+  font-size: 1.25rem;
 }
 
+/* === BOLAS (CÍRCULOS PERFEITOS) PARA CADA JOGADOR NA RODA === */
 .seat-node {
   position: absolute;
-  width: 104px;
-  margin-left: -52px;
-  margin-top: -42px;
+  width: 86px;
+  height: 86px;
+  margin-left: -43px;
+  margin-top: -43px;
+  border-radius: 50%;
   background: #1e293b;
-  border: 2px solid #475569;
-  border-radius: 12px;
-  padding: 0.45rem 0.4rem;
+  border: 3px solid #475569;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
   text-align: center;
-  z-index: 3;
-  transition: all 0.25s ease;
+  z-index: 4;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
 }
 
 .seat-node.nominated {
   border-color: #ef4444;
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.65);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.75);
 }
 
 .seat-node.pointer-active {
   border-color: #fbbf24;
-  transform: scale(1.12);
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.85);
+  transform: scale(1.18);
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.95);
 }
 
 .seat-node.locked {
@@ -130,14 +136,14 @@
 }
 
 .seat-node.hand-up {
-  background: rgba(22, 101, 52, 0.85);
-  border-color: #22c55e;
+  background: radial-gradient(circle, #15803d 0%, #14532d 100%);
+  border-color: #4ade80;
 }
 
 .seat-name {
   font-weight: 700;
-  font-size: 0.82rem;
-  display: block;
+  font-size: 0.72rem;
+  max-width: 72px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -145,16 +151,15 @@
 
 .seat-hand {
   font-size: 1.25rem;
-  margin: 0.15rem 0;
-  display: block;
+  line-height: 1.1;
+  margin: 2px 0;
 }
 
 .seat-badge {
-  font-size: 0.68rem;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  display: inline-block;
+  font-size: 0.62rem;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .controls-column {
@@ -172,7 +177,7 @@
 
 .btn-hand-toggle {
   width: 100%;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 700;
   padding: 0.95rem 1.2rem;
   border-radius: 999px;
