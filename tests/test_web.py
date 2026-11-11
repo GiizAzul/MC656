@@ -859,3 +859,36 @@ def test_australia_nao_reinicia_votacao_encerrada(eleicao_isolada, gestor_austra
     assert res.status_code == 200
     assert "A votação já foi encerrada" in res.text
     assert isinstance(eleicao_isolada.estado, Encerrada)
+
+def test_elementos_interativos_frontend_renderizados():
+    """Garante que os 4 templates entregam o Drag-and-Drop, Cronômetro, Toggle de Mão e RA oculto."""
+    res_cad = client.get("/cadastro")
+    assert res_cad.status_code == 200
+    assert 'id="grupo-ra" style="display: none;"' in res_cad.text
+    assert 'pattern="[0-9]+"' in res_cad.text
+
+    client.cookies.set("sessao_usuario", "caio")
+    res_aus = client.get("/australia/votar")
+    assert res_aus.status_code == 200
+    assert 'draggable="true"' in res_aus.text
+    assert 'id="lista-dnd-australia"' in res_aus.text
+
+    res_dash = client.get("/dashboard")
+    assert res_dash.status_code == 200
+    assert 'action="/adicionar-escopo"' in res_dash.text
+
+    client.cookies.set("sessao_usuario", "leo")
+    res_botc = client.get("/botc/partida")
+    assert res_botc.status_code == 200
+    assert 'id="botc-timer-display"' in res_botc.text
+    assert 'id="btn-mao-interativo"' in res_botc.text
+
+    # Cobre linhas 106-110 de botc_router.py (retorno JSON com usuário autenticado no escopo BOTC)
+    res_json = client.post(
+        "/botc/votar",
+        data={"acao": "levantar_mao"},
+        headers={"Accept": "application/json"},
+    )
+    assert res_json.status_code == 200
+    assert res_json.json()["mao_levantada"] is True
+    client.cookies.clear()
