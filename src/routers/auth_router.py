@@ -2,13 +2,12 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
 from src.autenticacao.base import Usuario
-from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
-from src.autenticacao.caco import EstudanteCACo, GestaoCACo
+from src.autenticacao.factory import UsuarioFactory
 
 from .dependencias import obter_usuario_logado
 
@@ -19,16 +18,27 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.get("/admin", response_class=HTMLResponse)
-async def painel_admin(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
+async def painel_admin(
+    request: Request, 
+    usuario: Annotated [Usuario, Depends(obter_usuario_logado)]
+):
     # Impede que usuários comuns entrem na tela de gestão
     if "GESTAO" not in usuario.escopo and "STORYTELLER" not in usuario.escopo:
         return RedirectResponse(url="/dashboard")
         
-    return templates.TemplateResponse(request=request, name="admin.html", context={"usuario": usuario})
+    return templates.TemplateResponse(
+        request=request, 
+        name="admin.html", 
+        context={"usuario": usuario}
+    )
 
 @router.get("/cadastro", response_class=HTMLResponse)
 async def tela_cadastro(request: Request):
-    return templates.TemplateResponse(request=request, name="cadastro.html", context={})
+    return templates.TemplateResponse(
+        request=request, 
+        name="cadastro.html", 
+        context={}
+    )
 
 @router.post("/cadastro")
 async def processar_cadastro(
@@ -44,38 +54,30 @@ async def processar_cadastro(
         if senha != senha_confirma: # Verifica se as senhas inseridas batem
             raise ValueError("Senhas não conferem. Tente novamente")
         banco = request.app.state.banco_auth
-    
-        # Análise condicional do tipo de usuário
-        if tipo_conta == "CACO_ESTUDANTE":
-            if not ra or not ra.isnumeric():
-                raise ValueError("RA inválido. Tente novamente.")
-            novo_usuario = EstudanteCACo(username, senha, nome_real, int(ra))
-        elif tipo_conta == "CACO_GESTAO":
-            novo_usuario = GestaoCACo(username, senha, nome_real)
-        elif tipo_conta == "AUSTRALIA_ELEITOR":
-            novo_usuario = EleitorAustralia(username, senha, nome_real)
-        elif tipo_conta == "AUSTRALIA_CANDIDATO":
-            novo_usuario = CandidatoAustralia(username, senha, nome_real)
-        elif tipo_conta == "BOTC_JOGADOR":
-            novo_usuario = JogadorBOTC(username, senha, nome_real)
-        elif tipo_conta == "BOTC_STORYTELLER":
-            novo_usuario = StoryTellerBOTC(username, senha, nome_real)
-        else:
-            raise ValueError("Tipo de conta desconhecido.")
-            
-        banco.registrar(novo_usuario)
+
+        # Delegação da lógica de criação polimórfica e validações para a Factory
+        novo_usuario = UsuarioFactory.criar(tipo_conta, username, senha, nome_real, ra)
+
+        usuario_registrado = banco.registrar(novo_usuario)
+        id_final = usuario_registrado.id if usuario_registrado else novo_usuario.id
 
         # Adiciona alunos e gestores novos na lista de eleitores da assembleia ativa 
         if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
             eleicao_caco = request.app.state.eleicao_caco
-            eleicao_caco.alunos_cadastrados.add(novo_usuario.id)
-            eleicao_caco.eleitores.add(novo_usuario.id)
-                
+            eleicao_caco.alunos_cadastrados.add(id_final)
+            eleicao_caco.eleitores.add(id_final)
+
         # Faz o login automático após cadastro
         resposta = RedirectResponse(url="/dashboard", status_code=302)
-        resposta.set_cookie(key="sessao_usuario", value=username, httponly=True)
+        resposta.set_cookie(
+            key="sessao_usuario",
+            value=username,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
         return resposta
-        
+            
     except ValueError as erro:
         # Devolve o HTML de erro preenchendo os dados antigos para não apagar a tela
         return templates.TemplateResponse(
@@ -89,6 +91,39 @@ async def processar_cadastro(
                 "ra_digitado": ra
             }
         )
+
+
+@router.post("/adicionar-escopo")
+async def adicionar_escopo_usuario(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    tipo_conta: str = Form(...),
+    ra: str = Form(None),
+):
+    """Permite que um usuário já logado habilite outro escopo/contexto na mesma conta."""
+    try:
+        temp_user = UsuarioFactory.criar(
+            tipo_conta, usuario.username, "senha_temp", usuario.nome_real, ra
+        )
+        ra_int = getattr(temp_user, "ra", None)
+        usuario.adicionar_escopo(temp_user.escopo, ra=ra_int)
+
+        if ra_int is not None:
+            request.app.state.banco_auth._mapa_usernames[str(ra_int)] = usuario.id
+
+        if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
+            eleicao_caco = request.app.state.eleicao_caco
+            eleicao_caco.alunos_cadastrados.add(usuario.id)
+            eleicao_caco.eleitores.add(usuario.id)
+
+        return RedirectResponse(url="/dashboard", status_code=302)
+    except ValueError as erro:
+        return templates.TemplateResponse(
+            request=request,
+            name="dashboard.html",
+            context={"usuario": usuario, "erro": str(erro)},
+        )
+
 
 @router.post("/login")
 async def processar_login(
@@ -132,6 +167,19 @@ async def painel_usuario(request: Request, usuario: Annotated [Usuario, Depends(
         name="dashboard.html", 
         context={"usuario": usuario}
     )
+
+@router.get("/api/me")
+async def obter_perfil_json(
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+):
+    """Endpoint JSON consumido pelo frontend para obter sessão e escopos."""
+    return JSONResponse({
+        "id": usuario.id,
+        "username": usuario.username,
+        "nome_real": usuario.nome_real,
+        "escopo": usuario.escopo,
+        "ra": getattr(usuario, "ra", None),
+    })
 
 @router.get("/logout")
 async def sair(request: Request):
