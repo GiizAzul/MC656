@@ -72,7 +72,7 @@ async def processar_cadastro(
             key="sessao_usuario",
             value=username,
             httponly=True,
-            secure=True,
+            secure=request.url.scheme == "https",
             samesite="lax",
         )
         return resposta
@@ -142,7 +142,7 @@ async def processar_login(
             key="sessao_usuario", 
             value=usuario.username, 
             httponly=True,
-            secure=True,
+            secure=request.url.scheme == "https",
             samesite="lax"
         )
         return resposta
