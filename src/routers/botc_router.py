@@ -84,6 +84,15 @@ async def processar_voto_botc(
 ):
     if not hasattr(request.app.state, "maos_botc"):
         request.app.state.maos_botc = {}
+
+    giro = getattr(request.app.state, "giro_botc", None)
+    if giro and giro.get("ativo") and usuario is not None:
+        if usuario.id in giro.get("trancados", {}) or usuario.nome_real in giro.get("trancados_nomes", set()):
+            if "application/json" in request.headers.get("accept", ""):
+                return JSONResponse(
+                    {"erro": "O ponteiro já passou por você! Seu voto foi computado e sua mão está travada."},
+                    status_code=400,
+                )
     
     mao_levantada = acao == "levantar_mao"
     
