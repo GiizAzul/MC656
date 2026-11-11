@@ -1,100 +1,193 @@
 {% extends "base.html" %}
-{% block content %}
-<header class="header-context botc-theme">
-    <h2>Blood on the Clocktower - Partida da Cidade</h2>
-</header>
-<main class="box-content">
-    <h3 class="text-center">Roda dos Cidadãos</h3>
 
-    <div class="roda-jogadores">
-        {% for jog in jogadores %}
-        <div class="jogador-card {% if 'Morto' in jog.status %}morto{% endif %}">
-            <strong>{{ jog.nome }}</strong>
-            <small>{{ jog.status }}</small>
-            {% if is_storyteller %}
-                <small title="Peso efetivo do voto">(Peso: {{ jog.peso }})</small>
-            {% endif %}
+{% block content %}
+<main class="card botc-theme">
+    <div class="botc-top-bar">
+        <div>
+            <h2>🩸 Blood on the Clocktower — Praça da Cidade</h2>
+            <p>Status atual: <strong>{{ status_usuario | default('VIVO') }}</strong></p>
         </div>
-        {% endfor %}
+
+        <div class="botc-timer-widget" id="cronometro-container">
+            <span class="timer-label">⏱️ CRONÔMETRO DA FORCA</span>
+            <span id="botc-timer-display" class="timer-digits">01:00</span>
+            <div class="timer-btns">
+                <button type="button" class="btn-small" id="btn-toggle-timer" onclick="alternarCronometro()">▶ Iniciar</button>
+                <button type="button" class="btn-small" onclick="resetarCronometro(30)">30s</button>
+                <button type="button" class="btn-small" onclick="resetarCronometro(60)">60s</button>
+            </div>
+        </div>
     </div>
 
     {% if erro %}
-        <div class="alert alert-danger text-center mt-2">{{ erro }}</div>
+    <div class="alert-error" role="alert">
+        {{ erro }}
+    </div>
     {% endif %}
 
-    <div class="status-usuario text-center mt-2">
-        <p>Seu status atual: <strong>{{ status_usuario }}</strong></p>
-    </div>
+    <div id="botc-toast" class="alert-success" style="display: none;" role="status"></div>
 
-    {% if pode_votar %}
-        <form action="/botc/votar" method="POST" class="botoes-votacao text-center mt-2">
-            <button type="submit" name="acao" value="levantar_mao" class="btn-primary">Levantar a Mão</button>
-            <button type="submit" name="acao" value="abaixar_mao" class="btn-secondary">Abaixar a Mão</button>
+    <section class="botc-hand-section mt-2">
+        <h3>Sua Ação na Roda de Votação</h3>
+        <p class="text-muted">Você pode levantar e abaixar sua mão quantas vezes quiser enquanto o cronômetro estiver ativo.</p>
+
+        {% if pode_votar is defined and not pode_votar %}
+        <div class="alert-error" role="alert">
+            Voto indisponível: a votação está bloqueada para você (morto sem voto fantasma).
+        </div>
+        {% endif %}
+        <form action="/botc/votar" method="POST" id="form-mao-botc" onsubmit="submeterMaoAssincrono(event)">
+            <input type="hidden" id="input-acao-mao" name="acao" value="{% if mao_levantada %}abaixar_mao{% else %}levantar_mao{% endif %}">
+            <button type="submit"
+                    id="btn-mao-interativo"
+                    data-levantada="{{ 'true' if mao_levantada else 'false' }}"
+                    class="btn-hand {% if mao_levantada %}hand-raised{% else %}hand-lowered{% endif %}"
+                    {% if pode_votar is defined and not pode_votar %}disabled{% endif %}>
+                {% if mao_levantada %}
+                    ✋ MÃO LEVANTADA (Clique para Abaixar)
+                {% else %}
+                    👇 MÃO ABAIXADA (Clique para Levantar)
+                {% endif %}
+            </button>
         </form>
-    {% else %}
-        <div class="alert alert-warning text-center mt-2">
-            Você é um jogador morto e já utilizou seu voto fantasma. A votação está bloqueada para você nesta partida.
-        </div>
-        <div class="botoes-votacao text-center mt-2">
-            <button type="button" class="btn-secondary" disabled title="Voto fantasma já utilizado">Voto Indisponível</button>
-        </div>
+        <p class="mt-1">Mãos levantadas na praça agora: <strong id="contador-maos">{{ maos_ativas.values() | select | list | length if maos_ativas else 0 }}</strong></p>
+    </section>
+
+    {% if jogadores %}
+    <section class="mt-2">
+        <h3>Roda de Jogadores na Partida</h3>
+        <ul class="lista-candidatos">
+            {% for jog in jogadores %}
+            <li class="candidato-item">
+                <span><strong>{{ jog.nome }}</strong> ({{ jog.status }})</span>
+                <span>Peso do voto: {{ jog.peso }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
     {% endif %}
 
     {% if is_storyteller %}
-    <section class="controles-gestao mt-2">
-        <h4 class="text-center">Painel do Storyteller</h4>
-
-        <!-- Gerenciar Status de Vida e Voto Fantasma (Issue #71) -->
-        <form action="/botc/status-jogador" method="POST" class="mt-2">
-            <label for="status-jogador-id"><strong>Jogador:</strong></label>
-            <select name="id_jogador" id="status-jogador-id" class="candidato-item" style="width: 100%;">
-                {% for jog in jogadores %}
-                <option value="{{ jog.id }}">{{ jog.nome }} ({{ jog.status }})</option>
-                {% endfor %}
-            </select>
-            <label for="novo-status-id" class="mt-2" style="display: block;"><strong>Novo Status:</strong></label>
-            <select name="novo_status" id="novo-status-id" class="candidato-item" style="width: 100%;">
-                <option value="Vivo">Vivo</option>
-                <option value="Morto (Com Voto)">Morto (Com Voto Fantasma)</option>
-                <option value="Morto (Sem Voto)">Morto (Sem Voto Fantasma)</option>
-            </select>
-            <button type="submit" class="btn-neutral mt-2">Atualizar Status</button>
+    <section class="storyteller-panel mt-2">
+        <h3>📜 Grimório do Storyteller (Mestre)</h3>
+        <form action="/botc/registrar" method="POST" class="mt-1">
+            <div class="form-group">
+                <label for="botc_nomeado">Jogador Nomeado na Forca</label>
+                <input type="text" id="botc_nomeado" name="nomeado" placeholder="Ex: Leo" required>
+            </div>
+            <div class="form-group">
+                <label for="botc_num_votos">Quantidade de Votos (Mãos)</label>
+                <input type="number" id="botc_num_votos" name="num_votos" min="0" step="1" placeholder="0" required>
+            </div>
+            <button type="submit" class="btn-primary">Registrar Votos na Forca</button>
         </form>
 
-        <!-- Configurar Modificadores Ocultos de Voto (Issue #70 / Padrão Decorator) -->
-        <form action="/botc/modificador" method="POST" class="mt-2">
-            <label for="modificador-jogador-id"><strong>Jogador Alvo:</strong></label>
-            <select name="id_jogador" id="modificador-jogador-id" class="candidato-item" style="width: 100%;">
-                {% for jog in jogadores %}
-                <option value="{{ jog.id }}">{{ jog.nome }} - Peso atual: {{ jog.peso }}</option>
-                {% endfor %}
-            </select>
-            <label for="tipo-modificador-id" class="mt-2" style="display: block;"><strong>Tipo de Modificador:</strong></label>
-            <select name="tipo_modificador" id="tipo-modificador-id" class="candidato-item" style="width: 100%;">
-                <option value="multiplicador">Multiplicador (Voto triplo / x3)</option>
-                <option value="negativo">Negativador (Voto negativo / -1)</option>
-                <option value="multiplicador_negativo">Multiplicador com Negativador (Voto triplo negativo / -3)</option>
-                <option value="nulo">Anulador (Voto nulo / peso 0)</option>
-                <option value="padrao">Padrão Unitário (Voto normal / 1)</option>
-            </select>
-            <button type="submit" class="btn-neutral mt-2">Aplicar Modificador</button>
-        </form>
-
-        <!-- Registro de Votação e Apuração da Forca -->
-        <form action="/botc/registrar" method="POST" class="mt-2">
-            <label for="nomeado"><strong>Nome do Nomeado:</strong></label>
-            <input type="text" id="nomeado" name="nomeado" placeholder="Nome do acusado" required class="candidato-item" style="width: 100%;">
-            <label for="num-votos" class="mt-2" style="display: block;"><strong>Quantidade de Votos:</strong></label>
-            <input type="number" id="num-votos" name="num_votos" placeholder="Quantidade de votos" min="0" required class="candidato-item" style="width: 100%;">
-            <button type="submit" class="btn-primary mt-2">Registrar Votação</button>
-        </form>
-
-        <form action="/botc/apurar" method="POST" class="mt-2">
-            <button type="submit" class="btn-danger">Apurar Execução da Forca</button>
+        <form action="/botc/apurar" method="POST" class="mt-1">
+            <button type="submit" class="btn-secondary">Apurar Execução do Dia</button>
         </form>
     </section>
     {% endif %}
 
-    <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
+    <div class="mt-2">
+        <a href="/dashboard" class="btn-secondary">Voltar ao Dashboard</a>
+    </div>
 </main>
+
+<script>
+let tempoRestante = 60;
+let intervaloTimer = null;
+
+function formatarSegundos(seg) {
+    const m = String(Math.floor(seg / 60)).padStart(2, "0");
+    const s = String(seg % 60).padStart(2, "0");
+    return `${m}:${s}`;
+}
+
+function alternarCronometro() {
+    const btn = document.getElementById("btn-toggle-timer");
+    if (intervaloTimer) {
+        clearInterval(intervaloTimer);
+        intervaloTimer = null;
+        if (btn) btn.textContent = "▶ Continuar";
+    } else {
+        if (tempoRestante <= 0) tempoRestante = 60;
+        if (btn) btn.textContent = "⏸ Pausar";
+        intervaloTimer = setInterval(() => {
+            tempoRestante--;
+            const visor = document.getElementById("botc-timer-display");
+            if (visor) visor.textContent = formatarSegundos(Math.max(0, tempoRestante));
+            if (tempoRestante <= 0) {
+                clearInterval(intervaloTimer);
+                intervaloTimer = null;
+                if (btn) btn.textContent = "▶ Iniciar";
+                mostrarToast("⏱️ Tempo encerrado! As mãos foram congeladas para contagem.");
+            }
+        }, 1000);
+    }
+}
+
+function resetarCronometro(segundos) {
+    if (intervaloTimer) {
+        clearInterval(intervaloTimer);
+        intervaloTimer = null;
+    }
+    tempoRestante = segundos;
+    const visor = document.getElementById("botc-timer-display");
+    const btn = document.getElementById("btn-toggle-timer");
+    if (visor) visor.textContent = formatarSegundos(segundos);
+    if (btn) btn.textContent = "▶ Iniciar";
+}
+
+function mostrarToast(msg) {
+    const toast = document.getElementById("botc-toast");
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.style.display = "block";
+}
+
+async function submeterMaoAssincrono(event) {
+    event.preventDefault();
+    if (tempoRestante <= 0) {
+        mostrarToast("⚠️ O cronômetro zerou! Aguarde o Storyteller reiniciar a contagem.");
+        return;
+    }
+    const btn = document.getElementById("btn-mao-interativo");
+    const inputAcao = document.getElementById("input-acao-mao");
+    const contador = document.getElementById("contador-maos");
+
+    const estavaLevantada = btn.getAttribute("data-levantada") === "true";
+    const acaoEnviar = estavaLevantada ? "abaixar_mao" : "levantar_mao";
+
+    const body = new URLSearchParams();
+    body.append("acao", acaoEnviar);
+
+    const response = await fetch("/botc/votar", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json"
+        },
+        body: body.toString()
+    });
+
+    if (response.ok) {
+        const data = await response.json();
+        const novaMao = Boolean(data.mao_levantada);
+        btn.setAttribute("data-levantada", novaMao ? "true" : "false");
+        btn.className = "btn-hand " + (novaMao ? "hand-raised" : "hand-lowered");
+        btn.textContent = novaMao
+            ? "✋ MÃO LEVANTADA (Clique para Abaixar)"
+            : "👇 MÃO ABAIXADA (Clique para Levantar)";
+        inputAcao.value = novaMao ? "abaixar_mao" : "levantar_mao";
+        if (contador && data.total_maos !== undefined) {
+            contador.textContent = data.total_maos;
+        }
+        mostrarToast(
+            novaMao
+                ? "✋ Mão levantada registrada na roda! Você pode abaixar a qualquer momento."
+                : "👇 Mão abaixada na roda."
+        );
+    }
+}
+</script>
 {% endblock %}
