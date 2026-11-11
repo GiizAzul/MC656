@@ -116,7 +116,7 @@ async def processar_voto_botc(
                     "is_storyteller": "STORYTELLER" in usuario.escopo,
                     "pode_votar": False,
                     "status_usuario": jogador.status.value,
-                    "erro": "Você está morto e não possui mais voto fantasma para votar nesta partida.",
+                    "erro": "Você está morto e já utilizou seu voto fantasma nesta partida.",
                 },
             )
 
