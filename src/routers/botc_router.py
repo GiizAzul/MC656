@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
@@ -37,11 +37,17 @@ def _obter_ou_criar_jogador(sistema, usuario: Usuario) -> JogadorBotC:
 
 
 @router.get("/partida", response_class=HTMLResponse)
-async def tela_partida(request: Request, usuario: Annotated[Usuario, Depends(obter_usuario_logado)]):
+async def tela_partida(
+    request: Request, 
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
+):
     if "BOTC" not in usuario.escopo:
         return RedirectResponse(url="/", status_code=302)
 
     sistema = request.app.state.sistema_botc
+    maos = getattr(request.app.state, "maos_botc", {})
+    mao_levantada = maos.get(usuario.username, False)
+    
     jogador_atual = _obter_ou_criar_jogador(sistema, usuario)
 
     jogadores_view = []
@@ -64,6 +70,8 @@ async def tela_partida(request: Request, usuario: Annotated[Usuario, Depends(obt
             "is_storyteller": is_storyteller,
             "pode_votar": jogador_atual.pode_votar(),
             "status_usuario": jogador_atual.status.value,
+            "mao_levantada": mao_levantada,
+            "maos_ativas": maos,
         },
     )
 
@@ -74,9 +82,26 @@ async def processar_voto_botc(
     acao: str = Form(...),
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)] = None,
 ):
+    if not hasattr(request.app.state, "maos_botc"):
+        request.app.state.maos_botc = {}
+    
+    mao_levantada = acao == "levantar_mao"
+    request.app.state.maos_botc[usuario.username] = mao_levantada
+
+
+    
     sistema = request.app.state.sistema_botc
     if usuario is not None and "BOTC" in usuario.escopo:
         jogador = _obter_ou_criar_jogador(sistema, usuario)
+        # Se a requisição vier via fetch/React (Accept: application/json), responde sem trocar de tela!
+        if "application/json" in request.headers.get("accept", ""):
+            total_maos = sum(1 for v in request.app.state.maos_botc.values() if v)
+            return JSONResponse({
+                "status": "ok",
+                "mao_levantada": mao_levantada,
+                "total_maos": total_maos,
+                "mensagem": "Ação registrada na roda da cidade.",
+            })
         if not jogador.pode_votar():
             jogadores_view = [
                 {"id": j.id_jogador, "nome": j.nome, "status": j.status.value, "peso": j.calcular_peso_voto()}
@@ -190,7 +215,7 @@ async def alterar_status_jogador_botc(
     id_jogador: str = Form(...),
     novo_status: str = Form(...),
 ):
-    """Permite ao Storyteller alterar o status de vida / voto fantasma de um jogador (Issue #71)."""
+    """Permite ao Storyteller alterar o status de vida / voto fantasma de um jogador"""
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode alterar o status de jogadores.")
 
@@ -209,9 +234,15 @@ async def alterar_status_jogador_botc(
 
 
 @router.post("/apurar")
-async def apurar_execucao_botc(request: Request, usuario: Annotated[Usuario, Depends(obter_usuario_logado)]):
+async def apurar_execucao_botc(
+    request: Request, 
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
+):
     if "BOTC_STORYTELLER" not in usuario.escopo:
-        raise HTTPException(status_code=403, detail="Apenas o Storyteller pode apurar a execução.")
+        raise HTTPException(
+            status_code=403, 
+            detail="Apenas o Storyteller pode apurar a execução."
+        )
 
     resultado = request.app.state.sistema_botc.apurar_vencedor()
 
