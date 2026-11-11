@@ -3,6 +3,7 @@ from .autorizacao import ControleDeAcesso, ErroAcessoNaoAutorizado
 from .base import ServicoAutenticacao, Usuario
 from .botc import JogadorBOTC, StoryTellerBOTC
 from .caco import EstudanteCACo, GestaoCACo
+from .factory import UsuarioFactory
 
 __all__ = [
     "CandidatoAustralia",
@@ -14,5 +15,6 @@ __all__ = [
     "JogadorBOTC",
     "ServicoAutenticacao",
     "StoryTellerBOTC",
-    "Usuario"
+    "Usuario",
+    "UsuarioFactory"
 ]
