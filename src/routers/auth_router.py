@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
 from src.autenticacao.base import Usuario
 from src.autenticacao.factory import UsuarioFactory
 
