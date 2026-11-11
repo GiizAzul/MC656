@@ -1,18 +1,18 @@
 :root {
   --bg-page: #f4f6fb;
   --surface: #ffffff;
+  --surface-alt: #f8fafc;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --border-color: #e2e8f0;
+  --input-bg: #ffffff;
 
-  /* Paleta por Domínio (baseada em docs/A1_report/imagens) */
-  --primary-blue: #1d4ed8;
-  --primary-blue-hover: #1e40af;
+  --primary-blue: #2563eb;
+  --primary-blue-hover: #1d4ed8;
   --aus-green: #047857;
   --aus-gold: #f59e0b;
   --caco-purple: #6d28d9;
   --botc-crimson: #991b1b;
-  --botc-dark: #111827;
 
   --danger-bg: #fef2f2;
   --danger-text: #b91c1c;
@@ -21,6 +21,22 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme='dark'] {
+  --bg-page: #0b0f19;
+  --surface: #1e293b;
+  --surface-alt: #0f172a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+  --input-bg: #0f172a;
+
+  --danger-bg: rgba(185, 28, 28, 0.2);
+  --danger-text: #fca5a5;
+  --success-bg: rgba(4, 120, 87, 0.25);
+  --success-text: #6ee7b7;
+  --shadow-card: 0 12px 28px -5px rgba(0, 0, 0, 0.55);
 }
 
 * {
@@ -34,12 +50,19 @@ body {
   background-color: var(--bg-page);
   color: var(--text-primary);
   min-height: 100vh;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .app-shell {
-  max-width: 1120px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 2rem 1.25rem;
+}
+
+.form-control {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
 }
 
 .alert-banner {
@@ -53,13 +76,13 @@ body {
 .alert-error {
   background-color: var(--danger-bg);
   color: var(--danger-text);
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .alert-success {
   background-color: var(--success-bg);
   color: var(--success-text);
-  border: 1px solid #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
 .btn-primary {
@@ -73,14 +96,19 @@ body {
   transition: background-color 0.2s, transform 0.1s;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--primary-blue-hover);
 }
 
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-secondary {
-  background-color: #e2e8f0;
+  background-color: var(--surface-alt);
   color: var(--text-primary);
-  border: none;
+  border: 1px solid var(--border-color);
   padding: 0.7rem 1.2rem;
   border-radius: var(--radius-md);
   font-weight: 600;

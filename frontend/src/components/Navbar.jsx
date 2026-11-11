@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/Navbar.css';
 
-export default function Navbar({ usuario, onLogout }) {
+export default function Navbar({ usuario, onLogout, tema, onToggleTema }) {
   const escopos = usuario?.escopo ? usuario.escopo.split(',') : [];
 
   return (
@@ -12,24 +12,36 @@ export default function Navbar({ usuario, onLogout }) {
       </Link>
 
       {usuario && (
-        <>
-          <div className="navbar-scopes">
-            {escopos.map((esc) => (
-              <span key={esc} className="scope-pill">
-                {esc}
-              </span>
-            ))}
-          </div>
-          <div className="navbar-actions">
+        <div className="navbar-scopes">
+          {escopos.map((esc) => (
+            <span key={esc} className="scope-pill">
+              {esc}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="navbar-actions">
+        <button
+          type="button"
+          onClick={onToggleTema}
+          className="theme-toggle-btn"
+          title="Alternar modo claro / escuro"
+        >
+          {tema === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Escuro'}
+        </button>
+
+        {usuario && (
+          <>
             <span className="navbar-user">
               Olá, <strong>{usuario.nome_real}</strong> ({usuario.username})
             </span>
             <a href="/logout" onClick={onLogout} className="btn-logout">
               Sair
             </a>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </header>
   );
 }
