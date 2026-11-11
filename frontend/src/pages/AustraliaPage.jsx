@@ -1,37 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/AustraliaPage.css';
 
-export default function AustraliaPage({ candidatosIniciais = ['Ana', 'Beto', 'Caio'] }) {
-  const [candidatos, setCandidatos] = useState(candidatosIniciais);
+export default function AustraliaPage() {
+  const [candidatos, setCandidatos] = useState([]);
+  const [estadoEleicao, setEstadoEleicao] = useState('AGUARDANDO');
+  const [isGestao, setIsGestao] = useState(false);
+  const [jaVotou, setJaVotou] = useState(false);
+  const [totalVotos, setTotalVotos] = useState(0);
+
   const [draggedIdx, setDraggedIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
   const [erro, setErro] = useState('');
 
-  const handleDragStart = (index) => {
-    setDraggedIdx(index);
-  };
+  const carregarEstadoAustralia = useCallback(async () => {
+    try {
+      const res = await fetch('/australia/api/estado');
+      if (res.ok) {
+        const data = await res.json();
+        setCandidatos((prev) => (prev.length === 0 ? data.candidatos : prev));
+        setEstadoEleicao(data.estado_eleicao);
+        setIsGestao(data.is_gestao);
+        setJaVotou(data.ja_votou);
+        setTotalVotos(data.total_votos);
+      }
+    } catch {
+      // ignora erro temporário
+    }
+  }, []);
+
+  useEffect(() => {
+    carregarEstadoAustralia();
+  }, [carregarEstadoAustralia]);
 
   const controlarEleicaoAustralia = async (acao) => {
     setErro('');
     setMensagemSucesso('');
     const res = await fetch(`/australia/${acao}`, { method: 'POST' });
     const html = await res.text();
+
     if (html.includes('iniciada com sucesso')) {
-      setMensagemSucesso('Eleição Federal da Austrália iniciada com sucesso!');
+      setMensagemSucesso('✅ Eleição Federal da Austrália iniciada com sucesso! Agora você já pode votar.');
     } else if (html.includes('Eleição encerrada')) {
-      setMensagemSucesso('Eleição Federal da Austrália encerrada.');
+      setMensagemSucesso('⏹ Eleição Federal da Austrália encerrada.');
+    } else if (html.includes('alert-error')) {
+      const m = html.match(/<div class="alert-error"[^>]*>([\s\S]*?)<\/div>/);
+      setErro(m ? m[1].trim() : 'Operação não permitida no estado atual da eleição.');
     } else {
-      setErro('Para iniciar/encerrar, vincule o escopo "Comissão Eleitoral / Gestão (Austrália)" no Painel.');
+      setErro('Apenas usuários com escopo AUSTRALIA_GESTAO podem iniciar ou encerrar a eleição.');
     }
+    await carregarEstadoAustralia();
   };
+
+  const handleDragStart = (index) => setDraggedIdx(index);
 
   const handleDragOver = (e, index) => {
     e.preventDefault();
-    if (index !== dragOverIdx) {
-      setDragOverIdx(index);
-    }
+    if (index !== dragOverIdx) setDragOverIdx(index);
   };
 
   const handleDrop = (indexDestino) => {
@@ -65,7 +91,6 @@ export default function AustraliaPage({ candidatosIniciais = ['Ana', 'Beto', 'Ca
 
     const formData = new URLSearchParams();
     candidatos.forEach((cand, idx) => {
-      // Envia inteiros estritos 1..N conforme a ordem do Drag and Drop
       formData.append(`posicao_${cand}`, String(idx + 1));
     });
 
@@ -77,11 +102,15 @@ export default function AustraliaPage({ candidatosIniciais = ['Ana', 'Beto', 'Ca
 
     const html = await response.text();
     if (html.toLowerCase().includes('voto registrado com sucesso')) {
-      setMensagemSucesso('Voto preferencial registrado com sucesso na Eleição Federal!');
-    } else if (html.includes('já registrou seu voto')) {
-      setErro('Você já registrou seu voto nesta eleição.');
+      setMensagemSucesso('🎉 Voto preferencial registrado com sucesso na Eleição Federal!');
+      await carregarEstadoAustralia();
     } else {
-      setErro('Não foi possível registrar o voto. Verifique se a eleição está aberta.');
+      const m = html.match(/<div class="alert-error"[^>]*>([\s\S]*?)<\/div>/);
+      setErro(
+        m
+          ? m[1].trim()
+          : `Não foi possível registrar o voto. Estado atual da eleição: ${estadoEleicao}.`
+      );
     }
   };
 
@@ -89,21 +118,35 @@ export default function AustraliaPage({ candidatosIniciais = ['Ana', 'Beto', 'Ca
     <div className="australia-container">
       <div className="australia-banner">
         <h1>🇦🇺 Eleição Preferencial Australiana (IRV)</h1>
-        <p>Arraste e solte os candidatos para definir sua ordem de preferência (1º ao {candidatos.length}º).</p>
+        <p>
+          Status da Eleição: <strong>{estadoEleicao}</strong> | Cédulas computadas: <strong>{totalVotos}</strong>
+        </p>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        <button type="button" className="btn-primary" onClick={() => controlarEleicaoAustralia('iniciar')}>
-          ▶ Iniciar Votação (Comissão Australiana)
-        </button>
-        <button type="button" className="btn-secondary" onClick={() => controlarEleicaoAustralia('encerrar')}>
-          ⏹ Encerrar Votação
-        </button>
-      </div>
+      {isGestao && (
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={estadoEleicao === 'VOTACAO'}
+            onClick={() => controlarEleicaoAustralia('iniciar')}
+          >
+            ▶ Iniciar Votação (Comissão Australiana)
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={estadoEleicao !== 'VOTACAO'}
+            onClick={() => controlarEleicaoAustralia('encerrar')}
+          >
+            ⏹ Encerrar Votação
+          </button>
+        </div>
+      )}
 
       <div className="australia-instructions">
-        <strong>Como votar:</strong> Segure e arraste qualquer candidato para reordenar sua cédula, ou utilize as setas
-        laterais. A numeração de 1 a {candidatos.length} é atualizada automaticamente sem risco de empates ou valores inválidos.
+        <strong>Como votar:</strong> Segure e arraste os candidatos abaixo (ou use as setas ▲/▼) para definir sua ordem
+        de preferência de 1º a {candidatos.length}º lugar.
       </div>
 
       {erro && <div className="alert-banner alert-error">{erro}</div>}
@@ -166,8 +209,16 @@ export default function AustraliaPage({ candidatosIniciais = ['Ana', 'Beto', 'Ca
         </ul>
 
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button type="submit" className="btn-primary">
-            Confirmar Cédula Preferencial
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={jaVotou || estadoEleicao !== 'VOTACAO'}
+          >
+            {jaVotou
+              ? '✓ Voto Já Registrado'
+              : estadoEleicao !== 'VOTACAO'
+              ? `Aguardando Abertura (${estadoEleicao})`
+              : 'Confirmar Cédula Preferencial'}
           </button>
           <Link to="/dashboard" className="btn-secondary">
             Voltar ao Painel
