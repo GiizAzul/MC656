@@ -67,3 +67,6 @@ async def root(request: Request):
     # Redireciona a raiz direto para o login
     return templates.TemplateResponse(request=request, name="login.html", context={})
     
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/app", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="react_app")
