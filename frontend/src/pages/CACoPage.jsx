@@ -6,7 +6,23 @@ export default function CACoPage({ usuario }) {
   const [opcao, setOpcao] = useState('APROVAR');
   const [feedback, setFeedback] = useState('');
   const [erro, setErro] = useState('');
+  const [resultados, setResultados] = useState(null);
   const isGestao = usuario?.escopo?.includes('GESTAO');
+
+  const carregarResultados = async () => {
+    const res = await fetch('/caco/resultados', { headers: { Accept: 'application/html' } });
+    const html = await res.text();
+    const extrair = (label) => {
+      const regex = new RegExp(`${label}[\\s\\S]*?(\\d+)\\s*votos`, 'i');
+      const m = html.match(regex);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    const aprovar = extrair('Aprovar');
+    const rejeitar = extrair('Rejeitar');
+    const abster = extrair('Absten');
+    const total = aprovar + rejeitar + abster;
+    setResultados({ aprovar, rejeitar, abster, total });
+  };
 
   const enviarVoto = async (e) => {
     e.preventDefault();
@@ -24,8 +40,9 @@ export default function CACoPage({ usuario }) {
     const html = await res.text();
     if (html.includes('VOTO NEGADO')) {
       setErro('VOTO NEGADO: Você já registrou seu voto nesta pauta.');
-    } else if (html.includes('contabilizado')) {
-      setFeedback(`Seu voto na assembleia foi contabilizado como: ${opcao}`);
+    } else if (html.includes('contabilizado') || html.includes('Voto:')) {
+      setFeedback(`Seu voto na assembleia foi contabilizado com sucesso: ${opcao}`);
+      await carregarResultados();
     } else {
       setErro('A votação ainda não foi iniciada pela Gestão ou já foi encerrada.');
     }
@@ -35,13 +52,16 @@ export default function CACoPage({ usuario }) {
     await fetch(rota, { method: 'POST' });
     setFeedback(msg);
     setErro('');
+    await carregarResultados();
   };
+
+  const pct = (val, tot) => (tot > 0 ? Math.round((val / tot) * 100) : 0);
 
   return (
     <div className="caco-container">
       <div className="caco-header">
         <h1>🏛️ Assembleia Geral do CACo</h1>
-        <p>Votação estudantil secreta e auditada por quórum estatutário.</p>
+        <p>Pauta: Aprovação do novo estatuto de representação discente.</p>
       </div>
 
       {erro && <div className="alert-banner alert-error">{erro}</div>}
@@ -70,25 +90,51 @@ export default function CACoPage({ usuario }) {
 
       {isGestao && (
         <div className="caco-card">
-          <h3>Controles da Gestão CACo</h3>
+          <h3>⚙️ Controles da Gestão CACo</h3>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn-primary"
               onClick={() => acaoGestao('/caco/iniciar', 'Votação da Assembleia iniciada com sucesso!')}
             >
-              Iniciar Votação
+              ▶ Iniciar Votação
             </button>
             <button
               type="button"
               className="btn-secondary"
               onClick={() => acaoGestao('/caco/encerrar', 'Votação da Assembleia encerrada.')}
             >
-              Encerrar Votação
+              ⏹ Encerrar Votação
             </button>
-            <a href="/caco/resultados" className="btn-secondary">
-              Ver Barras de Resultados
-            </a>
+            <button type="button" className="btn-secondary" onClick={carregarResultados}>
+              📊 Exibir / Atualizar Resultados
+            </button>
+          </div>
+        </div>
+      )}
+
+      {resultados && (
+        <div className="caco-card">
+          <h3>📊 Resultados Parciais / Finais (Total: {resultados.total} votos)</h3>
+          <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            <div>
+              <strong>A Favor (Aprovar): {resultados.aprovar} voto(s) ({pct(resultados.aprovar, resultados.total)}%)</strong>
+              <div className="progress-bar-track">
+                <div className="progress-bar-fill" style={{ width: `${pct(resultados.aprovar, resultados.total)}%` }} />
+              </div>
+            </div>
+            <div>
+              <strong>Contra (Rejeitar): {resultados.rejeitar} voto(s) ({pct(resultados.rejeitar, resultados.total)}%)</strong>
+              <div className="progress-bar-track">
+                <div className="progress-bar-fill" style={{ width: `${pct(resultados.rejeitar, resultados.total)}%` }} />
+              </div>
+            </div>
+            <div>
+              <strong>Abstenções: {resultados.abster} voto(s) ({pct(resultados.abster, resultados.total)}%)</strong>
+              <div className="progress-bar-track">
+                <div className="progress-bar-fill" style={{ width: `${pct(resultados.abster, resultados.total)}%` }} />
+              </div>
+            </div>
           </div>
         </div>
       )}
