@@ -596,7 +596,7 @@ export default function BotCPage() {
                     ))}
                   </select>
                 </div>
-
+                
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1rem' }}>
                   <button
                     type="button"
@@ -619,62 +619,80 @@ export default function BotCPage() {
                   </button>
                   <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1.1rem 0' }} />
 
-                <form onSubmit={alterarStatusVidaJogador}>
-                  <label htmlFor="select-status-jog" style={{ color: '#e2e8f0', fontSize: '0.88rem', fontWeight: 600 }}>
-                    Alterar Status de Vida / Voto Fantasma
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                    <select
-                      id="select-status-jog"
-                      className="form-control"
-                      style={{ flex: 1 }}
-                      value={jogadorAlvoStatus}
-                      onChange={(e) => setJogadorAlvoStatus(e.target.value)}
+                  <form onSubmit={alterarStatusVidaJogador}>
+                    <label 
+                      htmlFor="select-status-jog" 
+                      style={{ color: '#e2e8f0', fontSize: '0.88rem', fontWeight: 600 }}
                     >
-                      {jogadores.map((j) => (
-                        <option key={j.id} value={j.id}>
-                          {j.nome} ({j.status})
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label="Novo Status de Vida"
-                      className="form-control"
-                      style={{ flex: 1 }}
-                      value={novoStatusEscolhido}
-                      onChange={(e) => setNovoStatusEscolhido(e.target.value)}
+                      Alterar Status de Vida / Voto Fantasma
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                      <select
+                        id="select-status-jog"
+                        className="form-control"
+                        style={{ flex: 1 }}
+                        value={jogadorAlvoStatus}
+                        onChange={(e) => setJogadorAlvoStatus(e.target.value)}
+                      >
+                        {jogadores.map((j) => (
+                          <option key={j.id} value={j.id}>
+                            {j.nome} ({j.status})
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Novo Status de Vida"
+                        className="form-control"
+                        style={{ flex: 1 }}
+                        value={novoStatusEscolhido}
+                        onChange={(e) => setNovoStatusEscolhido(e.target.value)}
+                      >
+                        <option value="Vivo">Vivo</option>
+                        <option value="Morto (Com Voto)">Morto (Com Voto Fantasma 👻)</option>
+                        <option value="Morto (Sem Voto)">Morto (Sem Voto Fantasma)</option>
+                      </select>
+                      
+                      <button 
+                        type="submit" 
+                        className="btn-secondary" 
+                        disabled={giro.ativo}
+                      >
+                        Aplicar Status
+                      </button>
+                    </div>
+                  </form>
+
+                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                    {!partidaAtualInfo.encerrada && (
+                      <button
+                        type="button"
+                        onClick={encerrarPartidaInteira}
+                        disabled={giro.ativo}
+                        className="btn-secondary"
+                        style={{ flex: 1 }}
+                      >
+                        🏁 Encerrar Partida Inteira
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={excluirSalaAtual}
+                      disabled={giro.ativo}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#991b1b',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '0.65rem',
+                        borderRadius: '8px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
                     >
-                      <option value="Vivo">Vivo</option>
-                      <option value="Morto (Com Voto)">Morto (Com Voto Fantasma 👻)</option>
-                      <option value="Morto (Sem Voto)">Morto (Sem Voto Fantasma)</option>
-                    </select>
-                    
-                    <button type="submit" className="btn-secondary" disabled={giro.ativo}>
-                      Aplicar Status
+                      🗑️ Excluir Esta Sala
                     </button>
                   </div>
-                </form>
-
-              {partidaId !== 'principal' && (
-                <button
-                  type="button"
-                  onClick={excluirSalaAtual}
-                  disabled={giro.ativo}
-                  style={{
-                    marginTop: '1rem',
-                    width: '100%',
-                    backgroundColor: '#991b1b',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '0.65rem',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  🗑️ Excluir Esta Sala (Mestre)
-                </button>
-              )}
                 </div>
               </div>
             )}
