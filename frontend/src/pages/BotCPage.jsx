@@ -342,191 +342,213 @@ export default function BotCPage() {
       )}
       {veredito && <div className="alert-banner alert-success">⚖️ {veredito}</div>}
 
-      <div className="botc-layout">
-        {/* RODA CIRCULAR COM O STORYTELLER NO CENTRO E JOGADORES NAS BOLAS AO REDOR */}
-        <div className="wheel-wrapper">
-          <div className="town-wheel">
-            {anguloPonteiro !== null && (
-              <div
-                className="wheel-pointer-arm"
-                style={{ transform: `rotate(${anguloPonteiro}deg)` }}
-              />
+      {requerSenha ? (
+        <div className="botc-panel-box" style={{ maxWidth: '440px', margin: '2rem auto' }}>
+          <h3>🔒 Sala Privada: {partidaAtualInfo.nome}</h3>
+          <p style={{ fontSize: '0.9rem', color: '#cbd5e1', margin: '0.5rem 0 1rem' }}>
+            Digite a senha definida pelo criador para entrar nesta roda:
+          </p>
+          <form onSubmit={entrarComSenha} style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="password"
+              className="form-control"
+              placeholder="Senha da sala"
+              value={senhaDigitadaSala}
+              onChange={(e) => setSenhaDigitadaSala(e.target.value)}
+              required
+            />
+            <button type="submit" className="btn-primary">
+              Entrar
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="botc-layout">
+          {/* RODA CIRCULAR COM O STORYTELLER NO CENTRO E JOGADORES NAS BOLAS AO REDOR */}
+          <div className="wheel-wrapper">
+            <div className="town-wheel">
+              {anguloPonteiro !== null && (
+                <div
+                  className="wheel-pointer-arm"
+                  style={{ transform: `rotate(${anguloPonteiro}deg)` }}
+                />
+              )}
+
+              {/* CENTRO DA RODA: STORYTELLER + CONTADOR */}
+              <div className="wheel-center">
+                <span style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: 700 }}>
+                  🎩 STORYTELLER
+                </span>
+                <strong style={{ fontSize: '0.82rem', color: '#f8fafc', marginBottom: '0.2rem' }}>
+                  {partidaAtualInfo.storyteller_nome}
+                </strong>
+                <small style={{ color: '#94a3b8', fontSize: '0.65rem' }}>VOTOS NA FORCA</small>
+                <strong style={{ fontSize: '1.65rem', color: '#f87171', lineHeight: 1.1 }}>
+                  {giro.votos_computados || 0}
+                </strong>
+              </div>
+
+              {jogadores.map((jog, index) => {
+                const total = jogadores.length || 1;
+                const angleRad = ((index * 360) / total - 90) * (Math.PI / 180);
+                const radius = 190;
+                const x = 240 + radius * Math.cos(angleRad);
+                const y = 240 + radius * Math.sin(angleRad);
+
+                const isNomeado = jog.id === giro.nomeado_id;
+                const isPonteiroAqui = giro.ativo && jog.id === giro.id_ponteiro_atual;
+                const estaVivo = jog.status?.toLowerCase() === 'vivo';
+                const temGhostVote = !estaVivo && jog.pode_votar;
+
+                return (
+                  <div
+                    key={jog.id}
+                    style={{ left: `${x}px`, top: `${y}px` }}
+                    className={`seat-node ${!estaVivo ? 'dead-player' : ''} ${
+                      isNomeado ? 'nominated' : ''
+                    } ${isPonteiroAqui ? 'pointer-active' : ''} ${jog.trancado ? 'locked' : ''} ${
+                      jog.mao_levantada ? 'hand-up' : ''
+                    }`}
+                  >
+                    {temGhostVote && (
+                      <span className="ghost-vote-indicator" title="Morto com Voto Fantasma disponível!">
+                        👻
+                      </span>
+                    )}
+                    <span className="seat-name" title={jog.nome}>
+                      {isNomeado ? '🎯' : ''} {jog.nome}
+                    </span>
+                    <span className="seat-hand">
+                      {jog.mao_levantada ? '✋' : '👇'}
+                      {jog.trancado ? '🔒' : ''}
+                    </span>
+                    <span className="seat-badge">
+                      {jog.trancado
+                        ? 'Trancado'
+                        : estaVivo
+                        ? 'Vivo'
+                        : temGhostVote
+                        ? 'Fantasma'
+                        : 'Morto'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* COLUNA LATERAL DE CONTROLES */}
+          <div className="controls-column">
+            {!meuStatus.is_storyteller_desta_partida ? (
+              <div className="botc-panel-box">
+                <h3>Seu Assento de Jogador ({meuStatus.nome})</h3>
+                <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.3rem' }}>
+                  {meuStatus.trancado
+                    ? '🔒 O ponteiro já passou pela sua bola! Seu voto foi computado e sua mão está travada.'
+                    : 'Enquanto o ponteiro não passar por você, alterne sua mão livremente:'}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={alternarMinhaMao}
+                  disabled={meuStatus.trancado || !meuStatus.pode_votar}
+                  className={`btn-hand-toggle ${meuStatus.mao_levantada ? 'raised' : 'lowered'}`}
+                >
+                  {meuStatus.trancado
+                    ? `🔒 VOTO TRANCADO (${meuStatus.mao_levantada ? 'MÃO LEVANTADA' : 'MÃO ABAIXADA'})`
+                    : meuStatus.mao_levantada
+                    ? '✋ MÃO LEVANTADA (Clique para Abaixar)'
+                    : '👇 MÃO ABAIXADA (Clique para Levantar)'}
+                </button>
+              </div>
+            ) : (
+              <div className="botc-panel-box">
+                <h3>🎩 Você está no Centro da Roda (Storyteller)</h3>
+                <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
+                  Como Storyteller titular desta partida, você conduz a execução no centro da roda e{' '}
+                  <strong>não possui poder de voto</strong> nesta sala.
+                </p>
+              </div>
             )}
 
-            {/* CENTRO DA RODA: STORYTELLER + CONTADOR */}
-            <div className="wheel-center">
-              <span style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: 700 }}>
-                🎩 STORYTELLER
-              </span>
-              <strong style={{ fontSize: '0.82rem', color: '#f8fafc', marginBottom: '0.2rem' }}>
-                {partidaAtualInfo.storyteller_nome}
-              </strong>
-              <small style={{ color: '#94a3b8', fontSize: '0.65rem' }}>VOTOS NA FORCA</small>
-              <strong style={{ fontSize: '1.65rem', color: '#f87171', lineHeight: 1.1 }}>
-                {giro.votos_computados || 0}
-              </strong>
-            </div>
+            {meuStatus.tem_escopo_storyteller && !partidaAtualInfo.storyteller_id && (
+              <div className="botc-panel-box">
+                <h3>🎩 Assumir Centro da Roda</h3>
+                <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.75rem' }}>
+                  Esta partida ainda não possui Storyteller. Deseja assumir o centro da roda (máx. 1 por partida)?
+                </p>
+                <button type="button" className="btn-primary" onClick={assumirCentroDaRoda}>
+                  Assumir como Único Storyteller desta Partida
+                </button>
+              </div>
+            )}
 
-            {jogadores.map((jog, index) => {
-              const total = jogadores.length || 1;
-              const angleRad = ((index * 360) / total - 90) * (Math.PI / 180);
-              const radius = 190;
-              const x = 240 + radius * Math.cos(angleRad);
-              const y = 240 + radius * Math.sin(angleRad);
-
-              const isNomeado = jog.id === giro.nomeado_id;
-              const isPonteiroAqui = giro.ativo && jog.id === giro.id_ponteiro_atual;
-              const estaVivo = jog.status?.toLowerCase() === 'vivo';
-              const temGhostVote = !estaVivo && jog.pode_votar;
-
-              return (
-                <div
-                  key={jog.id}
-                  style={{ left: `${x}px`, top: `${y}px` }}
-                  className={`seat-node ${!estaVivo ? 'dead-player' : ''} ${
-                    isNomeado ? 'nominated' : ''
-                  } ${isPonteiroAqui ? 'pointer-active' : ''} ${jog.trancado ? 'locked' : ''} ${
-                    jog.mao_levantada ? 'hand-up' : ''
-                  }`}
-                >
-                  {temGhostVote && (
-                    <span className="ghost-vote-indicator" title="Morto com Voto Fantasma disponível!">
-                      👻
-                    </span>
-                  )}
-                  <span className="seat-name" title={jog.nome}>
-                    {isNomeado ? '🎯' : ''} {jog.nome}
-                  </span>
-                  <span className="seat-hand">
-                    {jog.mao_levantada ? '✋' : '👇'}
-                    {jog.trancado ? '🔒' : ''}
-                  </span>
-                  <span className="seat-badge">
-                    {jog.trancado
-                      ? 'Trancado'
-                      : estaVivo
-                      ? 'Vivo'
-                      : temGhostVote
-                      ? 'Fantasma'
-                      : 'Morto'}
-                  </span>
+            {meuStatus.is_storyteller_desta_partida && (
+              <div className="botc-panel-box">
+                <h3>📜 Grimório do Storyteller (Condução da Roda)</h3>
+                <div className="form-group" style={{ marginTop: '0.85rem' }}>
+                  <label htmlFor="select-nomeado" style={{ color: '#e2e8f0' }}>
+                    Indicar Jogador Nomeado para a Forca
+                  </label>
+                  <select
+                    id="select-nomeado"
+                    className="form-control"
+                    value={nomeadoSelecionado}
+                    disabled={giro.ativo}
+                    onChange={(e) => setNomeadoSelecionado(e.target.value)}
+                  >
+                    {jogadores.map((j) => (
+                      <option key={j.id} value={j.id} disabled={j.ja_nomeado_hoje}>
+                        {j.nome} ({j.status}) {j.ja_nomeado_hoje ? '— [Já nomeado hoje]' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* COLUNA LATERAL DE CONTROLES */}
-        <div className="controls-column">
-          {!meuStatus.is_storyteller_desta_partida ? (
-            <div className="botc-panel-box">
-              <h3>Seu Assento de Jogador ({meuStatus.nome})</h3>
-              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.3rem' }}>
-                {meuStatus.trancado
-                  ? '🔒 O ponteiro já passou pela sua bola! Seu voto foi computado e sua mão está travada.'
-                  : 'Enquanto o ponteiro não passar por você, alterne sua mão livremente:'}
-              </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={giro.ativo}
+                    onClick={iniciarGiroStoryteller}
+                  >
+                    {giro.ativo
+                      ? '🔄 Girando Ponteiro Oficial...'
+                      : '▶ Indicar Nomeado e Iniciar Giro do Ponteiro'}
+                  </button>
 
-              <button
-                type="button"
-                onClick={alternarMinhaMao}
-                disabled={meuStatus.trancado || !meuStatus.pode_votar}
-                className={`btn-hand-toggle ${meuStatus.mao_levantada ? 'raised' : 'lowered'}`}
-              >
-                {meuStatus.trancado
-                  ? `🔒 VOTO TRANCADO (${meuStatus.mao_levantada ? 'MÃO LEVANTADA' : 'MÃO ABAIXADA'})`
-                  : meuStatus.mao_levantada
-                  ? '✋ MÃO LEVANTADA (Clique para Abaixar)'
-                  : '👇 MÃO ABAIXADA (Clique para Levantar)'}
-              </button>
-            </div>
-          ) : (
-            <div className="botc-panel-box">
-              <h3>🎩 Você está no Centro da Roda (Storyteller)</h3>
-              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
-                Como Storyteller titular desta partida, você conduz a execução no centro da roda e{' '}
-                <strong>não possui poder de voto</strong> nesta sala.
-              </p>
-            </div>
-          )}
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={giro.ativo}
+                    onClick={apurarExecucaoDia}
+                  >
+                    ⚖️ Encerrar Dia e Apurar Executado na Forca
+                  </button>
+                </div>
+              </div>
+            )}
 
-          {meuStatus.tem_escopo_storyteller && !partidaAtualInfo.storyteller_id && (
             <div className="botc-panel-box">
-              <h3>🎩 Assumir Centro da Roda</h3>
-              <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.75rem' }}>
-                Esta partida ainda não possui Storyteller. Deseja assumir o centro da roda (máx. 1 por partida)?
-              </p>
-              <button type="button" className="btn-primary" onClick={assumirCentroDaRoda}>
-                Assumir como Único Storyteller desta Partida
-              </button>
-            </div>
-          )}
-
-          {meuStatus.is_storyteller_desta_partida && (
-            <div className="botc-panel-box">
-              <h3>📜 Grimório do Storyteller (Condução da Roda)</h3>
-              <div className="form-group" style={{ marginTop: '0.85rem' }}>
-                <label htmlFor="select-nomeado" style={{ color: '#e2e8f0' }}>
-                  Indicar Jogador Nomeado para a Forca
-                </label>
-                <select
-                  id="select-nomeado"
+              <h3>➕ Criar Nova Sala / Partida Separada</h3>
+              <form onSubmit={criarNovaPartida} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                <input
+                  type="text"
                   className="form-control"
-                  value={nomeadoSelecionado}
+                  placeholder="Nome da nova sala (ex: Mesa 2)"
+                  value={novoNomeSala}
+                  onChange={(e) => setNovoNomeSala(e.target.value)}
                   disabled={giro.ativo}
-                  onChange={(e) => setNomeadoSelecionado(e.target.value)}
-                >
-                  {jogadores.map((j) => (
-                    <option key={j.id} value={j.id} disabled={j.ja_nomeado_hoje}>
-                      {j.nome} ({j.status}) {j.ja_nomeado_hoje ? '— [Já nomeado hoje]' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1rem' }}>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={giro.ativo}
-                  onClick={iniciarGiroStoryteller}
-                >
-                  {giro.ativo
-                    ? '🔄 Girando Ponteiro Oficial...'
-                    : '▶ Indicar Nomeado e Iniciar Giro do Ponteiro'}
+                  required
+                />
+                <button type="submit" className="btn-secondary" disabled={giro.ativo}>
+                  Criar Sala
                 </button>
-
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={giro.ativo}
-                  onClick={apurarExecucaoDia}
-                >
-                  ⚖️ Encerrar Dia e Apurar Executado na Forca
-                </button>
-              </div>
+              </form>
             </div>
-          )}
-
-          <div className="botc-panel-box">
-            <h3>➕ Criar Nova Sala / Partida Separada</h3>
-            <form onSubmit={criarNovaPartida} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Nome da nova sala (ex: Mesa 2)"
-                value={novoNomeSala}
-                onChange={(e) => setNovoNomeSala(e.target.value)}
-                disabled={giro.ativo}
-                required
-              />
-              <button type="submit" className="btn-secondary" disabled={giro.ativo}>
-                Criar Sala
-              </button>
-            </form>
           </div>
         </div>
-      </div>
+        )}
     </div>
   );
 }
