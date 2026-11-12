@@ -191,10 +191,17 @@ export default function BotCPage() {
   };
 
   const apurarExecucaoDia = async () => {
-    const res = await fetch('/botc/apurar', { method: 'POST' });
+    const form = new URLSearchParams();
+    form.append('partida_id', partidaId);
+    const res = await fetch('/botc/apurar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
     const html = await res.text();
     const match = html.match(/O jogador executado foi:[^<]+|Ninguém foi executado[^<]+/);
     setVeredito(match ? match[0] : 'Apuração concluída.');
+    await carregarRoda();
   };
 
   return (
@@ -302,7 +309,11 @@ export default function BotCPage() {
                     {jog.trancado ? '🔒' : ''}
                   </span>
                   <span className="seat-badge">
-                    {jog.trancado ? 'Trancado' : jog.status === 'vivo' ? 'Vivo' : 'Morto'}
+                    {jog.trancado
+                      ? 'Trancado'
+                      : jog.status?.toLowerCase() === 'vivo'
+                      ? 'Vivo'
+                      : 'Morto'}
                   </span>
                 </div>
               );
@@ -371,8 +382,8 @@ export default function BotCPage() {
                   onChange={(e) => setNomeadoSelecionado(e.target.value)}
                 >
                   {jogadores.map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.nome} ({j.status})
+                    <option key={j.id} value={j.id} disabled={j.ja_nomeado_hoje}>
+                      {j.nome} ({j.status}) {j.ja_nomeado_hoje ? '— [Já nomeado hoje]' : ''}
                     </option>
                   ))}
                 </select>
