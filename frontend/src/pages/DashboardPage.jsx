@@ -20,8 +20,8 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
     setMensagem('');
 
     const formData = new URLSearchParams();
-    formData.append('tipo_conta', novoTipo);
-    if (novoTipo === 'CACO_ESTUDANTE') {
+    formData.append('tipo_conta', tipoSelecionadoEfetivo);
+    if (tipoSelecionadoEfetivo === 'CACO_ESTUDANTE') {
       formData.append('ra', raExtra);
     }
 
@@ -38,6 +38,21 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
       setErro('Não foi possível vincular o escopo. Verifique o RA.');
     }
   };
+
+  const OPCOES_ESCOPO = [
+    { valor: 'AUSTRALIA_ELEITOR', label: 'Eleitor (Austrália)' },
+    { valor: 'AUSTRALIA_GESTAO', label: 'Comissão Eleitoral / Gestão (Austrália)' },
+    { valor: 'CACO_ESTUDANTE', label: 'Estudante Unicamp (CACo)' },
+    { valor: 'CACO_GESTAO', label: 'Gestão (CACo)' },
+    { valor: 'BOTC_JOGADOR', label: 'Jogador (BoTC)' },
+    { valor: 'BOTC_STORYTELLER', label: 'Storyteller (BoTC)' },
+  ];
+
+  const escoposAtuaisLista = escopoStr.split(',').map((s) => s.trim());
+  const opcoesDisponiveis = OPCOES_ESCOPO.filter((op) => !escoposAtuaisLista.includes(op.valor));
+  const tipoSelecionadoEfetivo = opcoesDisponiveis.some((op) => op.valor === novoTipo)
+    ? novoTipo
+    : opcoesDisponiveis[0]?.valor || '';
 
   return (
     <div>
@@ -99,47 +114,48 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
         )}
       </div>
 
-      <div className="scope-linker-card">
-        <h3>➕ Participar de Outro Escopo com este Mesmo Username ({usuario?.username})</h3>
-        <form onSubmit={vincularNovoEscopo} className="scope-linker-form">
-          <div className="form-group" style={{ marginBottom: 0, minWidth: '260px' }}>
-            <label htmlFor="novo_escopo_select">Escolha o contexto adicional</label>
-            <select
-              id="novo_escopo_select"
-              className="form-control"
-              value={novoTipo}
-              onChange={(e) => setNovoTipo(e.target.value)}
-            >
-              <option value="AUSTRALIA_ELEITOR">Eleitor (Austrália)</option>
-              <option value="AUSTRALIA_GESTAO">Comissão Eleitoral / Gestão (Austrália)</option>
-              <option value="CACO_ESTUDANTE">Estudante Unicamp (CACo)</option>
-              <option value="CACO_GESTAO">Gestão (CACo)</option>
-              <option value="BOTC_JOGADOR">Jogador (BoTC)</option>
-              <option value="BOTC_STORYTELLER">Storyteller (BoTC)</option>
-            </select>
-          </div>
-
-          {novoTipo === 'CACO_ESTUDANTE' && (
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="ra_extra">RA (Apenas números positivos)</label>
-              <input
-                id="ra_extra"
-                type="text"
-                inputMode="numeric"
+      {opcoesDisponiveis.length > 0 && (
+        <div className="scope-linker-card">
+          <h3>➕ Participar de Outro Escopo com este Mesmo Username ({usuario?.username})</h3>
+          <form onSubmit={vincularNovoEscopo} className="scope-linker-form">
+            <div className="form-group" style={{ marginBottom: 0, minWidth: '260px' }}>
+              <label htmlFor="novo_escopo_select">Escolha o contexto adicional</label>
+              <select
+                id="novo_escopo_select"
                 className="form-control"
-                placeholder="Ex: 288808"
-                value={raExtra}
-                onChange={(e) => setRaExtra(e.target.value.replace(/\D/g, ''))}
-                required
-              />
+                value={tipoSelecionadoEfetivo}
+                onChange={(e) => setNovoTipo(e.target.value)}
+              >
+                {opcoesDisponiveis.map((op) => (
+                  <option key={op.valor} value={op.valor}>
+                    {op.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
 
-          <button type="submit" className="btn-primary">
-            Vincular Escopo à Conta
-          </button>
-        </form>
-      </div>
+            {tipoSelecionadoEfetivo === 'CACO_ESTUDANTE' && (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="ra_extra">RA (Apenas números positivos)</label>
+                <input
+                  id="ra_extra"
+                  type="text"
+                  inputMode="numeric"
+                  className="form-control"
+                  placeholder="Ex: 288808"
+                  value={raExtra}
+                  onChange={(e) => setRaExtra(e.target.value.replace(/\D/g, ''))}
+                  required
+                />
+              </div>
+            )}
+
+            <button type="submit" className="btn-primary">
+              Vincular Escopo à Conta
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
