@@ -22,16 +22,18 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 def _obter_salas_botc(app_state) -> dict:
-    """Gerencia múltiplas partidas de BoTC. A sala 'principal' usa app_state.sistema_botc para compatibilidade com os testes."""
+    """Gerencia múltiplas partidas de BoTC."""
     if not hasattr(app_state, "salas_botc"):
         app_state.salas_botc = {}
-    if "principal" not in app_state.salas_botc:
+    if not getattr(app_state, "_salas_botc_iniciadas", False):
+        app_state._salas_botc_iniciadas = True
         app_state.salas_botc["principal"] = {
             "id": "principal",
             "nome": "Partida Principal — Ravenswood Bluff",
             "sistema": app_state.sistema_botc,
             "storyteller_id": None,
             "storyteller_nome": None,
+            "encerrada": False,
             "senha": None,
             "autorizados": set(),
             "nomeados_hoje": set(),
@@ -49,7 +51,7 @@ def _obter_salas_botc(app_state) -> dict:
                 "mensagem_final": "",
             },
         }
-    else:
+    elif "principal" in app_state.salas_botc:
         app_state.salas_botc["principal"]["sistema"] = app_state.sistema_botc
     return app_state.salas_botc
 
