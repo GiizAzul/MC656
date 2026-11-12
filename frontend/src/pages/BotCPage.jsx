@@ -708,7 +708,7 @@ export default function BotCPage() {
                   placeholder="Nome da nova sala (ex: Mesa dos Amigos)"
                   value={novoNomeSala}
                   onChange={(e) => setNovoNomeSala(e.target.value)}
-                  disabled={giro.ativo}
+                  disabled={giro.ativo || meuStatus.preso_como_storyteller}
                   required
                 />
                 <input
@@ -717,9 +717,13 @@ export default function BotCPage() {
                   placeholder="Senha opcional (deixe em branco para sala pública)"
                   value={novaSenhaSala}
                   onChange={(e) => setNovaSenhaSala(e.target.value)}
-                  disabled={giro.ativo}
+                  disabled={giro.ativo || meuStatus.preso_como_storyteller}
                 />
-                <button type="submit" className="btn-secondary" disabled={giro.ativo}>
+                <button 
+                  type="submit" 
+                  className="btn-secondary" 
+                  disabled={giro.ativo || meuStatus.preso_como_storyteller}
+                >
                   Criar Sala Limpa
                 </button>
               </form>
