@@ -202,3 +202,28 @@
   cursor: not-allowed;
   background-color: #475569;
 }
+
+.seat-node.dead-player {
+  background: #334155;
+  border-color: #64748b;
+  color: #94a3b8;
+  filter: grayscale(65%);
+  opacity: 0.78;
+}
+
+.ghost-vote-indicator {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: #6d28d9;
+  color: #ffffff;
+  border: 2px solid #e9d5ff;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+}

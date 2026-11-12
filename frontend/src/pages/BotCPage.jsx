@@ -292,15 +292,24 @@ export default function BotCPage() {
 
               const isNomeado = jog.id === giro.nomeado_id;
               const isPonteiroAqui = giro.ativo && jog.id === giro.id_ponteiro_atual;
+              const estaVivo = jog.status?.toLowerCase() === 'vivo';
+              const temGhostVote = !estaVivo && jog.pode_votar;
 
               return (
                 <div
                   key={jog.id}
                   style={{ left: `${x}px`, top: `${y}px` }}
-                  className={`seat-node ${isNomeado ? 'nominated' : ''} ${
-                    isPonteiroAqui ? 'pointer-active' : ''
-                  } ${jog.trancado ? 'locked' : ''} ${jog.mao_levantada ? 'hand-up' : ''}`}
+                  className={`seat-node ${!estaVivo ? 'dead-player' : ''} ${
+                    isNomeado ? 'nominated' : ''
+                  } ${isPonteiroAqui ? 'pointer-active' : ''} ${jog.trancado ? 'locked' : ''} ${
+                    jog.mao_levantada ? 'hand-up' : ''
+                  }`}
                 >
+                  {temGhostVote && (
+                    <span className="ghost-vote-indicator" title="Morto com Voto Fantasma disponível!">
+                      👻
+                    </span>
+                  )}
                   <span className="seat-name" title={jog.nome}>
                     {isNomeado ? '🎯' : ''} {jog.nome}
                   </span>
@@ -311,8 +320,10 @@ export default function BotCPage() {
                   <span className="seat-badge">
                     {jog.trancado
                       ? 'Trancado'
-                      : jog.status?.toLowerCase() === 'vivo'
+                      : estaVivo
                       ? 'Vivo'
+                      : temGhostVote
+                      ? 'Fantasma'
                       : 'Morto'}
                   </span>
                 </div>
