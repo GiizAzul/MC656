@@ -4,13 +4,36 @@ from .interfaces import SistemaEleitoral
 class EleicaoAustralia(SistemaEleitoral):
     """Classe para apuração utilizando voto único transferível."""
 
-    def __init__(self, candidatos_ids: list[str], cedulas: list[list[str]]):
+    def __init__(
+        self,
+        candidatos_ids: list[str],
+        cedulas: list[list[str]],
+        partidos_candidatos: dict[str, list[str]] | None = None,
+    ):
         # Inicia no estado AguardandoVotacao (padrão State de SistemaEleitoral)
         super().__init__()
 
         self.candidatos_oficiais = set(candidatos_ids)
         self.candidatos = {cid: True for cid in candidatos_ids}
         self.cedulas: list[list[str]] = []
+        self.partidos_candidatos = {
+            partido: list(candidatos)
+            for partido, candidatos in (partidos_candidatos or {}).items()
+        }
+
+        candidatos_com_partido = [
+            candidato
+            for candidatos in self.partidos_candidatos.values()
+            for candidato in candidatos
+        ]
+        if len(candidatos_com_partido) != len(set(candidatos_com_partido)):
+            raise ValueError("Cada candidato deve pertencer a apenas um partido.")
+        if not set(candidatos_com_partido).issubset(self.candidatos_oficiais):
+            raise ValueError("Os partidos não podem conter candidatos não registrados na eleição.")
+        if partidos_candidatos and set(candidatos_com_partido) != self.candidatos_oficiais:
+            raise ValueError("Todos os candidatos devem pertencer a um partido para habilitar o ranking por partidos.")
+        if any(not partido.strip() or not candidatos for partido, candidatos in self.partidos_candidatos.items()):
+            raise ValueError("Cada partido deve ter um nome e pelo menos um candidato.")
 
         # Registro de quem já votou (cédulas carregadas no construtor são anônimas)
         self.votantes: set[str] = set()
@@ -31,6 +54,51 @@ class EleicaoAustralia(SistemaEleitoral):
         # Verifica se não está colocando candidato que não existem, anular o voto ou repetindo ele
         if set(cedula) != self.candidatos_oficiais:
             raise ValueError(f"Erro de {identificacao} inválida: A cédula contém candidatos duplicados ou não registrados.")
+
+    def converter_ranking_partidos(self, preferencias: list[str]) -> list[str]:
+        """Valida um ranking completo de partidos e o converte em ranking de candidatos.
+
+        Candidatos do mesmo partido seguem a ordem informada em `partidos_candidatos`.
+        Isso permite que o motor aceite votos por partido sem alterar o formato das
+        cédulas usado pela apuração existente.
+        """
+        if not self.partidos_candidatos:
+            raise ValueError("O ranking por partidos não está configurado nesta eleição.")
+        if not isinstance(preferencias, list):
+            raise TypeError("O ranking de partidos deve ser uma lista ordenada.")
+
+        partidos_registrados = set(self.partidos_candidatos)
+        partidos_votados = set(preferencias)
+        faltantes = [partido for partido in self.partidos_candidatos if partido not in partidos_votados]
+        duplicados = list(dict.fromkeys(
+            partido for partido in preferencias if preferencias.count(partido) > 1
+        ))
+        inexistentes = [partido for partido in preferencias if partido not in partidos_registrados]
+
+        erros = []
+        if faltantes:
+            erros.append("Faltam partidos no ranking: " + ", ".join(faltantes) + ".")
+        if duplicados:
+            erros.append("Partidos repetidos no ranking: " + ", ".join(duplicados) + ".")
+        if inexistentes:
+            erros.append("Partidos não registrados: " + ", ".join(dict.fromkeys(inexistentes)) + ".")
+        if len(preferencias) != len(partidos_registrados) and not faltantes and not duplicados and not inexistentes:
+            erros.append(f"O ranking deve conter exatamente {len(partidos_registrados)} partidos.")
+        if erros:
+            raise ValueError(" ".join(erros))
+
+        return [
+            candidato
+            for partido in preferencias
+            for candidato in self.partidos_candidatos[partido]
+        ]
+
+    def apurar_voto_partidos(self, eleitor_id: str, preferencias: list[str]) -> None:
+        """Registra preferência por partidos respeitando o ciclo de estados da eleição."""
+        if self.estado.nome != "VOTACAO":
+            self.apurar_voto(eleitor_id, preferencias)
+        cedula = self.converter_ranking_partidos(preferencias)
+        self.apurar_voto(eleitor_id, cedula)
 
     def _contar_primeiras_preferencias(self) -> dict[str, int]:
         """Método privado para contabilizar os votos válidos da rodada atual."""

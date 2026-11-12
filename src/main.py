@@ -42,7 +42,16 @@ app.state.banco_auth = banco_auth
 # Inicialização das eleições
 # Cria a eleição da Austrália com os candidatos
 CANDIDATOS_AUSTRALIA = ["Candidato A", "Candidato B", "Candidato C"]
-eleicao_australia = EleicaoAustralia(candidatos_ids=CANDIDATOS_AUSTRALIA, cedulas=[])
+PARTIDOS_AUSTRALIA = {
+    "Partido Azul": ["Candidato A"],
+    "Partido Verde": ["Candidato B"],
+    "Partido Amarelo": ["Candidato C"],
+}
+eleicao_australia = EleicaoAustralia(
+    candidatos_ids=CANDIDATOS_AUSTRALIA,
+    cedulas=[],
+    partidos_candidatos=PARTIDOS_AUSTRALIA,
+)
 app.state.eleicao_australia = eleicao_australia
 app.state.eleitores_australia_votaram = set()
 
