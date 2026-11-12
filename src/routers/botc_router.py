@@ -241,7 +241,77 @@ async def criar_nova_partida_botc(
         },
     }
     return JSONResponse({"status": "criada", "partida_id": novo_id})
+@router.post("/api/entrar-sala")
+async def entrar_sala_botc(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    partida_id: str = Form(...),
+    senha_sala: str = Form(""),
+):
+    salas = _obter_salas_botc(request.app.state)
+    if partida_id not in salas:
+        raise HTTPException(status_code=404, detail="Sala não encontrada.")
+    sala = salas[partida_id]
+    sala.setdefault("autorizados", set())
 
+    if sala.get("senha") and usuario.id not in sala["autorizados"]:
+        if senha_sala.strip() != sala["senha"]:
+            raise HTTPException(status_code=403, detail="Senha da sala incorreta!")
+
+    sala["autorizados"].add(usuario.id)
+    return JSONResponse({"status": "ok", "partida_id": partida_id})
+
+
+@router.post("/api/sair-sala")
+async def sair_da_sala_botc(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    partida_id: str = Form(...),
+):
+    salas = _obter_salas_botc(request.app.state)
+    if partida_id not in salas or partida_id == "principal":
+        return JSONResponse({"status": "ok", "partida_destino": "principal"})
+
+    sala = salas[partida_id]
+    sistema = sala["sistema"]
+
+    # Remove o usuário se ele era jogador ou Storyteller
+    sistema.jogadores.pop(usuario.id, None)
+    sistema.jogadores.pop(usuario.username, None)
+    sistema.jogadores.pop(usuario.nome_real, None)
+    sala["maos"].pop(usuario.username, None)
+    sala.get("autorizados", set()).discard(usuario.id)
+
+    if sala["storyteller_id"] == usuario.id:
+        sala["storyteller_id"] = None
+        sala["storyteller_nome"] = None
+
+    # Se não sobrou nenhum jogador E nenhum Storyteller, exclui a sala automaticamente!
+    if len(sistema.jogadores) == 0 and sala["storyteller_id"] is None:
+        salas.pop(partida_id, None)
+
+    return JSONResponse({"status": "saiu", "partida_destino": "principal"})
+
+
+@router.post("/api/excluir-sala")
+async def excluir_sala_storyteller(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    partida_id: str = Form(...),
+):
+    salas = _obter_salas_botc(request.app.state)
+    if partida_id == "principal":
+        raise HTTPException(status_code=400, detail="A sala principal padrão não pode ser excluída.")
+    if partida_id not in salas:
+        raise HTTPException(status_code=404, detail="Sala não encontrada.")
+
+    sala = salas[partida_id]
+    if sala["storyteller_id"] != usuario.id:
+        raise HTTPException(status_code=403, detail="Apenas o Storyteller titular desta sala pode excluí-la.")
+
+    salas.pop(partida_id, None)
+    return JSONResponse({"status": "excluida", "partida_destino": "principal"})
+    
 @router.post("/api/assumir-storyteller")
 async def assumir_storyteller_partida(
     request: Request,
