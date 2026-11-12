@@ -54,19 +54,8 @@ def _obter_salas_botc(app_state) -> dict:
     return app_state.salas_botc
 
 def _eh_storyteller_da_sala(sala: dict, usuario: Usuario) -> bool:
-    """Verifica se o usuário é o Storyteller titular desta partida específica."""
-    if sala["storyteller_id"] == usuario.id:
-        return True
-    # Se a sala ainda não tem Storyteller e o usuário tem permissão exclusiva de Storyteller, assume a mesa
-    if sala["storyteller_id"] is None and "BOTC_STORYTELLER" in usuario.escopo and "BOTC_JOGADOR" not in usuario.escopo:
-        sala["storyteller_id"] = usuario.id
-        sala["storyteller_nome"] = usuario.username
-        # Garante que o Storyteller não esteja na lista de jogadores votantes desta sala
-        sala["sistema"].jogadores.pop(usuario.id, None)
-        sala["sistema"].jogadores.pop(usuario.username, None)
-        sala["sistema"].jogadores.pop(usuario.nome_real, None)
-        return True
-    return False
+    """Verifica se o usuário já assumiu explicitamente o papel de Storyteller titular desta partida."""
+    return sala["storyteller_id"] == usuario.id
 
 def _obter_ou_criar_jogador(
     sistema, 
