@@ -4,6 +4,11 @@ import '../styles/BotCPage.css';
 
 export default function BotCPage() {
   const navigate = useNavigate();
+  const [novaSenhaSala, setNovaSenhaSala] = useState('');
+  const [requerSenha, setRequerSenha] = useState(false);
+  const [senhaDigitadaSala, setSenhaDigitadaSala] = useState('');
+  const [jogadorAlvoStatus, setJogadorAlvoStatus] = useState('');
+  const [novoStatusEscolhido, setNovoStatusEscolhido] = useState('Vivo');
   const [partidaId, setPartidaId] = useState('principal');
   const [partidasDisponiveis, setPartidasDisponiveis] = useState([]);
   const [partidaAtualInfo, setPartidaAtualInfo] = useState({
@@ -42,14 +47,23 @@ export default function BotCPage() {
   const carregarRoda = useCallback(async () => {
     try {
       const res = await fetch(`/botc/api/estado?partida_id=${encodeURIComponent(partidaId)}`);
+      if (res.status === 403) {
+        const data = await res.json();
+        setRequerSenha(true);
+        setPartidaAtualInfo(data.partida_atual || {});
+        setPartidasDisponiveis(data.partidas_disponiveis || []);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
+        setRequerSenha(false);
         setJogadores(data.jogadores || []);
         setMeuStatus(data.usuario_atual || {});
         setGiro(data.giro || {});
         setPartidaAtualInfo(data.partida_atual || {});
         setPartidasDisponiveis(data.partidas_disponiveis || []);
         setNomeadoSelecionado((prev) => prev || data.giro?.nomeado_id || data.jogadores?.[0]?.id || '');
+        setJogadorAlvoStatus((prev) => prev || data.jogadores?.[0]?.id || '');
       }
     } catch {
       // ignora oscilação temporária
