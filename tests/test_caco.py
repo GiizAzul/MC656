@@ -144,21 +144,8 @@ def test_voto_multiplo():
         match="O eleitor já registrou um voto nesta votação."
     ):
         eleicao.registrar_voto('Juh', OpcaoVoto.REJEITAR)
-        
-# Cria eleicão teste
-def criar_eleicao():
-    alunos = [
-        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
-        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
-    ]
 
-    eleitores = [
-        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
-    ]
-
-    return EleicaoAssembleia(alunos, eleitores, 30)
-
-# Testa vitoria quando APROVAR possui mais de 50% dos votos não nulos
+# Testa vitoria quando APROVAR possui mais de 50% dos votos não nulos (CE10)
 def test_vitoria_aprovacao():
 
     eleicao = criar_eleicao()
@@ -174,8 +161,7 @@ def test_vitoria_aprovacao():
 
     assert eleicao.apurar_vencedor() == 'APROVADA'
 
-
-# Testa vitoria quando REJEITAR possui mais de 50% dos votos não nulos
+# Testa vitoria quando REJEITAR possui mais de 50% dos votos não nulos (CE11)
 def test_vitoria_rejeicao():
 
     eleicao = criar_eleicao()
@@ -192,7 +178,7 @@ def test_vitoria_rejeicao():
     assert eleicao.apurar_vencedor() == 'VETADA'
 
 
-# Testa empate em APROVAR e REJEITAR
+# Testa empate em APROVAR e REJEITAR (CE11)
 def test_empate():
     
     eleicao = criar_eleicao()
@@ -208,7 +194,7 @@ def test_empate():
 
     assert eleicao.apurar_vencedor() == 'VETADA'
 
-# Testa abstencão total
+# Testa abstencão total (CE12)
 def test_todos_abstiveram():
     eleicao = criar_eleicao()
     eleicao.iniciar_votacao()
@@ -222,6 +208,19 @@ def test_todos_abstiveram():
     eleicao.encerrar_votacao()
 
     assert eleicao.apurar_vencedor() == 'VETADA'
+
+# Cria eleicão teste
+def criar_eleicao():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+    ]
+
+    eleitores = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
+    ]
+
+    return EleicaoAssembleia(alunos, eleitores, 30)
 
 def test_eleitor_nao_autorizado():
     """Verifica se o sistema impede votos de alunos que não estão na lista de eleitores daquela pauta."""
