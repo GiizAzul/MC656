@@ -407,7 +407,34 @@ export default function BotCPage() {
       )}
       {veredito && <div className="alert-banner alert-success">⚖️ {veredito}</div>}
 
-      {requerSenha ? (
+      {semSalas ? (
+        <div className="botc-panel-box" style={{ maxWidth: '480px', margin: '2rem auto', textAlign: 'center' }}>
+          <h3>🎲 Nenhuma Sala Ativa no Momento</h3>
+          <p style={{ fontSize: '0.9rem', color: '#cbd5e1', margin: '0.6rem 0 1.2rem' }}>
+            Todas as salas foram encerradas ou excluídas. Crie uma nova sala abaixo para iniciar uma partida!
+          </p>
+          <form onSubmit={criarNovaPartida} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Nome da nova sala (ex: Mesa Principal)"
+              value={novoNomeSala}
+              onChange={(e) => setNovoNomeSala(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              className="form-control"
+              placeholder="Senha opcional (em branco para pública)"
+              value={novaSenhaSala}
+              onChange={(e) => setNovaSenhaSala(e.target.value)}
+            />
+            <button type="submit" className="btn-primary">
+              ➕ Criar Nova Sala
+            </button>
+          </form>
+        </div>
+      ) : requerSenha ? (
         <div className="botc-panel-box" style={{ maxWidth: '440px', margin: '2rem auto' }}>
           <h3>🔒 Sala Privada: {partidaAtualInfo.nome}</h3>
           <p style={{ fontSize: '0.9rem', color: '#cbd5e1', margin: '0.5rem 0 1rem' }}>
