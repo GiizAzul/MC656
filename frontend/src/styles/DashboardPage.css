@@ -26,11 +26,13 @@
 .context-card.botc { border-top: 5px solid var(--botc-crimson); }
 
 .scope-linker-card {
-  background: #ffffff;
-  border: 2px dashed #94a3b8;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 2px dashed var(--border-color);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   margin-top: 1.5rem;
+  box-shadow: var(--shadow-card);
 }
 
 .scope-linker-form {

@@ -53,9 +53,9 @@
 }
 
 .dnd-item.dragging {
-  opacity: 0.55;
+  opacity: 0.7;
   border-color: var(--aus-green);
-  background-color: #ecfdf5;
+  background-color: var(--surface-alt);
   transform: scale(1.01);
 }
 
@@ -105,15 +105,25 @@
   gap: 0.45rem;
 }
 
+
 .btn-move {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 0.95rem;
   color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.btn-move:hover:not(:disabled) {
+  border-color: var(--aus-green);
 }
 
 .btn-move:disabled {
