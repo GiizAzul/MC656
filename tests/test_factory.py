@@ -1,6 +1,10 @@
 import pytest
 
-from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia, GestaoAustralia
+from src.autenticacao.australia import (
+    CandidatoAustralia,
+    EleitorAustralia,
+    GestaoAustralia,
+)
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 from src.autenticacao.factory import UsuarioFactory
