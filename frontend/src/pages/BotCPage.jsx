@@ -545,7 +545,6 @@ export default function BotCPage() {
                         </option>
                       ))}
                     </select>
-
                     <select
                       aria-label="Novo Status de Vida"
                       className="form-control"
@@ -554,10 +553,10 @@ export default function BotCPage() {
                       onChange={(e) => setNovoStatusEscolhido(e.target.value)}
                     >
                       <option value="Vivo">Vivo</option>
-                      <option value="Morto (Com Voto Fantasma)">Morto (Com Voto Fantasma 👻)</option>
-                      <option value="Morto (Sem Voto Fantasma)">Morto (Sem Voto Fantasma)</option>
+                      <option value="Morto (Com Voto)">Morto (Com Voto Fantasma 👻)</option>
+                      <option value="Morto (Sem Voto)">Morto (Sem Voto Fantasma)</option>
                     </select>
-
+                    
                     <button type="submit" className="btn-secondary" disabled={giro.ativo}>
                       Aplicar Status
                     </button>
