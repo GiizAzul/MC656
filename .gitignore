@@ -23,3 +23,8 @@ __pycache__/
 
 # Cache do Linter (Ruff)
 .ruff_cache/
+
+#Mutmut
+.mutmut-cache
+*.bak
+html/
