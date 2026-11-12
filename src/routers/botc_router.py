@@ -631,6 +631,27 @@ async def estado_roda_botc(
     partida_id: str = "principal",
 ):
     salas = _obter_salas_botc(request.app.state)
+    if not salas:
+            return JSONResponse({
+                "sem_salas": True,
+                "partidas_disponiveis": [],
+                "usuario_atual": {
+                    "username": usuario.username,
+                    "nome": usuario.username,
+                    "tem_escopo_storyteller": "BOTC_STORYTELLER" in usuario.escopo,
+                },
+            })
+
+    # Se o usuário é Storyteller de uma partida ainda NÃO encerrada, força ele a permanecer nela!
+    sala_st_ativa = next(
+        (s["id"] for s in salas.values() if s["storyteller_id"] == usuario.id and not s.get("encerrada", False)),
+        None,
+    )
+    if sala_st_ativa:
+        partida_id = sala_st_ativa
+    elif partida_id not in salas:
+        partida_id = next(iter(salas.keys()))
+
     sala = salas.get(partida_id, salas["principal"])
     sala.setdefault("nomeados_hoje", set())
     sala.setdefault("autorizados", set())
