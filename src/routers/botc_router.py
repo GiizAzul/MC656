@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from src.autenticacao.base import Usuario
 from src.botc import (
     JogadorBotC,
-    SistemaEleitoral,
+    SistemaEleitoralBotC,
     StatusJogador,
 )
 
@@ -32,6 +32,7 @@ def _obter_salas_botc(app_state) -> dict:
             "sistema": app_state.sistema_botc,
             "storyteller_id": None,
             "storyteller_nome": None,
+            "nomeados_hoje": set(),
             "maos": getattr(app_state, "maos_botc", {}),
             "giro": {
                 "ativo": False,
@@ -215,8 +216,9 @@ async def criar_nova_partida_botc(
 ):
     salas = _obter_salas_botc(request.app.state)
     novo_id = f"partida_{len(salas) + 1}"
-    novo_sistema = SistemaEleitoralBotC()
-    for nome in ["Alice", "Bruno", "Carla", "Diego", "Elena"]:
+    nomes_iniciais = ["Alice", "Bruno", "Carla", "Diego", "Elena"]
+    novo_sistema = SistemaEleitoralBotC(num_jogadores_vivos=len(nomes_iniciais))
+    for nome in nomes_iniciais:
         novo_sistema.adicionar_jogador(
             JogadorBotC(id_jogador=f"{novo_id}_{nome.lower()}", nome=nome, status=StatusJogador.VIVO)
         )
@@ -230,6 +232,7 @@ async def criar_nova_partida_botc(
         "sistema": novo_sistema,
         "storyteller_id": st_id,
         "storyteller_nome": st_nome,
+        "nomeados_hoje": set(),
         "maos": {},
         "giro": {
             "ativo": False,
@@ -378,19 +381,28 @@ async def alterar_status_jogador_botc(
         context={"mensagem": f"Status do jogador {id_jogador} alterado para {novo_status}."},
     )
 
-
 @router.post("/apurar")
 async def apurar_execucao_botc(
-    request: Request, 
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    partida_id: str = Form("principal"),
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(
-            status_code=403, 
-            detail="Apenas o Storyteller pode apurar a execução."
+            status_code=403,
+            detail="Apenas o Storyteller pode apurar a execução.",
         )
 
-    resultado = request.app.state.sistema_botc.apurar_vencedor()
+    salas = _obter_salas_botc(request.app.state)
+    sala = salas.get(partida_id, salas["principal"])
+    sistema = sala["sistema"]
+
+    resultado = sistema.apurar_vencedor()
+    # Ao encerrar o dia e apurar o executado, limpa os nomeados do dia para o próximo ciclo!
+    sala.setdefault("nomeados_hoje", set()).clear()
+    sala["giro"]["trancados"] = {}
+    sala["giro"]["trancados_nomes"] = set()
+    sala["giro"]["mensagem_final"] = ""
 
     mensagem = (
         f"O jogador executado foi: {resultado}"
@@ -403,7 +415,7 @@ async def apurar_execucao_botc(
         request=request,
         context={"mensagem": mensagem},
     )
-
+    
 def _atualizar_progresso_giro(sala: dict) -> dict:
     """Atualiza o ponteiro do Storyteller no servidor (1.5s por jogador) e trava as mãos."""
     giro = sala["giro"]
@@ -457,6 +469,7 @@ async def iniciar_giro_storyteller(
 
     salas = _obter_salas_botc(request.app.state)
     sala = salas.get(partida_id, salas["principal"])
+    sala.setdefault("nomeados_hoje", set())
 
     if sala["storyteller_id"] is None:
         sala["storyteller_id"] = usuario.id
@@ -470,13 +483,22 @@ async def iniciar_giro_storyteller(
     sistema = sala["sistema"]
     lista_jogadores = [j for j in sistema.jogadores.values() if j.id_jogador != sala["storyteller_id"]]
     if not lista_jogadores:
-        raise HTTPException(status_code=400, detail="Não há jogadores na roda.")
+        raise HTTPException(status_code=400, detail="Não há jogadores votantes na roda.")
 
     idx_nomeado = next(
         (i for i, j in enumerate(lista_jogadores) if j.id_jogador == nomeado_id or j.nome == nomeado_id),
         0,
     )
     nomeado_obj = lista_jogadores[idx_nomeado]
+
+    # Regra oficial do BoTC: um jogador só pode ser nomeado 1 vez por dia!
+    if nomeado_obj.id_jogador in sala["nomeados_hoje"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{nomeado_obj.nome} já foi indicado(a) para a forca hoje! Escolha outro jogador ou encerre o dia.",
+        )
+
+    sala["nomeados_hoje"].add(nomeado_obj.id_jogador)
 
     # Ordem começa no jogador imediatamente à direita (sentido horário) e termina no próprio nomeado
     ordem_ids = [
@@ -498,7 +520,6 @@ async def iniciar_giro_storyteller(
     }
     return JSONResponse({"status": "iniciado", "nomeado": nomeado_obj.nome})
 
-
 @router.get("/api/estado")
 async def estado_roda_botc(
     request: Request,
@@ -507,6 +528,7 @@ async def estado_roda_botc(
 ):
     salas = _obter_salas_botc(request.app.state)
     sala = salas.get(partida_id, salas["principal"])
+    sala.setdefault("nomeados_hoje", set())
     sistema = sala["sistema"]
 
     eh_st_desta_sala = _eh_storyteller_da_sala(sala, usuario)
@@ -542,6 +564,7 @@ async def estado_roda_botc(
             "pode_votar": jog.pode_votar(),
             "mao_levantada": mao_exibida,
             "trancado": trancado,
+            "ja_nomeado_hoje": jog.id_jogador in sala["nomeados_hoje"],
         })
 
     meu_trancado = bool(jogador_atual and jogador_atual.id_jogador in giro["trancados"])
@@ -575,7 +598,7 @@ async def estado_roda_botc(
             "username": usuario.username,
             "nome": usuario.nome_real or usuario.username,
             "id": jogador_atual.id_jogador if jogador_atual else usuario.id,
-            "status": "STORYTELLER (CENTRO DA RODA)" if eh_st_desta_sala else (jogador_atual.status.value if jogador_atual else "vivo"),
+            "status": "STORYTELLER (CENTRO DA RODA)" if eh_st_desta_sala else (jogador_atual.status.value if jogador_atual else "Vivo"),
             "pode_votar": False if eh_st_desta_sala else (jogador_atual.pode_votar() if jogador_atual else False),
             "mao_levantada": False if eh_st_desta_sala else minha_mao,
             "trancado": meu_trancado,
