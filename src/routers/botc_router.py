@@ -209,13 +209,15 @@ async def criar_nova_partida_botc(
     salas = _obter_salas_botc(request.app.state)
     # Usa timestamp/contador único para evitar colisão após deleções
     novo_id = f"partida_{int(time.time() * 1000)}"
-    novo_sistema = SistemaEleitoralBotC()
 
-    # Adiciona apenas quem criou a sala inicialmente como jogador (ele pode clicar em Assumir Storyteller depois se quiser)
-    novo_sistema.adicionar_jogador(
-        JogadorBotC(id_jogador=usuario.id, nome=usuario.username, status=StatusJogador.VIVO)
+    jogador_criador = JogadorBotC(
+        id_jogador=usuario.id,
+        nome=usuario.username,
+        status=StatusJogador.VIVO,
     )
-
+    # Adiciona apenas quem criou a sala inicialmente como jogador (ele pode clicar em Assumir Storyteller depois se quiser)
+    novo_sistema = SistemaEleitoralBotC(jogadores=[jogador_criador])
+    
     senha_limpa = senha_sala.strip() or None
     salas[novo_id] = {
         "id": novo_id,
@@ -241,6 +243,7 @@ async def criar_nova_partida_botc(
         },
     }
     return JSONResponse({"status": "criada", "partida_id": novo_id})
+
 @router.post("/api/entrar-sala")
 async def entrar_sala_botc(
     request: Request,
