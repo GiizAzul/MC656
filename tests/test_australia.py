@@ -1,6 +1,7 @@
 import pytest
 
 from src import EleicaoAustralia
+from src.estados import AguardandoVotacao, EmVotacao, Encerrada
 
 
 def test_vitoria_maioria_simples():
@@ -67,3 +68,74 @@ def test_votos_zerados_no_meio_da_apuracao():
     eleicao = EleicaoAustralia(['Samuel', 'Juh'], [['Juh', 'Samuel']])
     eleicao.cedulas = [] # Esvazia as cédulas artificialmente após a validação
     assert eleicao.apurar_vencedor() is None
+
+# --- Registro de votos e integração com o padrão State (src/estados.py) ---
+
+def test_inicia_aguardando_votacao():
+    eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
+    assert isinstance(eleicao.estado, AguardandoVotacao)
+
+def test_apurar_voto_registra_cedula_quando_em_votacao():
+    eleicao = EleicaoAustralia(['Caio', 'Gi', 'Juh'], [])
+    eleicao.iniciar_votacao()
+    assert isinstance(eleicao.estado, EmVotacao)
+
+    eleicao.apurar_voto('eleitor1', ['Gi', 'Juh', 'Caio'])
+
+    assert eleicao.cedulas == [['Gi', 'Juh', 'Caio']]
+    assert 'eleitor1' in eleicao.votantes
+
+def test_apurar_voto_antes_de_iniciar_levanta_erro():
+    eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
+    with pytest.raises(RuntimeError):
+        eleicao.apurar_voto('eleitor1', ['Caio', 'Gi'])
+    assert eleicao.cedulas == []
+
+def test_apurar_voto_apos_encerrar_levanta_erro():
+    eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
+    eleicao.iniciar_votacao()
+    eleicao.encerrar_votacao()
+    assert isinstance(eleicao.estado, Encerrada)
+    with pytest.raises(RuntimeError):
+        eleicao.apurar_voto('eleitor1', ['Caio', 'Gi'])
+
+def test_registrar_voto_copia_a_cedula():
+    eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
+    cedula = ['Caio', 'Gi']
+    eleicao.registrar_voto('eleitor1', cedula)
+    cedula.reverse()  # alterar a lista original não pode afetar a urna
+    assert eleicao.cedulas == [['Caio', 'Gi']]
+
+def test_registrar_voto_rejeita_voto_duplicado():
+    eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
+    eleicao.registrar_voto('eleitor1', ['Caio', 'Gi'])
+    with pytest.raises(ValueError, match="já registrou seu voto"):
+        eleicao.registrar_voto('eleitor1', ['Gi', 'Caio'])
+    assert len(eleicao.cedulas) == 1
+
+def test_registrar_voto_rejeita_cedula_incompleta():
+    eleicao = EleicaoAustralia(['Caio', 'Gi', 'Juh'], [])
+    with pytest.raises(ValueError, match="ranquear exatamente todos os 3 candidatos"):
+        eleicao.registrar_voto('eleitor1', ['Caio', 'Gi'])
+    assert 'eleitor1' not in eleicao.votantes  # voto inválido não "gasta" o direito de voto
+
+def test_registrar_voto_rejeita_candidato_falso_ou_duplicado():
+    eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
+    with pytest.raises(ValueError, match="duplicados ou não registrados"):
+        eleicao.registrar_voto('eleitor1', ['Caio', 'Caio'])
+    with pytest.raises(ValueError, match="duplicados ou não registrados"):
+        eleicao.registrar_voto('eleitor1', ['Caio', 'Fantasma'])
+
+def test_registrar_voto_rejeita_voto_que_nao_e_lista():
+    eleicao = EleicaoAustralia(['Caio', 'Gi'], [])
+    with pytest.raises(TypeError, match="lista ordenada"):
+        eleicao.registrar_voto('eleitor1', 'Caio')
+
+def test_apuracao_com_votos_registrados_via_estado():
+    eleicao = EleicaoAustralia(['Caio', 'Gi', 'Juh'], [])
+    eleicao.iniciar_votacao()
+    eleicao.apurar_voto('e1', ['Caio', 'Gi', 'Juh'])
+    eleicao.apurar_voto('e2', ['Caio', 'Juh', 'Gi'])
+    eleicao.apurar_voto('e3', ['Gi', 'Caio', 'Juh'])
+    eleicao.encerrar_votacao()
+    assert eleicao.apurar_vencedor() == 'Caio'

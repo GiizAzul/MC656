@@ -1,28 +1,100 @@
 {% extends "base.html" %}
 {% block content %}
 <header class="header-context botc-theme">
-    <h2>Blood on the Clocktower - Partida #12</h2>
+    <h2>Blood on the Clocktower - Partida da Cidade</h2>
 </header>
 <main class="box-content">
-    <h3 class="text-center">Nomeação: Jogador X</h3>
-    
+    <h3 class="text-center">Roda dos Cidadãos</h3>
+
     <div class="roda-jogadores">
         {% for jog in jogadores %}
         <div class="jogador-card {% if 'Morto' in jog.status %}morto{% endif %}">
-            <span>{{ jog.nome }}</span>
+            <strong>{{ jog.nome }}</strong>
             <small>{{ jog.status }}</small>
+            {% if is_storyteller %}
+                <small title="Peso efetivo do voto">(Peso: {{ jog.peso }})</small>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
 
     {% if erro %}
-        <div class="alert alert-danger">{{ erro }}</div>
+        <div class="alert alert-danger text-center mt-2">{{ erro }}</div>
     {% endif %}
-    
-    <form action="/botc/votar" method="POST" class="botoes-votacao text-center mt-2">
-        <button type="submit" name="acao" value="levantar_mao" class="btn-primary">Levantar a Mão</button>
-        <button type="submit" name="acao" value="abaixar_mao" class="btn-secondary">Abaixar a Mão</button>
-    </form>
+
+    <div class="status-usuario text-center mt-2">
+        <p>Seu status atual: <strong>{{ status_usuario }}</strong></p>
+    </div>
+
+    {% if pode_votar %}
+        <form action="/botc/votar" method="POST" class="botoes-votacao text-center mt-2">
+            <button type="submit" name="acao" value="levantar_mao" class="btn-primary">Levantar a Mão</button>
+            <button type="submit" name="acao" value="abaixar_mao" class="btn-secondary">Abaixar a Mão</button>
+        </form>
+    {% else %}
+        <div class="alert alert-warning text-center mt-2">
+            Você é um jogador morto e já utilizou seu voto fantasma. A votação está bloqueada para você nesta partida.
+        </div>
+        <div class="botoes-votacao text-center mt-2">
+            <button type="button" class="btn-secondary" disabled title="Voto fantasma já utilizado">Voto Indisponível</button>
+        </div>
+    {% endif %}
+
+    {% if is_storyteller %}
+    <section class="controles-gestao mt-2">
+        <h4 class="text-center">Painel do Storyteller</h4>
+
+        <!-- Gerenciar Status de Vida e Voto Fantasma (Issue #71) -->
+        <form action="/botc/status-jogador" method="POST" class="mt-2">
+            <label for="status-jogador-id"><strong>Jogador:</strong></label>
+            <select name="id_jogador" id="status-jogador-id" class="candidato-item" style="width: 100%;">
+                {% for jog in jogadores %}
+                <option value="{{ jog.id }}">{{ jog.nome }} ({{ jog.status }})</option>
+                {% endfor %}
+            </select>
+            <label for="novo-status-id" class="mt-2" style="display: block;"><strong>Novo Status:</strong></label>
+            <select name="novo_status" id="novo-status-id" class="candidato-item" style="width: 100%;">
+                <option value="Vivo">Vivo</option>
+                <option value="Morto (Com Voto)">Morto (Com Voto Fantasma)</option>
+                <option value="Morto (Sem Voto)">Morto (Sem Voto Fantasma)</option>
+            </select>
+            <button type="submit" class="btn-neutral mt-2">Atualizar Status</button>
+        </form>
+
+        <!-- Configurar Modificadores Ocultos de Voto (Issue #70 / Padrão Decorator) -->
+        <form action="/botc/modificador" method="POST" class="mt-2">
+            <label for="modificador-jogador-id"><strong>Jogador Alvo:</strong></label>
+            <select name="id_jogador" id="modificador-jogador-id" class="candidato-item" style="width: 100%;">
+                {% for jog in jogadores %}
+                <option value="{{ jog.id }}">{{ jog.nome }} - Peso atual: {{ jog.peso }}</option>
+                {% endfor %}
+            </select>
+            <label for="tipo-modificador-id" class="mt-2" style="display: block;"><strong>Tipo de Modificador:</strong></label>
+            <select name="tipo_modificador" id="tipo-modificador-id" class="candidato-item" style="width: 100%;">
+                <option value="multiplicador">Multiplicador (Voto triplo / x3)</option>
+                <option value="negativo">Negativador (Voto negativo / -1)</option>
+                <option value="multiplicador_negativo">Multiplicador com Negativador (Voto triplo negativo / -3)</option>
+                <option value="nulo">Anulador (Voto nulo / peso 0)</option>
+                <option value="padrao">Padrão Unitário (Voto normal / 1)</option>
+            </select>
+            <button type="submit" class="btn-neutral mt-2">Aplicar Modificador</button>
+        </form>
+
+        <!-- Registro de Votação e Apuração da Forca -->
+        <form action="/botc/registrar" method="POST" class="mt-2">
+            <label for="nomeado"><strong>Nome do Nomeado:</strong></label>
+            <input type="text" id="nomeado" name="nomeado" placeholder="Nome do acusado" required class="candidato-item" style="width: 100%;">
+            <label for="num-votos" class="mt-2" style="display: block;"><strong>Quantidade de Votos:</strong></label>
+            <input type="number" id="num-votos" name="num_votos" placeholder="Quantidade de votos" min="0" required class="candidato-item" style="width: 100%;">
+            <button type="submit" class="btn-primary mt-2">Registrar Votação</button>
+        </form>
+
+        <form action="/botc/apurar" method="POST" class="mt-2">
+            <button type="submit" class="btn-danger">Apurar Execução da Forca</button>
+        </form>
+    </section>
+    {% endif %}
+
     <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
 </main>
 {% endblock %}

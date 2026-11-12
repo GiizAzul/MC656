@@ -202,7 +202,7 @@ def test_voto_antes_do_inicio():
         RuntimeError,
         match="Não existe um ciclo de votação ativo."
     ):
-        eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
+        eleicao.apurar_voto('Juh', OpcaoVoto.APROVAR)
 
 # Testa se barra votos depois do fim da votacão
 def test_voto_depois_do_encerramento():
@@ -215,7 +215,7 @@ def test_voto_depois_do_encerramento():
         RuntimeError,
         match="Não existe um ciclo de votação ativo."
     ):
-        eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
+        eleicao.apurar_voto('Juh', OpcaoVoto.APROVAR)
 
 # Testa se uma votação não pode ser iniciada duas vezes
 def test_iniciar_votacao_duplicado():
@@ -226,7 +226,7 @@ def test_iniciar_votacao_duplicado():
 
     with pytest.raises(
         RuntimeError,
-        match="A votação já está em andamento."
+        match="A votação já foi iniciada."
     ):
         eleicao.iniciar_votacao()
 
