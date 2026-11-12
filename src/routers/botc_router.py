@@ -595,9 +595,31 @@ async def estado_roda_botc(
     salas = _obter_salas_botc(request.app.state)
     sala = salas.get(partida_id, salas["principal"])
     sala.setdefault("nomeados_hoje", set())
+    sala.setdefault("autorizados", set())
     sistema = sala["sistema"]
 
+    # Verifica se a sala tem senha e se o usuário ainda não foi autorizado nela
+    if sala.get("senha") and usuario.id not in sala["autorizados"] and sala["storyteller_id"] != usuario.id:
+        return JSONResponse(
+            {
+                "requer_senha": True,
+                "partida_atual": {"id": sala["id"], "nome": sala["nome"]},
+                "partidas_disponiveis": [
+                    {
+                        "id": s["id"],
+                        "nome": s["nome"],
+                        "storyteller_nome": s["storyteller_nome"],
+                        "tem_senha": bool(s.get("senha")),
+                    }
+                    for s in salas.values()
+                ],
+            },
+            status_code=403,
+        )
+
+    sala["autorizados"].add(usuario.id)
     eh_st_desta_sala = _eh_storyteller_da_sala(sala, usuario)
+
     if eh_st_desta_sala:
         sistema.jogadores.pop(usuario.id, None)
         sistema.jogadores.pop(usuario.username, None)
@@ -605,9 +627,9 @@ async def estado_roda_botc(
 
     jogador_atual = _obter_ou_criar_jogador(sistema, usuario, sala=sala)
 
-    nomes_demo = ["Alice", "Bruno", "Carla", "Diego", "Elena"]
-    if len(sistema.jogadores) < 4:
-        for nome in nomes_demo:
+    # Mocks apenas na sala principal! Novas salas começam limpas só com usuários reais.
+    if partida_id == "principal" and len(sistema.jogadores) < 4:
+        for nome in ["Alice", "Bruno", "Carla", "Diego", "Elena"]:
             if not sistema.obter_jogador(nome):
                 sistema.adicionar_jogador(
                     JogadorBotC(id_jogador=nome.lower(), nome=nome, status=StatusJogador.VIVO)
