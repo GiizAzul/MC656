@@ -587,21 +587,31 @@ export default function BotCPage() {
                 </div>
               </div>
             )}
-
             <div className="botc-panel-box">
               <h3>➕ Criar Nova Sala / Partida Separada</h3>
-              <form onSubmit={criarNovaPartida} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <form
+                onSubmit={criarNovaPartida}
+                style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginTop: '0.75rem' }}
+              >
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Nome da nova sala (ex: Mesa 2)"
+                  placeholder="Nome da nova sala (ex: Mesa dos Amigos)"
                   value={novoNomeSala}
                   onChange={(e) => setNovoNomeSala(e.target.value)}
                   disabled={giro.ativo}
                   required
                 />
+                <input
+                  type="password"
+                  className="form-control"
+                  placeholder="Senha opcional (deixe em branco para sala pública)"
+                  value={novaSenhaSala}
+                  onChange={(e) => setNovaSenhaSala(e.target.value)}
+                  disabled={giro.ativo}
+                />
                 <button type="submit" className="btn-secondary" disabled={giro.ativo}>
-                  Criar Sala
+                  Criar Sala Limpa
                 </button>
               </form>
             </div>
