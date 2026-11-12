@@ -209,6 +209,14 @@ async def criar_nova_partida_botc(
     senha_sala: str = Form(""),
 ):
     salas = _obter_salas_botc(request.app.state)
+    # Impede que um Storyteller com partida ativa crie outra sala antes de encerrar ou excluir a atual
+    for s in salas.values():
+        if s["storyteller_id"] == usuario.id and not s.get("encerrada", False):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Você já é Storyteller da sala '{s['nome']}'. Encerre a partida inteira ou exclua a sala antes de criar outra!",
+            )
+
     # Usa timestamp/contador único para evitar colisão após deleções
     novo_id = f"partida_{int(time.time() * 1000)}"
 
@@ -225,6 +233,7 @@ async def criar_nova_partida_botc(
         "id": novo_id,
         "nome": nome_sala.strip() or f"Partida #{len(salas) + 1}",
         "sistema": novo_sistema,
+        "encerrada": False,
         "storyteller_id": None,
         "storyteller_nome": None,
         "senha": senha_limpa,
