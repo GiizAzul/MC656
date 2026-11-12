@@ -198,31 +198,33 @@ async def processar_voto_botc(
         context={"mensagem": "Ação registrada na roda da cidade."},
     )
 
+
 @router.post("/api/criar-partida")
 async def criar_nova_partida_botc(
     request: Request,
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
     nome_sala: str = Form(...),
-    assumir_storyteller: bool = Form(True),
+    senha_sala: str = Form(""),
 ):
     salas = _obter_salas_botc(request.app.state)
-    novo_id = f"partida_{len(salas) + 1}"
-    nomes_iniciais = ["Alice", "Bruno", "Carla", "Diego", "Elena"]
-    novo_sistema = SistemaEleitoralBotC(jogadores_vivos=len(nomes_iniciais))
-    for nome in nomes_iniciais:
-        novo_sistema.adicionar_jogador(
-            JogadorBotC(id_jogador=f"{novo_id}_{nome.lower()}", nome=nome, status=StatusJogador.VIVO)
-        )
+    # Usa timestamp/contador único para evitar colisão após deleções
+    novo_id = f"partida_{int(time.time() * 1000)}"
+    novo_sistema = SistemaEleitoralBotC()
 
-    st_id = usuario.id if (assumir_storyteller and "BOTC_STORYTELLER" in usuario.escopo) else None
-    st_nome = usuario.username if st_id else None
+    # Adiciona apenas quem criou a sala inicialmente como jogador (ele pode clicar em Assumir Storyteller depois se quiser)
+    novo_sistema.adicionar_jogador(
+        JogadorBotC(id_jogador=usuario.id, nome=usuario.username, status=StatusJogador.VIVO)
+    )
 
+    senha_limpa = senha_sala.strip() or None
     salas[novo_id] = {
         "id": novo_id,
         "nome": nome_sala.strip() or f"Partida #{len(salas) + 1}",
         "sistema": novo_sistema,
-        "storyteller_id": st_id,
-        "storyteller_nome": st_nome,
+        "storyteller_id": None,
+        "storyteller_nome": None,
+        "senha": senha_limpa,
+        "autorizados": {usuario.id},
         "nomeados_hoje": set(),
         "maos": {},
         "giro": {
