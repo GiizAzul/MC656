@@ -6,7 +6,40 @@ from src import EleicaoAssembleia
 from src.caco import OpcaoVoto
 
 
-# Verifica se está barrando nomes duplicados na presenca
+# Verifica se está aceitando corretamente listas de eleitores válidas (CE1)
+def test_eleitores_validos():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+    ]
+    
+    eleitores = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
+    ]
+
+    eleicao = EleicaoAssembleia(alunos, eleitores, 60)
+
+    assert eleicao.eleitores == set(eleitores)
+    
+
+# Verifica se está barrando corretamente não alunos sem duplicatas (CE2)
+def test_eleitor_nao_aluno():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+    ]
+
+    eleitores = [
+         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo', 'PessoaFalsa'
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="O User_ID 'PessoaFalsa' não está cadastrado como aluno."
+    ):
+        EleicaoAssembleia(alunos, eleitores, 60)
+
+# Verifica se está barrando nomes duplicados na presenca com todos alunos válidos (CE3)
 def test_presenca_duplicada():
     alunos = [
         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
@@ -24,25 +57,21 @@ def test_presenca_duplicada():
             duracao_ciclo=60
         )
 
-# Verifica se está barrando corretamente não alunos
-def test_eleitor_nao_aluno():
+# Verifica se passa quórum suficiente (CE4)
+def test_quorum_minimo():
+
+    # quorum mínimo == 1 (teto)
     alunos = [
         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
-        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+        'Ana', 'Carol', 'Leticia', 'Naomi'
     ]
 
-    eleitores = [
-         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo', 'PessoaFalsa'
-    ]
+    eleitores = ['Juh']
 
-    with pytest.raises(
-        ValueError,
-        match="O User_ID 'PessoaFalsa' não está cadastrado como aluno."
-    ):
-        EleicaoAssembleia(alunos, eleitores, 60)
+    eleicao = EleicaoAssembleia(alunos, eleitores, 60)
+    assert eleicao is not None
 
-
-# Verifica se está barrando quórum não suficiente
+# Verifica se está barrando quórum não suficiente (CE5)
 def test_abaixo_quorum_minimo():
 
     # quorum mínimo == 1 
@@ -58,20 +87,6 @@ def test_abaixo_quorum_minimo():
         match="Quórum mínimo não foi satisfeito"
     ):
         EleicaoAssembleia(alunos, eleitores, 60)
-
-# Verifica se passa quórum suficiente
-def test_quorum_minimo():
-
-    # quorum mínimo == 1 (teto)
-    alunos = [
-        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
-        'Ana', 'Carol', 'Leticia', 'Naomi'
-    ]
-
-    eleitores = ['Juh']
-
-    eleicao = EleicaoAssembleia(alunos, eleitores, 60)
-    assert eleicao is not None
 
 
 # Verifica se está barrando duracão inválida
