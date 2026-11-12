@@ -32,6 +32,8 @@ def _obter_salas_botc(app_state) -> dict:
             "sistema": app_state.sistema_botc,
             "storyteller_id": None,
             "storyteller_nome": None,
+            "senha": None,
+            "autorizados": set(),
             "nomeados_hoje": set(),
             "maos": getattr(app_state, "maos_botc", {}),
             "giro": {
