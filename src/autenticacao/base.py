@@ -21,10 +21,10 @@ class Usuario(ABC):
     def escopo(self) -> str:
         """Identificar qual o contexto entre as possíveis eleições"""
 
-    def _getattribute_(self, name: str):
-        val = super()._getattribute_(name)
+    def __getattribute__(self, name: str):
+        val = super().__getattribute__(name)
         if name == "escopo":
-            extras = super()._getattribute_("_escopos_extras")
+            extras = super().__getattribute__("_escopos_extras")
             if extras:
                 atuais = {s.strip() for s in val.split(",") if s.strip()}
                 todos = atuais | {s.strip() for s in extras if s.strip()}

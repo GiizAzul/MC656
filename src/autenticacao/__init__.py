@@ -5,7 +5,7 @@ from .botc import JogadorBOTC, StoryTellerBOTC
 from .caco import EstudanteCACo, GestaoCACo
 from .factory import UsuarioFactory
 
-_all_ = [
+__all__ = [
     "CandidatoAustralia",
     "ControleDeAcesso",
     "EleitorAustralia",

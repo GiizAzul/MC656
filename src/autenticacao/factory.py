@@ -1,4 +1,8 @@
-from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia, GestaoAustralia
+from src.autenticacao.australia import (
+    CandidatoAustralia,
+    EleitorAustralia,
+    GestaoAustralia,
+)
 from src.autenticacao.base import Usuario
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 from src.autenticacao.caco import EstudanteCACo, GestaoCACo
