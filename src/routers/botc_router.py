@@ -734,6 +734,7 @@ async def estado_roda_botc(
         "partida_atual": {
             "id": sala["id"],
             "nome": sala["nome"],
+            "encerrada": bool(sala.get("encerrada", False)),
             "storyteller_id": sala["storyteller_id"],
             "storyteller_nome": sala["storyteller_nome"] or "Aguardando Storyteller",
         },
@@ -751,6 +752,7 @@ async def estado_roda_botc(
             "nome": usuario.username,
             "id": jogador_atual.id_jogador if jogador_atual else usuario.id,
             "status": "STORYTELLER (CENTRO DA RODA)" if eh_st_desta_sala else (jogador_atual.status.value if jogador_atual else "Vivo"),
+            "preso_como_storyteller": bool(sala_st_ativa),
             "pode_votar": False if eh_st_desta_sala else (jogador_atual.pode_votar() if jogador_atual else False),
             "mao_levantada": False if eh_st_desta_sala else minha_mao,
             "trancado": meu_trancado,
