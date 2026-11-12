@@ -88,8 +88,22 @@ def test_abaixo_quorum_minimo():
     ):
         EleicaoAssembleia(alunos, eleitores, 60)
 
+# Verifica se permite duracão válida (CE6)
+def test_duracao_valida():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+    ]
 
-# Verifica se está barrando duracão inválida
+    eleitores = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
+    ]
+
+    eleicao = EleicaoAssembleia(alunos, eleitores, 10)
+
+    assert eleicao.duracao_ciclo == 10
+
+# Verifica se está barrando duracão inválida (CE7)
 def test_duracao_invalida():
     alunos = [
         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
