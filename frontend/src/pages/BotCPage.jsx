@@ -310,30 +310,29 @@ export default function BotCPage() {
             value={partidaId}
             onChange={(e) => {
               setNomeadoSelecionado('');
+              setErro('');
               setPartidaId(e.target.value);
             }}
           >
             {partidasDisponiveis.map((p) => (
               <option key={p.id} value={p.id}>
-                🎲 {p.nome} (Mestre: {p.storyteller_nome || 'Livre'})
+                {p.tem_senha ? '🔒 ' : '🎲 '}
+                {p.nome} (Mestre: {p.storyteller_nome || 'Livre'})
               </option>
             ))}
           </select>
 
-          <button
-            type="button"
-            className="btn-secondary"
-            disabled={giro.ativo}
-            onClick={() => {
-              if (giro.ativo) {
-                setErro('⚠️ Você não pode sair da partida enquanto o ponteiro de votação está girando!');
-                return;
-              }
-              navigate('/dashboard');
-            }}
-          >
-            {giro.ativo ? '🔒 Votação em Andamento' : 'Voltar ao Painel'}
-          </button>
+          {partidaId !== 'principal' && (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={giro.ativo}
+              onClick={sairDaSalaAtual}
+              title="Sair desta sala (se todos saírem, a sala é excluída automaticamente)"
+            >
+              🚪 Sair da Sala
+            </button>
+          )}
         </div>
       </div>
 
