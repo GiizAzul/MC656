@@ -120,7 +120,31 @@ def test_duracao_invalida():
     ):
         EleicaoAssembleia(alunos, eleitores, 0)
 
+# Testa se aceita corretamente voto unico (CE8)
+def test_voto_unico():
 
+    eleicao = criar_eleicao()
+    eleicao.iniciar_votacao()
+
+    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
+
+    assert eleicao.contadores[OpcaoVoto.APROVAR] == 1
+    assert 'Juh' in eleicao.votantes
+
+# Testa se barra corretamente multiplos votos (CE9)
+def test_voto_multiplo():
+
+    eleicao = criar_eleicao()
+    eleicao.iniciar_votacao()
+
+    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
+
+    with pytest.raises(
+        ValueError,
+        match="O eleitor já registrou um voto nesta votação."
+    ):
+        eleicao.registrar_voto('Juh', OpcaoVoto.REJEITAR)
+        
 # Cria eleicão teste
 def criar_eleicao():
     alunos = [
@@ -198,20 +222,6 @@ def test_todos_abstiveram():
     eleicao.encerrar_votacao()
 
     assert eleicao.apurar_vencedor() == 'VETADA'
-
-# Testa se barra corretamente multiplos votos
-def test_voto_unico():
-
-    eleicao = criar_eleicao()
-    eleicao.iniciar_votacao()
-
-    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
-
-    with pytest.raises(
-        ValueError,
-        match="O eleitor já registrou um voto nesta votação."
-    ):
-        eleicao.registrar_voto('Juh', OpcaoVoto.REJEITAR)
 
 def test_eleitor_nao_autorizado():
     """Verifica se o sistema impede votos de alunos que não estão na lista de eleitores daquela pauta."""
