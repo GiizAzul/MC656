@@ -58,7 +58,7 @@ def _eh_storyteller_da_sala(sala: dict, usuario: Usuario) -> bool:
     # Se a sala ainda não tem Storyteller e o usuário tem permissão exclusiva de Storyteller, assume a mesa
     if sala["storyteller_id"] is None and "BOTC_STORYTELLER" in usuario.escopo and "BOTC_JOGADOR" not in usuario.escopo:
         sala["storyteller_id"] = usuario.id
-        sala["storyteller_nome"] = usuario.nome_real or usuario.username
+        sala["storyteller_nome"] = usuario.username
         # Garante que o Storyteller não esteja na lista de jogadores votantes desta sala
         sala["sistema"].jogadores.pop(usuario.id, None)
         sala["sistema"].jogadores.pop(usuario.username, None)
@@ -83,7 +83,7 @@ def _obter_ou_criar_jogador(
     if not jogador:
         jogador = JogadorBotC(
             id_jogador=usuario.id,
-            nome=usuario.nome_real or usuario.username,
+            nome= usuario.username,
             status=StatusJogador.VIVO,
         )
         sistema.adicionar_jogador(jogador)
@@ -217,14 +217,14 @@ async def criar_nova_partida_botc(
     salas = _obter_salas_botc(request.app.state)
     novo_id = f"partida_{len(salas) + 1}"
     nomes_iniciais = ["Alice", "Bruno", "Carla", "Diego", "Elena"]
-    novo_sistema = SistemaEleitoralBotC(num_jogadores_vivos=len(nomes_iniciais))
+    novo_sistema = SistemaEleitoralBotC(jogadores_vivos=len(nomes_iniciais))
     for nome in nomes_iniciais:
         novo_sistema.adicionar_jogador(
             JogadorBotC(id_jogador=f"{novo_id}_{nome.lower()}", nome=nome, status=StatusJogador.VIVO)
         )
 
     st_id = usuario.id if (assumir_storyteller and "BOTC_STORYTELLER" in usuario.escopo) else None
-    st_nome = (usuario.nome_real or usuario.username) if st_id else None
+    st_nome = usuario.username if st_id else None
 
     salas[novo_id] = {
         "id": novo_id,
@@ -268,7 +268,7 @@ async def assumir_storyteller_partida(
         )
 
     sala["storyteller_id"] = usuario.id
-    sala["storyteller_nome"] = usuario.nome_real or usuario.username
+    sala["storyteller_nome"] = usuario.username
     # Remove o Storyteller dos assentos votantes da borda da roda
     sala["sistema"].jogadores.pop(usuario.id, None)
     sala["sistema"].jogadores.pop(usuario.username, None)
@@ -596,7 +596,7 @@ async def estado_roda_botc(
         ],
         "usuario_atual": {
             "username": usuario.username,
-            "nome": usuario.nome_real or usuario.username,
+            "nome": usuario.username,
             "id": jogador_atual.id_jogador if jogador_atual else usuario.id,
             "status": "STORYTELLER (CENTRO DA RODA)" if eh_st_desta_sala else (jogador_atual.status.value if jogador_atual else "Vivo"),
             "pode_votar": False if eh_st_desta_sala else (jogador_atual.pode_votar() if jogador_atual else False),
