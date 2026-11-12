@@ -419,19 +419,22 @@ async def aplicar_modificador_botc(
         },
     )
 
-
 @router.post("/status-jogador")
 async def alterar_status_jogador_botc(
     request: Request,
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
     id_jogador: str = Form(...),
     novo_status: str = Form(...),
+    partida_id: str = Form("principal"),
 ):
-    """Permite ao Storyteller alterar o status de vida / voto fantasma de um jogador"""
+    """Permite ao Storyteller alterar o status de vida / voto fantasma de um jogador."""
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode alterar o status de jogadores.")
 
-    sistema = request.app.state.sistema_botc
+    salas = _obter_salas_botc(request.app.state)
+    sala = salas.get(partida_id, salas["principal"])
+    sistema = sala["sistema"]
+
     try:
         status_enum = StatusJogador(novo_status)
         sistema.alterar_status_jogador(id_jogador, status_enum)
