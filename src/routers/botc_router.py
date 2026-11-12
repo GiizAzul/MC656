@@ -283,11 +283,18 @@ async def sair_da_sala_botc(
     partida_id: str = Form(...),
 ):
     salas = _obter_salas_botc(request.app.state)
-    if partida_id not in salas or partida_id == "principal":
-        return JSONResponse({"status": "ok", "partida_destino": "principal"})
+    if partida_id not in salas:
+        return JSONResponse({"status": "saiu"})
 
     sala = salas[partida_id]
     sistema = sala["sistema"]
+
+    # Storyteller não pode abandonar a sala enquanto a partida inteira não acabar (ou ele excluir a sala)
+    if sala["storyteller_id"] == usuario.id and not sala.get("encerrada", False):
+        raise HTTPException(
+            status_code=400,
+            detail="O Storyteller não pode sair da sala enquanto a partida não acabar! Encerre a partida inteira ou exclua a sala.",
+        )
 
     # Remove o usuário se ele era jogador ou Storyteller
     sistema.jogadores.pop(usuario.id, None)
@@ -300,12 +307,30 @@ async def sair_da_sala_botc(
         sala["storyteller_id"] = None
         sala["storyteller_nome"] = None
 
-    # Se não sobrou nenhum jogador E nenhum Storyteller, exclui a sala automaticamente!
+    # Se não sobrou nenhum jogador E nenhum Storyteller, exclui a sala automaticamente
     if len(sistema.jogadores) == 0 and sala["storyteller_id"] is None:
         salas.pop(partida_id, None)
 
-    return JSONResponse({"status": "saiu", "partida_destino": "principal"})
+    return JSONResponse({"status": "saiu"})
 
+
+@router.post("/api/encerrar-partida")
+async def encerrar_partida_inteira_botc(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    partida_id: str = Form(...),
+):
+    salas = _obter_salas_botc(request.app.state)
+    if partida_id not in salas:
+        raise HTTPException(status_code=404, detail="Sala não encontrada.")
+    sala = salas[partida_id]
+    if sala["storyteller_id"] != usuario.id:
+        raise HTTPException(status_code=403, detail="Apenas o Storyteller desta sala pode encerrar a partida.")
+
+    sala["encerrada"] = True
+    sala["giro"]["ativo"] = False
+    sala["giro"]["mensagem_final"] = "🏁 Partida encerrada pelo Storyteller! Todos estão liberados para sair ou criar nova sala."
+    return JSONResponse({"status": "encerrada"})
 
 @router.post("/api/excluir-sala")
 async def excluir_sala_storyteller(
@@ -314,17 +339,16 @@ async def excluir_sala_storyteller(
     partida_id: str = Form(...),
 ):
     salas = _obter_salas_botc(request.app.state)
-    if partida_id == "principal":
-        raise HTTPException(status_code=400, detail="A sala principal padrão não pode ser excluída.")
     if partida_id not in salas:
         raise HTTPException(status_code=404, detail="Sala não encontrada.")
 
     sala = salas[partida_id]
-    if sala["storyteller_id"] != usuario.id:
+    if sala["storyteller_id"] != usuario.id and "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller titular desta sala pode excluí-la.")
 
     salas.pop(partida_id, None)
-    return JSONResponse({"status": "excluida", "partida_destino": "principal"})
+    proxima = next(iter(salas.keys()), "")
+    return JSONResponse({"status": "excluida", "partida_destino": proxima})
     
 @router.post("/api/assumir-storyteller")
 async def assumir_storyteller_partida(
