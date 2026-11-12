@@ -26,11 +26,16 @@ class Usuario(ABC):
         if name == "escopo":
             extras = super()._getattribute_("_escopos_extras")
             if extras:
-                return ",".join(sorted({val} | extras))
+                atuais = {s.strip() for s in val.split(",") if s.strip()}
+                todos = atuais | {s.strip() for s in extras if s.strip()}
+                return ",".join(sorted(todos))
         return val
 
     def adicionar_escopo(self, novo_escopo: str, ra: int | None = None) -> None:
-        self._escopos_extras.add(novo_escopo)
+        for esc in novo_escopo.split(","):
+            limpo = esc.strip()
+            if limpo:
+                self._escopos_extras.add(limpo)
         if ra is not None:
             self.ra = ra
 

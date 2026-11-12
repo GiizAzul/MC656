@@ -1,4 +1,4 @@
-from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
+from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia, GestaoAustralia
 from src.autenticacao.base import Usuario
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 from src.autenticacao.caco import EstudanteCACo, GestaoCACo
@@ -17,6 +17,8 @@ class UsuarioFactory:
             return EleitorAustralia(username, senha, nome_real)
         elif tipo_conta == "AUSTRALIA_CANDIDATO":
             return CandidatoAustralia(username, senha, nome_real)
+        elif tipo_conta == "AUSTRALIA_GESTAO":
+            return GestaoAustralia(username, senha, nome_real)
         elif tipo_conta == "BOTC_JOGADOR":
             return JogadorBOTC(username, senha, nome_real)
         elif tipo_conta == "BOTC_STORYTELLER":
