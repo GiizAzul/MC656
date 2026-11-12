@@ -137,6 +137,7 @@ export default function BotCPage() {
   };
 
   const criarNovaPartida = async (e) => {
+    setErro('');
     e.preventDefault();
     if (!novoNomeSala.trim()) return;
     const form = new URLSearchParams();
@@ -154,6 +155,9 @@ export default function BotCPage() {
       setNovaSenhaSala('');
       setNomeadoSelecionado('');
       setPartidaId(d.partida_id);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setErro(d.detail || 'Não é possível criar uma nova sala enquanto a partida atual não acabou.');
     }
   };
 
@@ -335,38 +339,65 @@ export default function BotCPage() {
               : 'Aguardando o Storyteller nomear um jogador'}
           </p>
         </div>
-
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <select
-            aria-label="Selecionar Sala de Partida"
-            className="form-control"
-            disabled={giro.ativo}
-            value={partidaId}
-            onChange={(e) => {
-              setNomeadoSelecionado('');
-              setErro('');
-              setPartidaId(e.target.value);
-            }}
-          >
-            {partidasDisponiveis.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.tem_senha ? '🔒 ' : '🎲 '}
-                {p.nome} (Mestre: {p.storyteller_nome || 'Livre'})
-              </option>
-            ))}
-          </select>
+          {partidasDisponiveis.length > 0 && (
+            <select
+              aria-label="Selecionar Sala de Partida"
+              className="form-control"
+              disabled={giro.ativo || meuStatus.preso_como_storyteller}
+              title={
+                meuStatus.preso_como_storyteller
+                  ? 'Encerre a partida ou exclua a sala atual antes de trocar de sala'
+                  : 'Selecionar Sala'
+              }
+              value={partidaId}
+              onChange={(e) => {
+                setNomeadoSelecionado('');
+                setErro('');
+                setPartidaId(e.target.value);
+              }}
+            >
+              {partidasDisponiveis.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.tem_senha ? '🔒 ' : '🎲 '}
+                  {p.nome} (Mestre: {p.storyteller_nome || 'Livre'})
+                </option>
+              ))}
+            </select>
+          )}
 
-          {partidaId !== 'principal' && (
+          {!semSalas && (
             <button
               type="button"
               className="btn-secondary"
-              disabled={giro.ativo}
+              disabled={giro.ativo || meuStatus.preso_como_storyteller}
               onClick={sairDaSalaAtual}
-              title="Sair desta sala (se todos saírem, a sala é excluída automaticamente)"
+              title="Sair desta sala e voltar ao menu (se todos saírem, a sala é excluída)"
             >
               🚪 Sair da Sala
             </button>
           )}
+
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={giro.ativo || meuStatus.preso_como_storyteller}
+            onClick={() => {
+              if (giro.ativo || meuStatus.preso_como_storyteller) {
+                setErro(
+                  '⚠️ Como Storyteller de uma partida ativa, encerre a partida inteira ou exclua a sala antes de sair!'
+                );
+                return;
+              }
+              navigate('/dashboard');
+            }}
+          >
+            {giro.ativo
+              ? '🔒 Votação em Andamento'
+              : meuStatus.preso_como_storyteller
+              ? '🔒 Partida Ativa (Mestre)'
+              : 'Voltar ao Menu'}
+          </button>
         </div>
       </div>
 
