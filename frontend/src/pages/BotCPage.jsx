@@ -5,6 +5,7 @@ import '../styles/BotCPage.css';
 export default function BotCPage() {
   const navigate = useNavigate();
   const [novaSenhaSala, setNovaSenhaSala] = useState('');
+  const [semSalas, setSemSalas] = useState(false);
   const [requerSenha, setRequerSenha] = useState(false);
   const [senhaDigitadaSala, setSenhaDigitadaSala] = useState('');
   const [jogadorAlvoStatus, setJogadorAlvoStatus] = useState('');
@@ -56,12 +57,22 @@ export default function BotCPage() {
       }
       if (res.ok) {
         const data = await res.json();
+        if (data.sem_salas) {
+          setSemSalas(true);
+          setPartidasDisponiveis([]);
+          setMeuStatus(data.usuario_atual || {});
+          return;
+        }
+        setSemSalas(false);
         setRequerSenha(false);
         setJogadores(data.jogadores || []);
         setMeuStatus(data.usuario_atual || {});
         setGiro(data.giro || {});
         setPartidaAtualInfo(data.partida_atual || {});
         setPartidasDisponiveis(data.partidas_disponiveis || []);
+        if (data.partida_atual?.id && data.partida_atual.id !== partidaId) {
+          setPartidaId(data.partida_atual.id);
+        }
         setNomeadoSelecionado((prev) => prev || data.giro?.nomeado_id || data.jogadores?.[0]?.id || '');
         setJogadorAlvoStatus((prev) => prev || data.jogadores?.[0]?.id || '');
       }
