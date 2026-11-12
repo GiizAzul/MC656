@@ -892,3 +892,47 @@ def test_elementos_interativos_frontend_renderizados():
     assert res_json.status_code == 200
     assert res_json.json()["mao_levantada"] is True
     client.cookies.clear()
+def test_cadastro_adiciona_eleitor_caco_corretamente():
+    """Garante que alunos do CACo SÃO inseridos na eleição do CACo."""
+    from src.main import app
+    
+    # Simula o envio do formulário de cadastro para um estudante do CACo
+    response = client.post("/cadastro", data={
+        "username": "aluno_teste_caco",
+        "senha": "123",
+        "senha_confirma": "123",
+        "nome_real": "Aluno Teste",
+        "tipo_conta": "CACO_ESTUDANTE",
+        "ra": "112233"
+    }, follow_redirects=False)
+    
+    assert response.status_code == 302
+    
+    # Busca o ID do usuário recém criado
+    user_id = app.state.banco_auth._mapa_usernames["aluno_teste_caco"]
+    
+    # Verifica se foi parar na lista de eleitores (Comportamento original esperado)
+    assert user_id in app.state.eleicao_caco.eleitores
+
+
+def test_cadastro_isolar_dominio_eleicao_caco():
+    """Garante que usuários de OUTROS domínios NÃO entram na eleição do CACo (Mata o Mutante 236)."""
+    from src.main import app
+    
+    # Simula o envio do formulário de cadastro para um jogador do BotC
+    response = client.post("/cadastro", data={
+        "username": "jogador_botc_teste",
+        "senha": "123",
+        "senha_confirma": "123",
+        "nome_real": "Jogador de Teste",
+        "tipo_conta": "BOTC_JOGADOR" 
+    }, follow_redirects=False)
+    
+    assert response.status_code == 302
+    
+    # Extrai o ID gerado para o novo usuário
+    user_id = app.state.banco_auth._mapa_usernames["jogador_botc_teste"]
+    
+    # Garante que jogadores de BotC NÃO foram inseridos na eleição do CACo
+    assert user_id not in app.state.eleicao_caco.eleitores, \
+        "Falha de isolamento: Usuário do BotC foi inserido na eleição do CACo!"

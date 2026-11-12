@@ -26,3 +26,8 @@ __pycache__/
 
 # Dependências do Frontend
 node_modules/
+
+#Mutmut
+.mutmut-cache
+*.bak
+html/
