@@ -679,7 +679,12 @@ async def estado_roda_botc(
             "storyteller_nome": sala["storyteller_nome"] or "Aguardando Storyteller",
         },
         "partidas_disponiveis": [
-            {"id": s["id"], "nome": s["nome"], "storyteller_nome": s["storyteller_nome"]}
+            {
+                "id": s["id"],
+                "nome": s["nome"],
+                "storyteller_nome": s["storyteller_nome"],
+                "tem_senha": bool(s.get("senha")),
+            }
             for s in salas.values()
         ],
         "usuario_atual": {
