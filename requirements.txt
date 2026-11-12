@@ -1,7 +1,6 @@
 # Tests
 pytest
 pytest-cov
-mutmut==2.5.1
 
 # lint
 ruff
