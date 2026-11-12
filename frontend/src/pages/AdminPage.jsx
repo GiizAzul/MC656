@@ -39,7 +39,7 @@ export default function AdminPage({ usuario }) {
 
       {isAusGestao && (
         <div className="caco-card">
-          <h3>🇦🇺 Comissão Eleitoral Australiana</h3>
+          <h3>🪃 Comissão Eleitoral Australiana</h3>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
             <button
               type="button"

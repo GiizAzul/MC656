@@ -117,7 +117,7 @@ export default function AustraliaPage() {
   return (
     <div className="australia-container">
       <div className="australia-banner">
-        <h1>🇦🇺 Eleição Preferencial Australiana (IRV)</h1>
+        <h1>🪃 Eleição Preferencial Australiana (IRV)</h1>
         <p>
           Status da Eleição: <strong>{estadoEleicao}</strong> | Cédulas computadas: <strong>{totalVotos}</strong>
         </p>
