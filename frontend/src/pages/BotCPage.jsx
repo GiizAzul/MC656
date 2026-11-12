@@ -130,7 +130,7 @@ export default function BotCPage() {
     if (!novoNomeSala.trim()) return;
     const form = new URLSearchParams();
     form.append('nome_sala', novoNomeSala);
-    form.append('assumir_storyteller', String(meuStatus.tem_escopo_storyteller));
+    form.append('senha_sala', novaSenhaSala);
 
     const res = await fetch('/botc/api/criar-partida', {
       method: 'POST',
@@ -140,10 +140,81 @@ export default function BotCPage() {
     if (res.ok) {
       const d = await res.json();
       setNovoNomeSala('');
+      setNovaSenhaSala('');
+      setNomeadoSelecionado('');
       setPartidaId(d.partida_id);
     }
   };
 
+  const entrarComSenha = async (e) => {
+    e.preventDefault();
+    setErro('');
+    const form = new URLSearchParams();
+    form.append('partida_id', partidaId);
+    form.append('senha_sala', senhaDigitadaSala);
+    const res = await fetch('/botc/api/entrar-sala', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    if (!res.ok) {
+      setErro('Senha incorreta para esta sala!');
+    } else {
+      setSenhaDigitadaSala('');
+      setRequerSenha(false);
+      await carregarRoda();
+    }
+  };
+
+  const sairDaSalaAtual = async () => {
+    if (giro.ativo) return;
+    const form = new URLSearchParams();
+    form.append('partida_id', partidaId);
+    await fetch('/botc/api/sair-sala', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    setPartidaId('principal');
+  };
+
+  const excluirSalaAtual = async () => {
+    if (giro.ativo) return;
+    const form = new URLSearchParams();
+    form.append('partida_id', partidaId);
+    const res = await fetch('/botc/api/excluir-sala', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    if (res.ok) {
+      setPartidaId('principal');
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setErro(d.detail || 'Não foi possível excluir a sala.');
+    }
+  };
+
+  const alterarStatusVidaJogador = async (e) => {
+    e.preventDefault();
+    if (!jogadorAlvoStatus) return;
+    setErro('');
+    const form = new URLSearchParams();
+    form.append('id_jogador', jogadorAlvoStatus);
+    form.append('novo_status', novoStatusEscolhido);
+    form.append('partida_id', partidaId);
+
+    const res = await fetch('/botc/status-jogador', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    if (!res.ok) {
+      setErro('Erro ao atualizar status do jogador.');
+    } else {
+      await carregarRoda();
+    }
+  };
   const iniciarGiroStoryteller = async () => {
     if (!nomeadoSelecionado) return;
     setErro('');
