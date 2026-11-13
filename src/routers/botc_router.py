@@ -708,7 +708,6 @@ async def estado_roda_botc(
         jogadores_roda.append({
             "id": jog.id_jogador,
             "nome": nome_exibicao,
-            "nome": jog.nome,
             "status": jog.status.value,
             "peso": jog.calcular_peso_voto(),
             "pode_votar": jog.pode_votar(),
