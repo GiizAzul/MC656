@@ -242,7 +242,11 @@ export default function BotCPage() {
     if (res.ok) {
       const d = await res.json();
       setPartidaId(d.partida_destino || '');
-      setEmPartida(true);
+      if (d){
+        setEmPartida(true);
+      } else {
+        setEmPartida(false);
+      }
       await carregarRoda();
     } else {
       const d = await res.json().catch(() => ({}));
