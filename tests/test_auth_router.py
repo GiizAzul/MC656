@@ -157,7 +157,17 @@ def test_fluxo_completo_salas_botc_e_estado_australia(client):
     client.cookies.set("sessao_usuario", "caio")
     assert client.get("/australia/api/estado").status_code == 200
 
-    # Cadastra jog2 antes para não sujar o cookie do storyteller depois
+    # Cadastra um Storyteller e um Jogador explícitos para o teste
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "BOTC_STORYTELLER",
+            "nome_real": "Mestre Teste",
+            "username": "st_teste",
+            "senha": "1",
+            "senha_confirma": "1",
+        },
+    )
     client.post(
         "/cadastro",
         data={
@@ -170,45 +180,73 @@ def test_fluxo_completo_salas_botc_e_estado_australia(client):
     )
     client.cookies.clear()
 
-    # Loga com storyteller (leo) e cria sala com senha
-    client.cookies.set("sessao_usuario", "leo")
+    # Loga com storyteller (st_teste) e cria sala com senha
+    client.cookies.set("sessao_usuario", "st_teste")
     assert client.get("/botc/api/estado?apenas_lobby=true").status_code == 200
-    res_criar = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Secreta", "senha_sala": "1234"})
+    res_criar = client.post(
+        "/botc/api/criar-partida",
+        data={"nome_sala": "Sala Secreta", "senha_sala": "1234"},
+    )
     assert res_criar.status_code == 200
     pid = res_criar.json()["partida_id"]
 
-    # Jog2 tenta entrar sem senha (403), com senha errada (403), com senha certa (200) e levanta a mão
+    # Jog2 tenta ações não autorizadas (403/404) e depois entra com a senha certa (200)
     client.cookies.clear()
     client.cookies.set("sessao_usuario", "jog2")
     assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid}).status_code == 403
+    assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid, "nomeado_id": "Jog2"}).status_code == 403
+    assert client.post("/botc/api/encerrar-partida", data={"partida_id": pid}).status_code == 403
+    assert client.post("/botc/api/excluir-sala", data={"partida_id": pid}).status_code == 403
+    assert client.post("/botc/api/entrar-sala", data={"partida_id": "inexistente"}).status_code == 404
     assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 403
     assert client.post("/botc/api/entrar-sala", data={"partida_id": pid, "senha_sala": "errada"}).status_code == 403
     assert client.post("/botc/api/entrar-sala", data={"partida_id": pid, "senha_sala": "1234"}).status_code == 200
     assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
-    assert client.post("/botc/votar", data={"acao": "levantar_mao", "partida_id": pid}, headers={"Accept": "application/json"}).status_code == 200
+    assert client.post(
+        "/botc/votar",
+        data={"acao": "levantar_mao", "partida_id": pid},
+        headers={"Accept": "application/json"},
+    ).status_code == 200
 
-    # Storyteller (leo) assume o centro da roda
+    # Storyteller (st_teste) assume o centro da roda
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "leo")
+    client.cookies.set("sessao_usuario", "st_teste")
     assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid}).status_code == 200
-    # Storyteller não pode votar na partida que conduz (403) nem criar outra sala enquanto ativa (400)
-    assert client.post("/botc/votar", data={"acao": "levantar_mao", "partida_id": pid}, headers={"Accept": "application/json"}).status_code == 403
+    assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
+
+    # Storyteller não pode votar na partida que conduz (403), nem criar outra sala (400), nem sair antes de encerrar (400)
+    assert client.post(
+        "/botc/votar",
+        data={"acao": "levantar_mao", "partida_id": pid},
+        headers={"Accept": "application/json"},
+    ).status_code == 403
     assert client.post("/botc/api/criar-partida", data={"nome_sala": "Outra"}).status_code == 400
     assert client.post("/botc/api/sair-sala", data={"partida_id": pid}).status_code == 400
 
-    # Storyteller altera status do jog2 para Morto (Com Voto), inicia giro e avança o tempo para concluir o giro
-    assert client.post("/botc/status-jogador", data={"id_jogador": "Jog2", "novo_status": "Morto (Com Voto)", "partida_id": pid}).status_code == 200
+    # Storyteller altera status do jog2 para Morto (Com Voto), inicia giro e testa bloqueio de mão pós-ponteiro
+    assert client.post(
+        "/botc/status-jogador",
+        data={"id_jogador": "Jog2", "novo_status": "Morto (Com Voto)", "partida_id": pid},
+    ).status_code == 200
     assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid, "nomeado_id": "Jog2"}).status_code == 200
-    # Nomeação repetida no mesmo dia deve retornar 400
     assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid, "nomeado_id": "Jog2"}).status_code == 400
 
-    # Simula passagem do tempo do ponteiro para trancar o voto e concluir a contagem
+    # Simula avanço do ponteiro (1 passo) e verifica que jog2 fica trancado ao tentar mudar a mão
     from src.main import app
-    app.state.salas_botc[pid]["giro"]["inicio_ts"] -= 10.0
+    app.state.salas_botc[pid]["giro"]["inicio_ts"] -= 2.0
     assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
 
-    # Apura o dia, encerra a partida inteira e exclui a sala
+    client.cookies.clear()
+    client.cookies.set("sessao_usuario", "jog2")
+    assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
+
+    # Storyteller apura o dia, encerra a partida inteira e exclui a sala
+    client.cookies.clear()
+    client.cookies.set("sessao_usuario", "st_teste")
     assert client.post("/botc/apurar", data={"partida_id": pid}).status_code == 200
+    assert client.post("/botc/api/encerrar-partida", data={"partida_id": "inexistente"}).status_code == 404
     assert client.post("/botc/api/encerrar-partida", data={"partida_id": pid}).status_code == 200
+    assert client.post("/botc/api/sair-sala", data={"partida_id": "inexistente"}).status_code == 200
+    assert client.post("/botc/api/excluir-sala", data={"partida_id": "inexistente"}).status_code == 404
     assert client.post("/botc/api/excluir-sala", data={"partida_id": pid}).status_code == 200
     client.cookies.clear()
