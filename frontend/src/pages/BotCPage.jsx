@@ -348,6 +348,100 @@ export default function BotCPage() {
     await carregarRoda();
   };
 
+  if (!emPartida) {
+    return (
+      <div className="botc-page">
+        <div className="botc-header">
+          <div className="botc-title">
+            <h1>🩸 Blood on the Clocktower — Lobby de Partidas</h1>
+            <p>Escolha uma sala existente para entrar na roda ou crie uma nova.</p>
+          </div>
+          <button type="button" className="btn-secondary" onClick={() => navigate('/dashboard')}>
+            Voltar ao Menu Principal
+          </button>
+        </div>
+
+        {erro && <div className="alert-banner alert-error">{erro}</div>}
+
+        <div className="botc-layout">
+          <div className="botc-panel-box">
+            <h3>🎲 Salas Disponíveis ({partidasDisponiveis.length})</h3>
+            {partidasDisponiveis.length === 0 ? (
+              <p style={{ color: '#94a3b8', marginTop: '1rem' }}>
+                Nenhuma partida ativa no momento. Crie uma nova sala ao lado!
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                {partidasDisponiveis.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.9rem 1.1rem',
+                      background: 'rgba(15, 23, 42, 0.75)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '10px',
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '1.05rem', color: '#f8fafc' }}>
+                        {p.tem_senha ? '🔒 ' : '🎲 '}
+                        {p.nome}
+                      </strong>
+                      <span style={{ display: 'block', fontSize: '0.82rem', color: '#94a3b8' }}>
+                        Storyteller: {p.storyteller_nome || 'Livre'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => {
+                        setPartidaId(p.id);
+                        setErro('');
+                        setEmPartida(true);
+                      }}
+                    >
+                      Entrar na Sala →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="botc-panel-box">
+            <h3>➕ Criar Nova Sala</h3>
+            <form
+              onSubmit={criarNovaPartida}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.85rem' }}
+            >
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nome da sala (ex: Mesa Noturna)"
+                value={novoNomeSala}
+                onChange={(e) => setNovoNomeSala(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="form-control"
+                placeholder="Senha opcional (em branco para pública)"
+                value={novaSenhaSala}
+                onChange={(e) => setNovaSenhaSala(e.target.value)}
+              />
+              <button type="submit" className="btn-primary">
+                Criar e Entrar na Sala
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="botc-page">
       <div className="botc-header">
