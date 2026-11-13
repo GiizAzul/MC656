@@ -150,3 +150,36 @@ def test_adicionar_escopo_erro_e_cedula_em_branco_australia(client):
     assert res_aus.status_code == 200
     assert "Você ranqueou" in res_aus.text
     client.cookies.clear()
+
+def test_fluxo_completo_salas_botc_e_estado_australia(client):
+    """Cobre todas as rotas JSON de salas do BoTC e estado da Austrália para o SonarCloud."""
+    client.cookies.set("sessao_usuario", "caio")
+    assert client.get("/australia/api/estado").status_code == 200
+
+    # Loga com storyteller (leo)
+    client.cookies.set("sessao_usuario", "leo")
+    res_criar = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Secreta", "senha_sala": "1234"})
+    assert res_criar.status_code == 200
+    pid = res_criar.json()["partida_id"]
+
+    # Testa acesso de outro jogador com senha errada e certa
+    client.post("/cadastro", data={"tipo_conta": "BOTC_JOGADOR", "nome_real": "Jog2", "username": "jog2", "senha": "1", "senha_confirma": "1"})
+    client.cookies.set("sessao_usuario", "jog2")
+    assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 403
+    assert client.post("/botc/api/entrar-sala", data={"partida_id": pid, "senha_sala": "errada"}).status_code == 403
+    assert client.post("/botc/api/entrar-sala", data={"partida_id": pid, "senha_sala": "1234"}).status_code == 200
+    assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
+
+    # Storyteller assume a sala, inicia giro, encerra partida e exclui sala
+    client.cookies.set("sessao_usuario", "leo")
+    assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid}).status_code == 200
+    assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
+    assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid, "nomeado_id": "jog2"}).status_code == 200
+    assert client.post("/botc/api/sair-sala", data={"partida_id": pid}).status_code == 400  # bloqueado antes de encerrar
+    assert client.post("/botc/api/encerrar-partida", data={"partida_id": pid}).status_code == 200
+    assert client.post("/botc/api/sair-sala", data={"partida_id": pid}).status_code == 200
+
+    # Jog2 sai e sala auto-exclui ou é excluída
+    client.cookies.set("sessao_usuario", "jog2")
+    assert client.post("/botc/api/sair-sala", data={"partida_id": pid}).status_code == 200
+    client.cookies.clear()
