@@ -142,21 +142,27 @@ async def processar_voto_botc(
         request.app.state.maos_botc = sala["maos"]
 
     # Storyteller da partida não pode votar!
-    if usuario is not None and sala["storyteller_id"] == usuario.id:
-        if "application/json" in request.headers.get("accept", ""):
-            return JSONResponse(
-                {"erro": "Você é o Storyteller desta partida e não possui poder de voto."},
-                status_code=403,
-            )
+    if (
+        usuario is not None
+        and sala["storyteller_id"] == usuario.id
+        and "application/json" in request.headers.get("accept", "")
+    ):
+        return JSONResponse(
+            {"erro": "Você é o Storyteller desta partida e não possui poder de voto."},
+            status_code=403,
+        )
 
     giro = sala["giro"]
-    if giro.get("ativo") and usuario is not None:
-        if usuario.id in giro.get("trancados", {}) or usuario.nome_real in giro.get("trancados_nomes", set()):
-            if "application/json" in request.headers.get("accept", ""):
-                return JSONResponse(
-                    {"erro": "O ponteiro já passou por você! Seu voto foi computado e sua mão está travada."},
-                    status_code=400,
-                )
+    if (
+        giro.get("ativo")
+        and usuario is not None
+        and (usuario.id in giro.get("trancados", {}) or usuario.nome_real in giro.get("trancados_nomes", set()))
+        and "application/json" in request.headers.get("accept", "")
+    ):
+        return JSONResponse(
+            {"erro": "O ponteiro já passou por você! Seu voto foi computado e sua mão está travada."},
+            status_code=400,
+        )
     
     mao_levantada = acao == "levantar_mao"
     if usuario is not None:
@@ -268,10 +274,13 @@ async def entrar_sala_botc(
         raise HTTPException(status_code=404, detail="Sala não encontrada.")
     sala = salas[partida_id]
     sala.setdefault("autorizados", set())
-
-    if sala.get("senha") and usuario.id not in sala["autorizados"]:
-        if senha_sala.strip() != sala["senha"]:
-            raise HTTPException(status_code=403, detail="Senha da sala incorreta!")
+    
+    if (
+        sala.get("senha")
+        and usuario.id not in sala["autorizados"]
+        and senha_sala.strip() != sala["senha"]
+    ):
+        raise HTTPException(status_code=403, detail="Senha da sala incorreta!")
 
     sala["autorizados"].add(usuario.id)
     return JSONResponse({"status": "ok", "partida_id": partida_id})
