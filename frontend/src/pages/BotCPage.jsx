@@ -112,7 +112,7 @@ export default function BotCPage() {
     window.addEventListener('popstate', impedirBotaoVoltarBrowser);
     return () => window.removeEventListener('popstate', impedirBotaoVoltarBrowser);
   }, [emPartida, giro.ativo, meuStatus.preso_como_storyteller]);
-  
+
   // Calcula o ângulo sempre avançando em sentido horário (delta >= 0)
   const idxPonteiro = jogadores.findIndex((j) => j.id === giro.id_ponteiro_atual);
   let anguloPonteiro = null;
@@ -170,6 +170,7 @@ export default function BotCPage() {
       setNovaSenhaSala('');
       setNomeadoSelecionado('');
       setPartidaId(d.partida_id);
+      setEmPartida(true);
     } else {
       const d = await res.json().catch(() => ({}));
       setErro(d.detail || 'Não é possível criar uma nova sala enquanto a partida atual não acabou.');
@@ -211,7 +212,7 @@ export default function BotCPage() {
       setErro(d.detail || 'Não foi possível sair da sala.');
       return;
     }
-    navigate('/dashboard');
+    setEmPartida(false);
   };
 
   const encerrarPartidaInteira = async () => {
@@ -241,6 +242,7 @@ export default function BotCPage() {
     if (res.ok) {
       const d = await res.json();
       setPartidaId(d.partida_destino || '');
+      setEmPartida(true);
       await carregarRoda();
     } else {
       const d = await res.json().catch(() => ({}));
