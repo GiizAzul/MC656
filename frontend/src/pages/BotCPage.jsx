@@ -511,7 +511,7 @@ export default function BotCPage() {
               ? '🔒 Votação em Andamento'
               : meuStatus.preso_como_storyteller
               ? '🔒 Partida Ativa (Mestre)'
-              : 'Voltar ao Menu'}
+              : 'Voltar ao Menu Principal'}
           </button>
         </div>
       </div>
