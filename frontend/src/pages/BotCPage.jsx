@@ -499,13 +499,13 @@ export default function BotCPage() {
               ))}
             </select>
           )}
-          
+
           {!semSalas && (
             <button
               type="button"
               className="btn-secondary"
               disabled={giro.ativo || meuStatus.preso_como_storyteller}
-              onClick={sairDaSalaAtual(false)}
+              onClick={() => sairDaSalaAtual(false)}
               title="Sair desta sala e voltar ao Lobby"
             >
               🚪 Sair da Sala
