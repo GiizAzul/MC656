@@ -250,3 +250,77 @@ def test_fluxo_completo_salas_botc_e_estado_australia(client):
     assert client.post("/botc/api/excluir-sala", data={"partida_id": "inexistente"}).status_code == 404
     assert client.post("/botc/api/excluir-sala", data={"partida_id": pid}).status_code == 200
     client.cookies.clear()
+
+def test_casos_borda_salas_e_giro_botc(client):
+    """Cobre as linhas restantes de botc_router.py (auto-exclusão, colisão de ST, trava pós-ponteiro e fim do giro)."""
+    from src.main import app
+
+    # Cadastra um segundo Storyteller (st2) e um jogador (jog_borda)
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "BOTC_STORYTELLER",
+            "nome_real": "Mestre Dois",
+            "username": "st2",
+            "senha": "1",
+            "senha_confirma": "1",
+        },
+    )
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "BOTC_JOGADOR",
+            "nome_real": "Jog Borda",
+            "username": "jog_borda",
+            "senha": "1",
+            "senha_confirma": "1",
+        },
+    )
+    client.cookies.clear()
+
+    # 1. Jogador cria sala pública e sai (testa linhas 301-315 e auto-exclusão da sala vazia)
+    client.cookies.set("sessao_usuario", "jog_borda")
+    pid_temp = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Temp"}).json()["partida_id"]
+    assert client.post("/botc/api/sair-sala", data={"partida_id": pid_temp}).status_code == 200
+    assert pid_temp not in app.state.salas_botc
+
+    # 2. Cria nova sala com jog_borda; st_teste inicia giro assumindo automaticamente a sala vazia de ST (linhas 580-585)
+    pid2 = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Giro"}).json()["partida_id"]
+    client.cookies.clear()
+    client.cookies.set("sessao_usuario", "st_teste")
+    assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid2, "nomeado_id": "jog_borda"}).status_code == 200
+
+    # 3. Outro Storyteller (st2) tenta assumir ou iniciar giro na sala que já pertence a st_teste (linhas 367 e 586)
+    client.cookies.clear()
+    client.cookies.set("sessao_usuario", "st2")
+    assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid2}).status_code == 400
+    assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid2, "nomeado_id": "jog_borda"}).status_code == 403
+
+    # 4. Trava o jog_borda no giro ativo e tenta votar com Accept: application/json (linhas 154-156)
+    app.state.salas_botc[pid2]["giro"]["trancados"]["jog_borda"] = True
+    app.state.salas_botc[pid2]["giro"]["trancados_nomes"].add("Jog Borda")
+    client.cookies.clear()
+    client.cookies.set("sessao_usuario", "jog_borda")
+    res_trancado = client.post(
+        "/botc/votar",
+        data={"acao": "abaixar_mao", "partida_id": pid2},
+        headers={"Accept": "application/json"},
+    )
+    assert res_trancado.status_code == 400
+
+    # 5. Avança o relógio além do total de jogadores para concluir 100% do giro (linhas 555-561)
+    app.state.salas_botc[pid2]["giro"]["inicio_ts"] -= 30.0
+    assert client.get(f"/botc/api/estado?partida_id={pid2}").status_code == 200
+
+    # 6. Encerra a partida, Storyteller sai da sala encerrada (linhas 309-311) e testa roda sem jogadores (linha 591)
+    client.cookies.clear()
+    client.cookies.set("sessao_usuario", "st_teste")
+    assert client.post("/botc/api/encerrar-partida", data={"partida_id": pid2}).status_code == 200
+    assert client.post("/botc/api/sair-sala", data={"partida_id": pid2}).status_code == 200
+
+    # Sala criada pelo próprio st_teste onde ele assume ST e fica com 0 jogadores votantes (linha 591)
+    pid_vazia = client.post("/botc/api/criar-partida", data={"nome_sala": "SoMestre"}).json()["partida_id"]
+    assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid_vazia}).status_code == 200
+    assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid_vazia, "nomeado_id": "ninguem"}).status_code == 400
+    assert client.post("/botc/api/excluir-sala", data={"partida_id": pid_vazia}).status_code == 200
+    client.cookies.clear()
