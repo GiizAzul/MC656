@@ -234,22 +234,13 @@ export default function BotCPage() {
     }
   };
 
-  const encerrarPartidaInteira = async () => {
-    setErro('');
-    const form = new URLSearchParams();
-    form.append('partida_id', partidaId);
-    const res = await fetch('/botc/api/encerrar-partida', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: form.toString(),
-    });
-    if (res.ok) {
-      await carregarRoda();
-    }
-  };
-
   const excluirSalaAtual = async () => {
     if (giro.ativo) return;
+    const confirmar = window.confirm(
+      `🗑️ Tem certeza que deseja excluir a sala "${partidaAtualInfo.nome}"? A sala será excluída e perdida para todos.`
+    );
+    if (!confirmar) return;
+
     setErro('');
     const form = new URLSearchParams();
     form.append('partida_id', partidaId);
@@ -261,15 +252,24 @@ export default function BotCPage() {
     if (res.ok) {
       const d = await res.json();
       setPartidaId(d.partida_destino || '');
-      if (d){
-        setEmPartida(true);
-      } else {
-        setEmPartida(false);
-      }
-      await carregarRoda();
+      setEmPartida(false);
     } else {
       const d = await res.json().catch(() => ({}));
       setErro(d.detail || 'Não foi possível excluir a sala.');
+    }
+  };
+  
+  const encerrarPartidaInteira = async () => {
+    setErro('');
+    const form = new URLSearchParams();
+    form.append('partida_id', partidaId);
+    const res = await fetch('/botc/api/encerrar-partida', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    if (res.ok) {
+      await carregarRoda();
     }
   };
 
