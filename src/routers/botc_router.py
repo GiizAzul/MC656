@@ -55,7 +55,7 @@ def _obter_salas_botc(app_state) -> dict:
         app_state.salas_botc["principal"]["sistema"] = app_state.sistema_botc
     return app_state.salas_botc
 
-def _eh_storyteller_da_sala(sala: dict, usuario: Usuario) -> bool:
+def _is_storyteller_da_sala(sala: dict, usuario: Usuario) -> bool:
     """Verifica se o usuário já assumiu explicitamente o papel de Storyteller titular desta partida."""
     return sala["storyteller_id"] == usuario.id
 
@@ -65,7 +65,7 @@ def _obter_ou_criar_jogador(
     sala: dict | None = None
 ) -> JogadorBotC:
     """Garante que o usuário autenticado esteja registrado no sistema eleitoral BotC e registra o usuário como jogador votante apenas se ele não for o Storyteller desta partida."""
-    if sala and _eh_storyteller_da_sala(sala, usuario):
+    if sala and _is_storyteller_da_sala(sala, usuario):
         return None
     
     jogador = (
@@ -76,10 +76,11 @@ def _obter_ou_criar_jogador(
     if not jogador:
         jogador = JogadorBotC(
             id_jogador=usuario.id,
-            nome= usuario.username,
+            nome= usuario.nome_real or usuario.username,
             status=StatusJogador.VIVO,
         )
         sistema.adicionar_jogador(jogador)
+    jogador.username = usuario.username
     return jogador
 
 
@@ -677,7 +678,7 @@ async def estado_roda_botc(
         )
 
     sala["autorizados"].add(usuario.id)
-    eh_st_desta_sala = _eh_storyteller_da_sala(sala, usuario)
+    eh_st_desta_sala = _is_storyteller_da_sala(sala, usuario)
 
     if eh_st_desta_sala:
         sistema.jogadores.pop(usuario.id, None)
