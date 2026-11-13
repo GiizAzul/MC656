@@ -139,3 +139,60 @@ def test_apuracao_com_votos_registrados_via_estado():
     eleicao.apurar_voto('e3', ['Gi', 'Caio', 'Juh'])
     eleicao.encerrar_votacao()
     assert eleicao.apurar_vencedor() == 'Caio'
+
+
+def _eleicao_com_partidos():
+    return EleicaoAustralia(
+        ['A1', 'A2', 'B1'],
+        [],
+        partidos_candidatos={'Partido A': ['A1', 'A2'], 'Partido B': ['B1']},
+    )
+
+
+def test_configuracao_partidos_na_eleicao():
+    assert _eleicao_com_partidos().partidos_candidatos['Partido A'] == ['A1', 'A2']
+    from src.main import app
+    assert app.state.eleicao_australia.partidos_candidatos['Partido Azul'] == ['Candidato A']
+
+
+def test_converter_ranking_partidos_valida_e_expande_cedula():
+    eleicao = _eleicao_com_partidos()
+    assert eleicao.converter_ranking_partidos(['Partido B', 'Partido A']) == ['B1', 'A1', 'A2']
+
+
+def test_converter_posicoes_partidos_valida_completude_e_intervalo():
+    eleicao = _eleicao_com_partidos()
+    assert eleicao.converter_posicoes_partidos({'Partido A': '2', 'Partido B': 1}) == [
+        'Partido B', 'Partido A'
+    ]
+
+    casos_invalidos = [
+        ({'Partido A': 2}, 'Partidos sem posição.*Posições faltantes'),
+        ({'Partido A': 1, 'Partido B': 1}, 'Posições repetidas.*Posições faltantes'),
+        ({'Partido A': 1, 'Partido B': 3}, 'Posições faltantes.*fora do intervalo'),
+        ({'Partido A': 'x', 'Partido B': 2}, 'Posições inválidas'),
+    ]
+    for posicoes, erro in casos_invalidos:
+        with pytest.raises(ValueError, match=erro):
+            eleicao.converter_posicoes_partidos(posicoes)
+
+
+def test_voto_por_partidos_respeita_estado_e_unicidade():
+    eleicao = _eleicao_com_partidos()
+    with pytest.raises(RuntimeError, match='ciclo de votação ativo'):
+        eleicao.apurar_voto_partidos('eleitor', ['Partido A', 'Partido B'])
+    with pytest.raises(RuntimeError, match='ciclo de votação ativo'):
+        eleicao.apurar_voto_partidos_por_posicao('eleitor', {'Partido A': 1, 'Partido B': 2})
+
+    eleicao.iniciar_votacao()
+    eleicao.apurar_voto_partidos('eleitor', ['Partido A', 'Partido B'])
+    assert eleicao.cedulas == [['A1', 'A2', 'B1']]
+    with pytest.raises(ValueError, match='já registrou seu voto'):
+        eleicao.apurar_voto_partidos('eleitor', ['Partido A', 'Partido B'])
+
+    outra_eleicao = _eleicao_com_partidos()
+    outra_eleicao.iniciar_votacao()
+    outra_eleicao.apurar_voto_partidos_por_posicao(
+        'eleitor-posicao', {'Partido A': 2, 'Partido B': 1}
+    )
+    assert outra_eleicao.cedulas == [['B1', 'A1', 'A2']]

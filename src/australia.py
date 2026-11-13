@@ -30,10 +30,10 @@ class EleicaoAustralia(SistemaEleitoral):
             raise ValueError("Cada candidato deve pertencer a apenas um partido.")
         if not set(candidatos_com_partido).issubset(self.candidatos_oficiais):
             raise ValueError("Os partidos não podem conter candidatos não registrados na eleição.")
-        if partidos_candidatos and set(candidatos_com_partido) != self.candidatos_oficiais:
-            raise ValueError("Todos os candidatos devem pertencer a um partido para habilitar o ranking por partidos.")
         if any(not partido.strip() or not candidatos for partido, candidatos in self.partidos_candidatos.items()):
             raise ValueError("Cada partido deve ter um nome e pelo menos um candidato.")
+        if partidos_candidatos and set(candidatos_com_partido) != self.candidatos_oficiais:
+            raise ValueError("Todos os candidatos devem pertencer a um partido para habilitar o ranking por partidos.")
 
         # Registro de quem já votou (cédulas carregadas no construtor são anônimas)
         self.votantes: set[str] = set()
@@ -82,8 +82,6 @@ class EleicaoAustralia(SistemaEleitoral):
             erros.append("Partidos repetidos no ranking: " + ", ".join(duplicados) + ".")
         if inexistentes:
             erros.append("Partidos não registrados: " + ", ".join(dict.fromkeys(inexistentes)) + ".")
-        if len(preferencias) != len(partidos_registrados) and not faltantes and not duplicados and not inexistentes:
-            erros.append(f"O ranking deve conter exatamente {len(partidos_registrados)} partidos.")
         if erros:
             raise ValueError(" ".join(erros))
 
