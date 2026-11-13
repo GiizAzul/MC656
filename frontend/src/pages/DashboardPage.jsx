@@ -96,7 +96,7 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
               <p>Roda de votação em tempo real com cronômetro e controle de mão levantada.</p>
             </div>
             <Link to="/botc/partida" className="btn-primary">
-              Entrar na Partida
+              Entrar no Lobby de partidas
             </Link>
           </div>
         )}
