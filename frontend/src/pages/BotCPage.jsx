@@ -582,18 +582,23 @@ export default function BotCPage() {
                   <label htmlFor="select-nomeado" style={{ color: '#e2e8f0' }}>
                     Indicar Jogador Nomeado para a Forca
                   </label>
+                  
                   <select
                     id="select-nomeado"
                     className="form-control"
-                    value={nomeadoSelecionado}
-                    disabled={giro.ativo}
+                    value={jogadores.length === 0 ? '' : nomeadoSelecionado}
+                    disabled={giro.ativo || jogadores.length === 0}
                     onChange={(e) => setNomeadoSelecionado(e.target.value)}
                   >
-                    {jogadores.map((j) => (
+                    {jogadores.length === 0 ? (
+                      <option value="">⏳ Aguardando jogadores entrarem na roda...</option>
+                    ) : (
+                      jogadores.map((j) => (
                       <option key={j.id} value={j.id} disabled={j.ja_nomeado_hoje}>
                         {j.nome} ({j.status}) {j.ja_nomeado_hoje ? '— [Já nomeado hoje]' : ''}
                       </option>
-                    ))}
+                    ))
+                  )}
                   </select>
                 </div>
                 
@@ -627,18 +632,24 @@ export default function BotCPage() {
                       Alterar Status de Vida / Voto Fantasma
                     </label>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+
                       <select
                         id="select-status-jog"
                         className="form-control"
                         style={{ flex: 1 }}
-                        value={jogadorAlvoStatus}
+                        value={jogadores.length === 0 ? '' : jogadorAlvoStatus}
+                        disabled={jogadores.length === 0}
                         onChange={(e) => setJogadorAlvoStatus(e.target.value)}
                       >
-                        {jogadores.map((j) => (
+                        {jogadores.length === 0 ? (
+                          <option value="">⏳ Sem jogadores na roda</option>
+                        ) : (
+                          jogadores.map((j) => (
                           <option key={j.id} value={j.id}>
                             {j.nome} ({j.status})
                           </option>
-                        ))}
+                        ))
+                      )}
                       </select>
                       <select
                         aria-label="Novo Status de Vida"
@@ -655,7 +666,7 @@ export default function BotCPage() {
                       <button 
                         type="submit" 
                         className="btn-secondary" 
-                        disabled={giro.ativo}
+                        disabled={giro.ativo || jogadores.length === 0}
                       >
                         Aplicar Status
                       </button>
