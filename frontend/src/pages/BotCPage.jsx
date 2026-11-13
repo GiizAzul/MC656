@@ -198,8 +198,21 @@ export default function BotCPage() {
     }
   };
 
-  const sairDaSalaAtual = async () => {
+  const sairDaSalaAtual = async (irParaDashboard = false) => {
     if (giro.ativo) return;
+    if (meuStatus.preso_como_storyteller) {
+      setErro('⚠️ Como Storyteller de uma partida ativa, encerre a partida inteira ou exclua a sala antes de sair!');
+      return;
+    }
+
+    const totalParticipantesNaSala = jogadores.length + (partidaAtualInfo.storyteller_id ? 1 : 0);
+    if (totalParticipantesNaSala <= 1) {
+      const confirmar = window.confirm(
+        '⚠️ Tem certeza que deseja sair? Você é a única pessoa nesta sala — se sair ela será excluída e perdida.'
+      );
+      if (!confirmar) return;
+    }
+
     setErro('');
     const form = new URLSearchParams();
     form.append('partida_id', partidaId);
@@ -213,7 +226,12 @@ export default function BotCPage() {
       setErro(d.detail || 'Não foi possível sair da sala.');
       return;
     }
-    setEmPartida(false);
+
+    if (irParaDashboard) {
+      navigate('/dashboard');
+    } else {
+      setEmPartida(false);
+    }
   };
 
   const encerrarPartidaInteira = async () => {
