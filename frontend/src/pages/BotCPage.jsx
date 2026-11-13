@@ -43,12 +43,13 @@ export default function BotCPage() {
   const [erro, setErro] = useState('');
   const [veredito, setVeredito] = useState('');
 
-  // Ângulo cumulativo contínuo para o ponteiro NUNCA girar para trás ao cruzar o topo da roda
+  // Ângulo cumulativo contínuo para o ponteiro nunca girar para trás ao cruzar o topo da roda
   const anguloAcumuladoRef = useRef(null);
 
   const carregarRoda = useCallback(async () => {
     try {
-      const res = await fetch(`/botc/api/estado?partida_id=${encodeURIComponent(partidaId)}`);
+      const url = `/botc/api/estado?partida_id=${encodeURIComponent(partidaId)}&apenas_lobby=${!emPartida}`;
+      const res = await fetch(url);
       if (res.status === 403) {
         const data = await res.json();
         setRequerSenha(true);
@@ -80,7 +81,7 @@ export default function BotCPage() {
     } catch {
       // ignora oscilação temporária
     }
-  }, [partidaId]);
+  }, [partidaId, emPartida]);
 
   useEffect(() => {
     carregarRoda();
