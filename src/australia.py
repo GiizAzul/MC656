@@ -93,12 +93,75 @@ class EleicaoAustralia(SistemaEleitoral):
             for candidato in self.partidos_candidatos[partido]
         ]
 
+    def converter_posicoes_partidos(self, posicoes: dict[str, object]) -> list[str]:
+        """Valida posições de 1 a N e retorna os partidos em ordem de preferência."""
+        if not self.partidos_candidatos:
+            raise ValueError("O ranking por partidos não está configurado nesta eleição.")
+        if not isinstance(posicoes, dict):
+            raise TypeError("As posições dos partidos devem ser informadas em um dicionário.")
+
+        partidos = list(self.partidos_candidatos)
+        ranking: list[tuple[int, str]] = []
+        partidos_sem_posicao = []
+        posicoes_invalidas = []
+
+        for partido in partidos:
+            valor = posicoes.get(partido)
+            if valor is None or (isinstance(valor, str) and not valor.strip()):
+                partidos_sem_posicao.append(partido)
+                continue
+            if isinstance(valor, bool):
+                posicoes_invalidas.append(partido)
+                continue
+            if isinstance(valor, int):
+                posicao = valor
+            elif isinstance(valor, str) and valor.strip().isdigit():
+                posicao = int(valor.strip())
+            else:
+                posicoes_invalidas.append(partido)
+                continue
+            ranking.append((posicao, partido))
+
+        partidos_desconhecidos = [partido for partido in posicoes if partido not in self.partidos_candidatos]
+        valores = [posicao for posicao, _ in ranking]
+        repetidas = sorted({posicao for posicao in valores if valores.count(posicao) > 1})
+        faltantes = sorted(set(range(1, len(partidos) + 1)) - set(valores))
+        fora_do_intervalo = sorted({posicao for posicao in valores if posicao < 1 or posicao > len(partidos)})
+
+        erros = []
+        if partidos_sem_posicao:
+            erros.append("Partidos sem posição: " + ", ".join(partidos_sem_posicao) + ".")
+        if posicoes_invalidas:
+            erros.append("Posições inválidas para: " + ", ".join(posicoes_invalidas) + ".")
+        if repetidas:
+            erros.append("Posições repetidas: " + ", ".join(map(str, repetidas)) + ".")
+        if faltantes:
+            erros.append("Posições faltantes: " + ", ".join(map(str, faltantes)) + ".")
+        if fora_do_intervalo:
+            erros.append("Posições fora do intervalo 1 a N: " + ", ".join(map(str, fora_do_intervalo)) + ".")
+        if partidos_desconhecidos:
+            erros.append("Partidos não registrados: " + ", ".join(partidos_desconhecidos) + ".")
+        if erros:
+            raise ValueError(" ".join(erros))
+
+        ranking.sort(key=lambda item: item[0])
+        return [partido for _, partido in ranking]
+
     def apurar_voto_partidos(self, eleitor_id: str, preferencias: list[str]) -> None:
         """Registra preferência por partidos respeitando o ciclo de estados da eleição."""
         if self.estado.nome != "VOTACAO":
             self.apurar_voto(eleitor_id, preferencias)
         cedula = self.converter_ranking_partidos(preferencias)
         self.apurar_voto(eleitor_id, cedula)
+
+    def apurar_voto_partidos_por_posicao(
+        self, eleitor_id: str, posicoes: dict[str, object]
+    ) -> None:
+        """Valida posições do eleitor e registra a cédula pelo ciclo de estados."""
+        if self.estado.nome != "VOTACAO":
+            self.apurar_voto(eleitor_id, [])
+        preferencias = self.converter_posicoes_partidos(posicoes)
+        self.apurar_voto_partidos(eleitor_id, preferencias)
 
     def _contar_primeiras_preferencias(self) -> dict[str, int]:
         """Método privado para contabilizar os votos válidos da rodada atual."""
