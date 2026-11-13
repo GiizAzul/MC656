@@ -9,6 +9,7 @@ export default function BotCPage() {
   const [requerSenha, setRequerSenha] = useState(false);
   const [senhaDigitadaSala, setSenhaDigitadaSala] = useState('');
   const [jogadorAlvoStatus, setJogadorAlvoStatus] = useState('');
+  const [emPartida, setEmPartida] = useState(false);
   const [novoStatusEscolhido, setNovoStatusEscolhido] = useState('Vivo');
   const [partidaId, setPartidaId] = useState('principal');
   const [partidasDisponiveis, setPartidasDisponiveis] = useState([]);
@@ -98,6 +99,20 @@ export default function BotCPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [giro.ativo]);
 
+  useEffect(() => {
+    const deveTravarNavegacao = emPartida && (giro.ativo || meuStatus.preso_como_storyteller);
+    if (!deveTravarNavegacao) return undefined;
+
+    window.history.pushState(null, '', window.location.href);
+    const impedirBotaoVoltarBrowser = () => {
+      window.history.pushState(null, '', window.location.href);
+      setErro('🔒 Navegação bloqueada! Use o botão oficial de Sair/Encerrar quando a votação ou partida terminar.');
+    };
+
+    window.addEventListener('popstate', impedirBotaoVoltarBrowser);
+    return () => window.removeEventListener('popstate', impedirBotaoVoltarBrowser);
+  }, [emPartida, giro.ativo, meuStatus.preso_como_storyteller]);
+  
   // Calcula o ângulo sempre avançando em sentido horário (delta >= 0)
   const idxPonteiro = jogadores.findIndex((j) => j.id === giro.id_ponteiro_atual);
   let anguloPonteiro = null;
