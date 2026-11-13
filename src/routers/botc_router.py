@@ -704,8 +704,10 @@ async def estado_roda_botc(
         mao = sala["maos"].get(jog.nome, False) or sala["maos"].get(jog.id_jogador, False)
         trancado = jog.id_jogador in giro["trancados"]
         mao_exibida = giro["trancados"][jog.id_jogador] if trancado else bool(mao)
+        nome_exibicao = getattr(jog, "username", jog.nome)
         jogadores_roda.append({
             "id": jog.id_jogador,
+            "nome": nome_exibicao,
             "nome": jog.nome,
             "status": jog.status.value,
             "peso": jog.calcular_peso_voto(),
