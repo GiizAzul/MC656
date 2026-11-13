@@ -499,14 +499,14 @@ export default function BotCPage() {
               ))}
             </select>
           )}
-
+          
           {!semSalas && (
             <button
               type="button"
               className="btn-secondary"
               disabled={giro.ativo || meuStatus.preso_como_storyteller}
-              onClick={sairDaSalaAtual}
-              title="Sair desta sala e voltar ao menu (se todos saírem, a sala é excluída)"
+              onClick={sairDaSalaAtual(false)}
+              title="Sair desta sala e voltar ao Lobby"
             >
               🚪 Sair da Sala
             </button>
@@ -516,15 +516,7 @@ export default function BotCPage() {
             type="button"
             className="btn-secondary"
             disabled={giro.ativo || meuStatus.preso_como_storyteller}
-            onClick={() => {
-              if (giro.ativo || meuStatus.preso_como_storyteller) {
-                setErro(
-                  '⚠️ Como Storyteller de uma partida ativa, encerre a partida inteira ou exclua a sala antes de sair!'
-                );
-                return;
-              }
-              navigate('/dashboard');
-            }}
+            onClick={() => sairDaSalaAtual(true)}
           >
             {giro.ativo
               ? '🔒 Votação em Andamento'
