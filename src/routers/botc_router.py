@@ -625,29 +625,42 @@ async def iniciar_giro_storyteller(
     }
     return JSONResponse({"status": "iniciado", "nomeado": nomeado_obj.nome})
 
+
 @router.get("/api/estado")
 async def estado_roda_botc(
     request: Request,
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
     partida_id: str = "principal",
+    apenas_lobby: bool = False,
 ):
     salas = _obter_salas_botc(request.app.state)
-    if not salas:
-            return JSONResponse({
-                "sem_salas": True,
-                "partidas_disponiveis": [],
-                "usuario_atual": {
-                    "username": usuario.username,
-                    "nome": usuario.username,
-                    "tem_escopo_storyteller": "BOTC_STORYTELLER" in usuario.escopo,
-                },
-            })
-
-    # Se o usuário é Storyteller de uma partida ainda NÃO encerrada, força ele a permanecer nela!
+    # Se o usuário é Storyteller de uma partida ainda não encerrada, força ele a permanecer nela!
     sala_st_ativa = next(
         (s["id"] for s in salas.values() if s["storyteller_id"] == usuario.id and not s.get("encerrada", False)),
         None,
     )
+
+    if not salas or (apenas_lobby and not sala_st_ativa):
+        return JSONResponse({
+            "sem_salas": len(salas) == 0,
+            "partidas_disponiveis": [
+                {
+                    "id": s["id"],
+                    "nome": s["nome"],
+                    "storyteller_nome": s["storyteller_nome"],
+                    "tem_senha": bool(s.get("senha")),
+                    "total_participantes": len(s["sistema"].jogadores) + (1 if s["storyteller_id"] else 0),
+                }
+                for s in salas.values()
+            ],
+            "usuario_atual": {
+                "username": usuario.username,
+                "nome": usuario.username,
+                "preso_como_storyteller": False,
+                "tem_escopo_storyteller": "BOTC_STORYTELLER" in usuario.escopo,
+            },
+        })
+
     if sala_st_ativa:
         partida_id = sala_st_ativa
     elif partida_id not in salas:
@@ -678,9 +691,8 @@ async def estado_roda_botc(
         )
 
     sala["autorizados"].add(usuario.id)
-    eh_st_desta_sala = _is_storyteller_da_sala(sala, usuario)
-
-    if eh_st_desta_sala:
+    is_st_desta_sala = _is_storyteller_da_sala(sala, usuario)
+    if is_st_desta_sala:
         sistema.jogadores.pop(usuario.id, None)
         sistema.jogadores.pop(usuario.username, None)
         sistema.jogadores.pop(usuario.nome_real, None)
@@ -753,12 +765,12 @@ async def estado_roda_botc(
             "username": usuario.username,
             "nome": usuario.username,
             "id": jogador_atual.id_jogador if jogador_atual else usuario.id,
-            "status": "STORYTELLER (CENTRO DA RODA)" if eh_st_desta_sala else (jogador_atual.status.value if jogador_atual else "Vivo"),
+            "status": "STORYTELLER (CENTRO DA RODA)" if is_st_desta_sala else (jogador_atual.status.value if jogador_atual else "Vivo"),
             "preso_como_storyteller": bool(sala_st_ativa),
-            "pode_votar": False if eh_st_desta_sala else (jogador_atual.pode_votar() if jogador_atual else False),
-            "mao_levantada": False if eh_st_desta_sala else minha_mao,
+            "pode_votar": False if is_st_desta_sala else (jogador_atual.pode_votar() if jogador_atual else False),
+            "mao_levantada": False if is_st_desta_sala else minha_mao,
             "trancado": meu_trancado,
-            "is_storyteller_desta_partida": eh_st_desta_sala,
+            "is_storyteller_desta_partida": is_st_desta_sala,
             "tem_escopo_storyteller": "BOTC_STORYTELLER" in usuario.escopo,
         },
         "jogadores": jogadores_roda,
