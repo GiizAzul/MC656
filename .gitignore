@@ -24,6 +24,9 @@ __pycache__/
 # Cache do Linter (Ruff)
 .ruff_cache/
 
+# Dependências do Frontend
+node_modules/
+
 #Mutmut
 .mutmut-cache
 *.bak
