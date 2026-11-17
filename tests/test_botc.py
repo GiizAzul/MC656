@@ -20,12 +20,14 @@ def test_votos_insuficientes():
     assert sistema.apurar_vencedor() is None
 
 
+# Verifica apuração de execução onde candidato atinge a maioria estatutária (CE45)
 def test_votos_suficientes_sucesso():
     sistema = SistemaEleitoralBotC(10)
     sistema.registrar_votacao("Gi", 5)
     assert sistema.apurar_vencedor() == "Gi"
 
 
+# Verifica apuração quando há empate entre os candidatos mais votados na maioria (CE46)
 def test_empate_na_maioria():
     sistema = SistemaEleitoralBotC(10)
     sistema.registrar_votacao("Gi", 6)
@@ -33,6 +35,7 @@ def test_empate_na_maioria():
     assert sistema.apurar_vencedor() is None
 
 
+# Verifica apuração onde o candidato com maior número de votos isolado vence (CE45)
 def test_maior_voto_vence():
     sistema = SistemaEleitoralBotC(10)
     sistema.registrar_votacao("Gi", 6)
@@ -87,6 +90,7 @@ def test_jogador_validacao_inicial():
         JogadorBotC("j1", "")
 
 
+# Verifica elegibilidade de jogador vivo que pode votar com sucesso (CE39)
 def test_jogador_vivo_pode_votar_sempre():
     jogador = JogadorBotC("j1", "Leo", StatusJogador.VIVO)
     assert jogador.pode_votar() is True
@@ -96,6 +100,7 @@ def test_jogador_vivo_pode_votar_sempre():
     assert jogador.pode_votar() is True
 
 
+# Verifica elegibilidade de jogador morto com voto fantasma consumindo seu único voto (CE40)
 def test_jogador_morto_com_fantasma_consome_voto():
     jogador = JogadorBotC("j2", "Julia", StatusJogador.MORTO_COM_FANTASMA)
     assert jogador.pode_votar() is True
@@ -110,6 +115,7 @@ def test_jogador_morto_com_fantasma_consome_voto():
     assert jogador.consumir_voto_fantasma() is False
 
 
+# Verifica bloqueio de voto de jogador morto sem voto fantasma (CE41)
 def test_sistema_bloqueia_voto_morto_sem_fantasma():
     j_vivo = JogadorBotC("v1", "Vivo 1", StatusJogador.VIVO)
     j_morto_sem_voto = JogadorBotC("m1", "Morto Sem Voto", StatusJogador.MORTO_SEM_FANTASMA)
@@ -119,17 +125,18 @@ def test_sistema_bloqueia_voto_morto_sem_fantasma():
         sistema.registrar_voto_jogador("candidato_x", "m1")
 
 
+# Verifica consumo automático do voto de fantasma e posterior bloqueio (CE40 / CE41)
 def test_sistema_consome_voto_fantasma_automaticamente():
     j_vivo = JogadorBotC("v1", "Vivo 1", StatusJogador.VIVO)
     j_fantasma = JogadorBotC("m2", "Morto Com Voto", StatusJogador.MORTO_COM_FANTASMA)
     sistema = SistemaEleitoralBotC(jogadores=[j_vivo, j_fantasma])
 
-    # Primeiro voto do fantasma: válido e contabiliza
+    # Primeiro voto do fantasma: válido e contabiliza (CE40)
     peso = sistema.registrar_voto_jogador("candidato_x", "m2")
     assert peso == 1
     assert j_fantasma.status == StatusJogador.MORTO_SEM_FANTASMA
 
-    # Tentativa de votar novamente para outro candidato na mesma rodada/jogo: bloqueado
+    # Tentativa de votar novamente para outro candidato na mesma rodada/jogo: bloqueado (CE41)
     with pytest.raises(ValueError, match="está morto e não possui mais voto fantasma"):
         sistema.registrar_voto_jogador("candidato_y", "m2")
 
@@ -152,6 +159,7 @@ def test_decorator_voto_padrao():
     assert voto.calcular_peso() == 1
 
 
+# Verifica decorador multiplicador com fator positivo válido (> 0) multiplicando o peso (CE42)
 def test_decorator_multiplicador():
     voto = VotoPadrao()
     voto_triplo = ModificadorMultiplicador(voto, fator=3)
@@ -159,12 +167,14 @@ def test_decorator_multiplicador():
     assert voto_triplo.componente is voto
 
 
+# Verifica rejeição de decorador multiplicador com fator menor ou igual a zero (CE43)
 def test_decorator_multiplicador_fator_invalido():
     voto = VotoPadrao()
     with pytest.raises(ValueError, match="fator de multiplicação deve ser maior que zero"):
         ModificadorMultiplicador(voto, fator=0)
 
 
+# Verifica decorador negativador tornando o peso do voto negativo (CE44)
 def test_decorator_negativo():
     voto = VotoPadrao()
     voto_negativo = ModificadorNegativo(voto)
@@ -187,6 +197,7 @@ def test_decorator_multiplicador_com_negativador_resulta_menos_tres():
     assert voto_multiplicado_depois.calcular_peso() == -3
 
 
+# Verifica decorador nulo tornando o peso do voto zero (CE44)
 def test_decorator_nulo():
     voto = VotoPadrao()
     voto_nulo = ModificadorNulo(voto)
@@ -344,3 +355,16 @@ def test_sistema_votante_e_candidato_validacoes_extras():
         sistema.registrar_voto_jogador("cand", "nao_existe")
     with pytest.raises(ValueError, match="identificador do candidato deve ser um User_ID válido"):
         sistema.registrar_voto_jogador("", "jogador_1")
+
+
+def test_obter_jogador_por_nome():
+    sistema = SistemaEleitoralBotC(jogadores=[JogadorBotC("j1", "Nome Leo", StatusJogador.VIVO)])
+    assert sistema.obter_jogador("Nome Leo") is not None
+    assert sistema.obter_jogador("Nome Leo").id_jogador == "j1"
+
+
+def test_sistema_registrar_voto_interface_nao_implementado():
+    sistema = SistemaEleitoralBotC(3)
+    with pytest.raises(NotImplementedError):
+        sistema.registrar_voto("e1", "voto")
+
