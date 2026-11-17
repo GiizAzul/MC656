@@ -1,36 +1,100 @@
 {% extends "base.html" %}
 
 {% block content %}
-<header>
+<main class="card">
     <h2>Bem-vindo, {{ usuario.nome_real }}!</h2>
-    <a href="/logout" class="btn-secondary">Sair da Sessão</a>
-</header>
+    <p class="text-muted">
+        Usuário: <strong>{{ usuario.username }}</strong> | Escopos ativos: <strong>{{ usuario.escopo }}</strong>
+    </p>
 
-<main>
-    <h3>Votações Disponíveis</h3>
-    <div class="card-list">
-        <!-- Renderização condicional baseada na autenticação -->
+    {% if erro %}
+    <div class="alert-error" role="alert">
+        {{ erro }}
+    </div>
+    {% endif %}
+
+    <div class="dashboard-grid mt-2">
         {% if "AUSTRALIA" in usuario.escopo %}
-            <div class="card">
-                <h4>Eleição Federal 2026</h4>
-                <p>Status: Aberta</p>
-                <a href="/australia/votar" class="btn-primary">Acessar Cédula</a>
-            </div>
+        <div class="pauta-card aus-border">
+            <h3>🪃 Eleição Federal 2026</h3>
+            <p>Votação preferencial australiana com ranqueamento de candidatos (Drag-and-Drop).</p>
+            <a href="/australia/votar" class="btn-primary">Votar na Austrália</a>
+        </div>
         {% endif %}
-        
-        {% if "BOTC" in usuario.escopo %}
-            <div class="card">
-                <h4>Indicações</h4>
-                <a href="/botc/partida" class="btn-primary">Indicar</a>
-            </div>
-        {% endif %}
-        
+
         {% if "CACO" in usuario.escopo %}
-            <div class="card">
-                <h4>Pauta #5 - Regimento</h4>
-                <a href="/caco/assembleia" class="btn-primary">Participar</a>
-            </div>
+        <div class="pauta-card caco-border">
+            <h3>🏛️ Assembleia CACo</h3>
+            <p>Pauta deliberativa estudantil com controle de quórum e voto único secreto.</p>
+            <a href="/caco/assembleia" class="btn-primary">Acessar Assembleia CACo</a>
+        </div>
+        {% endif %}
+
+        {% if "BOTC" in usuario.escopo %}
+        <div class="pauta-card botc-border">
+            <h3>🩸 Blood on the Clocktower</h3>
+            <p>Roda da cidade com botão de levantar/abaixar a mão em tempo real e cronômetro.</p>
+            <a href="/botc/partida" class="btn-primary">Entrar na Partida</a>
+        </div>
+        {% endif %}
+
+        {% if "GESTAO" in usuario.escopo or "STORYTELLER" in usuario.escopo %}
+        <div class="pauta-card admin-border">
+            <h3>⚙️ Painel Administrativo</h3>
+            <p>Acesso rápido aos controles de Gestão e Storyteller.</p>
+            <a href="/admin" class="btn-secondary">Gerenciar Votações</a>
+        </div>
         {% endif %}
     </div>
+
+    <section class="scope-box mt-2">
+        <h3>➕ Habilitar Outro Escopo nesta Conta ({{ usuario.username }})</h3>
+        <p class="text-muted">Participe de outras eleições usando este mesmo login sem precisar criar outro usuário:</p>
+
+        <form action="/adicionar-escopo" method="POST" class="mt-1">
+            <div class="form-group">
+                <label for="novo_tipo_conta">Novo Contexto Desejado</label>
+                <select id="novo_tipo_conta" name="tipo_conta" required onchange="toggleRaDashboard()">
+                    <option value="AUSTRALIA_ELEITOR">Eleitor (Austrália)</option>
+                    <option value="AUSTRALIA_CANDIDATO">Candidato (Austrália)</option>
+                    <option value="CACO_ESTUDANTE">Estudante Unicamp (CACo)</option>
+                    <option value="CACO_GESTAO">Gestão (CACo)</option>
+                    <option value="BOTC_JOGADOR">Jogador (BoTC)</option>
+                    <option value="BOTC_STORYTELLER">Storyteller / Mestre (BoTC)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="dash-grupo-ra" style="display: none;">
+                <label for="dash_ra">RA (Apenas números positivos)</label>
+                <input type="text"
+                       id="dash_ra"
+                       name="ra"
+                       inputmode="numeric"
+                       pattern="[0-9]+"
+                       placeholder="Ex: 288808"
+                       onkeydown="if(['-','+','.',',','e','E'].includes(event.key)) event.preventDefault();"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+            </div>
+
+            <button type="submit" class="btn-secondary">Vincular Escopo à Minha Conta</button>
+        </form>
+    </section>
 </main>
+
+<script>
+function toggleRaDashboard() {
+    const sel = document.getElementById("novo_tipo_conta");
+    const grp = document.getElementById("dash-grupo-ra");
+    const inp = document.getElementById("dash_ra");
+    if (!sel || !grp || !inp) return;
+    if (sel.value === "CACO_ESTUDANTE") {
+        grp.style.display = "block";
+        inp.setAttribute("required", "required");
+    } else {
+        grp.style.display = "none";
+        inp.removeAttribute("required");
+        inp.value = "";
+    }
+}
+</script>
 {% endblock %}

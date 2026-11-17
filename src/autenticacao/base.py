@@ -9,6 +9,7 @@ class Usuario(ABC):
         self.username = username
         self.senha = senha
         self.nome_real = nome_real
+        self._escopos_extras: set[str] = set()
 
     @property
     def id(self) -> str:
@@ -19,6 +20,24 @@ class Usuario(ABC):
     @abstractmethod
     def escopo(self) -> str:
         """Identificar qual o contexto entre as possíveis eleições"""
+
+    def __getattribute__(self, name: str):
+        val = super().__getattribute__(name)
+        if name == "escopo":
+            extras = super().__getattribute__("_escopos_extras")
+            if extras:
+                atuais = {s.strip() for s in val.split(",") if s.strip()}
+                todos = atuais | {s.strip() for s in extras if s.strip()}
+                return ",".join(sorted(todos))
+        return val
+
+    def adicionar_escopo(self, novo_escopo: str, ra: int | None = None) -> None:
+        for esc in novo_escopo.split(","):
+            limpo = esc.strip()
+            if limpo:
+                self._escopos_extras.add(limpo)
+        if ra is not None:
+            self.ra = ra
 
     def validar_senha(self, tentativa: str) -> bool:
         return self.senha == tentativa
@@ -35,6 +54,15 @@ class ServicoAutenticacao:
         if not usuario.username.strip() or not usuario.senha.strip():
             raise ValueError("Erro: Username e senha não podem ser vazios")
         if usuario.username in self._mapa_usernames:
+            existente = self._banco_por_id[self._mapa_usernames[usuario.username]]
+            if existente.validar_senha(usuario.senha) and usuario.escopo not in existente.escopo:
+                ra_novo = getattr(usuario, "ra", None)
+                if ra_novo and str(ra_novo) in self._mapa_usernames:
+                    raise ValueError(f"Erro: RA {ra_novo} já existente.")
+                existente.adicionar_escopo(usuario.escopo, ra=ra_novo)
+                if ra_novo:
+                    self._mapa_usernames[str(ra_novo)] = existente.id
+                return
             raise ValueError(f"Erro: username {usuario.username} já existente.")
         if hasattr(usuario, 'ra') and usuario.ra and str(usuario.ra) in self._mapa_usernames:
             raise ValueError(f"Erro: RA {usuario.ra} já existente.")

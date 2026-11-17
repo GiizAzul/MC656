@@ -1,0 +1,229 @@
+.botc-page {
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  color: #f8fafc;
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.botc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.botc-title h1 {
+  color: #f87171;
+  font-size: 1.6rem;
+}
+
+.botc-layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .botc-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wheel-wrapper {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.town-wheel {
+  position: relative;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  border: 3px dashed rgba(248, 113, 113, 0.35);
+  margin: 1rem auto;
+  background: radial-gradient(circle, rgba(153, 27, 27, 0.18) 0%, transparent 70%);
+}
+
+.wheel-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 146px;
+  height: 146px;
+  border-radius: 50%;
+  background: #0f172a;
+  border: 3px solid #ef4444;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.65rem;
+  z-index: 3;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.35);
+}
+
+.wheel-pointer-arm {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 175px;
+  height: 5px;
+  background: linear-gradient(90deg, #ef4444 0%, #fbbf24 100%);
+  transform-origin: 0% 50%;
+  transition: transform 0.65s ease-in-out;
+  z-index: 2;
+  border-radius: 4px;
+  box-shadow: 0 0 14px #fbbf24;
+}
+
+.wheel-pointer-arm::after {
+  content: '➤';
+  position: absolute;
+  right: -14px;
+  top: -11px;
+  color: #fbbf24;
+  font-size: 1.25rem;
+}
+
+/* === BOLAS (CÍRCULOS PERFEITOS) PARA CADA JOGADOR NA RODA === */
+.seat-node {
+  position: absolute;
+  width: 86px;
+  height: 86px;
+  margin-left: -43px;
+  margin-top: -43px;
+  border-radius: 50%;
+  background: #1e293b;
+  border: 3px solid #475569;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  text-align: center;
+  z-index: 4;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+.seat-node.nominated {
+  border-color: #ef4444;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.75);
+}
+
+.seat-node.pointer-active {
+  border-color: #fbbf24;
+  transform: scale(1.18);
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.95);
+}
+
+.seat-node.locked {
+  background: #0f172a;
+  border-color: #38bdf8;
+}
+
+.seat-node.hand-up {
+  background: radial-gradient(circle, #15803d 0%, #14532d 100%);
+  border-color: #4ade80;
+}
+
+.seat-name {
+  font-weight: 700;
+  font-size: 0.72rem;
+  max-width: 72px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seat-hand {
+  font-size: 1.25rem;
+  line-height: 1.1;
+  margin: 2px 0;
+}
+
+.seat-badge {
+  font-size: 0.62rem;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.controls-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.botc-panel-box {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 1.35rem;
+}
+
+.btn-hand-toggle {
+  width: 100%;
+  font-size: 1.02rem;
+  font-weight: 700;
+  padding: 0.95rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 0.75rem;
+}
+
+.btn-hand-toggle.lowered {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.btn-hand-toggle.raised {
+  background-color: #16a34a;
+  color: #ffffff;
+}
+
+.btn-hand-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: #475569;
+}
+
+.seat-node.dead-player {
+  background: #334155;
+  border-color: #64748b;
+  color: #94a3b8;
+  filter: grayscale(65%);
+  opacity: 0.78;
+}
+
+.ghost-vote-indicator {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: #6d28d9;
+  color: #ffffff;
+  border: 2px solid #e9d5ff;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+}

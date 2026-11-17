@@ -1,34 +1,121 @@
 {% extends "base.html" %}
+
 {% block content %}
-<header class="header-context">
-    <h2>Eleição Federal 2026</h2>
-</header>
-<main class="box-content">
-    <p>Ordene os candidatos de acordo com sua preferência (1 = Maior prioridade):</p>
+<main class="card">
+    <div class="context-header aus-header">
+        <h2>🪃 Eleição Federal 2026 — Voto Preferencial (IRV)</h2>
+        <p>Arraste e solte os candidatos (ou use os botões ▲/▼) para ordenar sua preferência de 1º a {{ candidatos|length }}º lugar.</p>
+    </div>
+
     {% if erro %}
-        <div class="alert alert-danger">{{ erro }}</div>
+    <div class="alert-error" role="alert">
+        {{ erro }}
+    </div>
     {% endif %}
-    <form action="/australia/votar" method="POST">
-        <!-- O input hidden guardará a ordem gerada pelo drag and drop via JS futuro -->
-        <input type="hidden" name="ranking" id="ranking_field" value="">
-        
-        <ul class="lista-candidatos">
+
+    {% if is_gestao %}
+    <section class="admin-controls mb-2">
+        <h3>Controles da Comissão Eleitoral (Estado: {{ estado_eleicao | default('VOTACAO') }})</h3>
+        <div class="btn-group">
+            <form action="/australia/iniciar" method="POST" style="display:inline;">
+                <button type="submit" class="btn-primary">Iniciar Eleição</button>
+            </form>
+            <form action="/australia/encerrar" method="POST" style="display:inline;">
+                <button type="submit" class="btn-secondary">Encerrar Eleição</button>
+            </form>
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="instrucoes-box mb-2">
+        <strong>Instruções de Preenchimento:</strong> Arraste os cartões abaixo na sua ordem de escolha ou digite números inteiros de <strong>1 a {{ candidatos|length }}</strong> sem repetir e sem usar casas decimais.
+    </div>
+
+    <form action="/australia/votar" method="POST" id="form-australia">
+        <ul class="lista-candidatos dnd-lista" id="lista-dnd-australia">
             {% for candidato in candidatos %}
-            <li class="candidato-item">
-                <label for="posicao_{{ loop.index }}"><strong>{{ candidato }}</strong></label>
-                <input type="number" 
-                       id="posicao_{{ loop.index }}" 
-                       name="posicao_{{ candidato }}" 
-                       class="posicao-input" 
-                       min="1" 
-                       max="{{ candidatos|length }}" 
-                       placeholder="Posição" 
-                       required>
+            <li class="candidato-item dnd-card" draggable="true" data-candidato="{{ candidato }}">
+                <div class="dnd-info">
+                    <span class="rank-badge" id="badge_{{ loop.index }}">{{ loop.index }}º</span>
+                    <label for="posicao_{{ loop.index }}"><strong>{{ candidato }}</strong></label>
+                </div>
+
+                <div class="dnd-actions">
+                    <button type="button" class="btn-move" onclick="moverItem(this, -1)" title="Subir posição">▲</button>
+                    <button type="button" class="btn-move" onclick="moverItem(this, 1)" title="Descer posição">▼</button>
+                    <input type="number"
+                           id="posicao_{{ loop.index }}"
+                           name="posicao_{{ candidato }}"
+                           class="posicao-input"
+                           min="1"
+                           max="{{ candidatos|length }}"
+                           step="1"
+                           value="{{ loop.index }}"
+                           placeholder="Posição"
+                           onkeydown="if(['. ',',','-','+','e','E'].includes(event.key)) event.preventDefault();"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                           required>
+                    <span class="drag-handle" title="Arraste para reordenar">⠿</span>
+                </div>
             </li>
             {% endfor %}
         </ul>
-        <button type="submit" class="btn-primary mt-2">Confirmar Cédula</button>
-        <a href="/dashboard" class="btn-secondary mt-2">Voltar ao Painel</a>
+
+        <div class="btn-group mt-2">
+            <button type="submit" class="btn-primary">Confirmar e Depositar Cédula</button>
+            <a href="/dashboard" class="btn-secondary">Voltar ao Painel</a>
+        </div>
     </form>
 </main>
+
+<script>
+(function() {
+    const lista = document.getElementById("lista-dnd-australia");
+    if (!lista) return;
+    let itemArrastado = null;
+
+    function atualizarNumeracao() {
+        const itens = lista.querySelectorAll(".dnd-card");
+        itens.forEach((item, index) => {
+            const pos = index + 1;
+            const input = item.querySelector(".posicao-input");
+            const badge = item.querySelector(".rank-badge");
+            if (input) input.value = pos;
+            if (badge) badge.textContent = pos + "º";
+        });
+    }
+
+    window.moverItem = function(botao, direcao) {
+        const li = botao.closest(".dnd-card");
+        if (!li) return;
+        if (direcao === -1 && li.previousElementSibling) {
+            lista.insertBefore(li, li.previousElementSibling);
+        } else if (direcao === 1 && li.nextElementSibling) {
+            lista.insertBefore(li.nextElementSibling, li);
+        }
+        atualizarNumeracao();
+    };
+
+    lista.addEventListener("dragstart", (e) => {
+        itemArrastado = e.target.closest(".dnd-card");
+        if (itemArrastado) itemArrastado.classList.add("dragging");
+    });
+
+    lista.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        const alvo = e.target.closest(".dnd-card");
+        if (alvo && alvo !== itemArrastado) {
+            const rect = alvo.getBoundingClientRect();
+            const depois = (e.clientY - rect.top) > (rect.height / 2);
+            lista.insertBefore(itemArrastado, depois ? alvo.nextSibling : alvo);
+        }
+    });
+
+    lista.addEventListener("dragend", () => {
+        if (itemArrastado) itemArrastado.classList.remove("dragging");
+        itemArrastado = null;
+        atualizarNumeracao();
+    });
+})();
+</script>
 {% endblock %}

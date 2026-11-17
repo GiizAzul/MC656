@@ -859,3 +859,80 @@ def test_australia_nao_reinicia_votacao_encerrada(eleicao_isolada, gestor_austra
     assert res.status_code == 200
     assert "A votação já foi encerrada" in res.text
     assert isinstance(eleicao_isolada.estado, Encerrada)
+
+def test_elementos_interativos_frontend_renderizados():
+    """Garante que os 4 templates entregam o Drag-and-Drop, Cronômetro, Toggle de Mão e RA oculto."""
+    res_cad = client.get("/cadastro")
+    assert res_cad.status_code == 200
+    assert 'id="grupo-ra" style="display: none;"' in res_cad.text
+    assert 'pattern="[0-9]+"' in res_cad.text
+
+    client.cookies.set("sessao_usuario", "caio")
+    res_aus = client.get("/australia/votar")
+    assert res_aus.status_code == 200
+    assert 'draggable="true"' in res_aus.text
+    assert 'id="lista-dnd-australia"' in res_aus.text
+
+    res_dash = client.get("/dashboard")
+    assert res_dash.status_code == 200
+    assert 'action="/adicionar-escopo"' in res_dash.text
+
+    client.cookies.set("sessao_usuario", "leo")
+    res_botc = client.get("/botc/partida")
+    assert res_botc.status_code == 200
+    assert 'id="botc-timer-display"' in res_botc.text
+    assert 'id="btn-mao-interativo"' in res_botc.text
+
+    # Cobre linhas 106-110 de botc_router.py (retorno JSON com usuário autenticado no escopo BOTC)
+    res_json = client.post(
+        "/botc/votar",
+        data={"acao": "levantar_mao"},
+        headers={"Accept": "application/json"},
+    )
+    assert res_json.status_code == 200
+    assert res_json.json()["mao_levantada"] is True
+    client.cookies.clear()
+def test_cadastro_adiciona_eleitor_caco_corretamente():
+    """Garante que alunos do CACo SÃO inseridos na eleição do CACo."""
+    from src.main import app
+    
+    # Simula o envio do formulário de cadastro para um estudante do CACo
+    response = client.post("/cadastro", data={
+        "username": "aluno_teste_caco",
+        "senha": "123",
+        "senha_confirma": "123",
+        "nome_real": "Aluno Teste",
+        "tipo_conta": "CACO_ESTUDANTE",
+        "ra": "112233"
+    }, follow_redirects=False)
+    
+    assert response.status_code == 302
+    
+    # Busca o ID do usuário recém criado
+    user_id = app.state.banco_auth._mapa_usernames["aluno_teste_caco"]
+    
+    # Verifica se foi parar na lista de eleitores (Comportamento original esperado)
+    assert user_id in app.state.eleicao_caco.eleitores
+
+
+def test_cadastro_isolar_dominio_eleicao_caco():
+    """Garante que usuários de OUTROS domínios NÃO entram na eleição do CACo (Mata o Mutante 236)."""
+    from src.main import app
+    
+    # Simula o envio do formulário de cadastro para um jogador do BotC
+    response = client.post("/cadastro", data={
+        "username": "jogador_botc_teste",
+        "senha": "123",
+        "senha_confirma": "123",
+        "nome_real": "Jogador de Teste",
+        "tipo_conta": "BOTC_JOGADOR" 
+    }, follow_redirects=False)
+    
+    assert response.status_code == 302
+    
+    # Extrai o ID gerado para o novo usuário
+    user_id = app.state.banco_auth._mapa_usernames["jogador_botc_teste"]
+    
+    # Garante que jogadores de BotC NÃO foram inseridos na eleição do CACo
+    assert user_id not in app.state.eleicao_caco.eleitores, \
+        "Falha de isolamento: Usuário do BotC foi inserido na eleição do CACo!"

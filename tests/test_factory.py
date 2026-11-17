@@ -1,6 +1,10 @@
 import pytest
 
-from src.autenticacao.australia import CandidatoAustralia, EleitorAustralia
+from src.autenticacao.australia import (
+    CandidatoAustralia,
+    EleitorAustralia,
+    GestaoAustralia,
+)
 from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
 from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 from src.autenticacao.factory import UsuarioFactory
@@ -41,6 +45,7 @@ def test_criar_estudante_caco_com_ra_nao_numerico_levanta_erro():
     ("CACO_GESTAO", GestaoCACo),
     ("AUSTRALIA_ELEITOR", EleitorAustralia),
     ("AUSTRALIA_CANDIDATO", CandidatoAustralia),
+    ("AUSTRALIA_GESTAO", GestaoAustralia), 
     ("BOTC_JOGADOR", JogadorBOTC),
     ("BOTC_STORYTELLER", StoryTellerBOTC),
 ])

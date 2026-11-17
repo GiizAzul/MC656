@@ -6,7 +6,40 @@ from src import EleicaoAssembleia
 from src.caco import OpcaoVoto
 
 
-# Verifica se está barrando nomes duplicados na presenca
+# Verifica se está aceitando corretamente listas de eleitores válidas (CE1)
+def test_eleitores_validos():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+    ]
+    
+    eleitores = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
+    ]
+
+    eleicao = EleicaoAssembleia(alunos, eleitores, 60)
+
+    assert eleicao.eleitores == set(eleitores)
+    
+
+# Verifica se está barrando corretamente não alunos sem duplicatas (CE2)
+def test_eleitor_nao_aluno():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+    ]
+
+    eleitores = [
+         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo', 'PessoaFalsa'
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="O User_ID 'PessoaFalsa' não está cadastrado como aluno."
+    ):
+        EleicaoAssembleia(alunos, eleitores, 60)
+
+# Verifica se está barrando nomes duplicados na presenca com todos alunos válidos (CE3)
 def test_presenca_duplicada():
     alunos = [
         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
@@ -24,25 +57,21 @@ def test_presenca_duplicada():
             duracao_ciclo=60
         )
 
-# Verifica se está barrando corretamente não alunos
-def test_eleitor_nao_aluno():
+# Verifica se passa quórum suficiente (CE4)
+def test_quorum_minimo():
+
+    # quorum mínimo == 1 (teto)
     alunos = [
         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
-        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+        'Ana', 'Carol', 'Leticia', 'Naomi'
     ]
 
-    eleitores = [
-         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo', 'PessoaFalsa'
-    ]
+    eleitores = ['Juh']
 
-    with pytest.raises(
-        ValueError,
-        match="O User_ID 'PessoaFalsa' não está cadastrado como aluno."
-    ):
-        EleicaoAssembleia(alunos, eleitores, 60)
+    eleicao = EleicaoAssembleia(alunos, eleitores, 60)
+    assert eleicao is not None
 
-
-# Verifica se está barrando quórum não suficiente
+# Verifica se está barrando quórum não suficiente (CE5)
 def test_abaixo_quorum_minimo():
 
     # quorum mínimo == 1 
@@ -59,22 +88,22 @@ def test_abaixo_quorum_minimo():
     ):
         EleicaoAssembleia(alunos, eleitores, 60)
 
-# Verifica se passa quórum suficiente
-def test_quorum_minimo():
-
-    # quorum mínimo == 1 (teto)
+# Verifica se permite duracão válida (CE6)
+def test_duracao_valida():
     alunos = [
         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
-        'Ana', 'Carol', 'Leticia', 'Naomi'
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
     ]
 
-    eleitores = ['Juh']
+    eleitores = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
+    ]
 
-    eleicao = EleicaoAssembleia(alunos, eleitores, 60)
-    assert eleicao is not None
+    eleicao = EleicaoAssembleia(alunos, eleitores, 10)
 
+    assert eleicao.duracao_ciclo == 10
 
-# Verifica se está barrando duracão inválida
+# Verifica se está barrando duracão inválida (CE7)
 def test_duracao_invalida():
     alunos = [
         'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
@@ -91,21 +120,32 @@ def test_duracao_invalida():
     ):
         EleicaoAssembleia(alunos, eleitores, 0)
 
+# Testa se aceita corretamente voto unico (CE8)
+def test_voto_unico():
 
-# Cria eleicão teste
-def criar_eleicao():
-    alunos = [
-        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
-        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
-    ]
+    eleicao = criar_eleicao()
+    eleicao.iniciar_votacao()
 
-    eleitores = [
-        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
-    ]
+    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
 
-    return EleicaoAssembleia(alunos, eleitores, 30)
+    assert eleicao.contadores[OpcaoVoto.APROVAR] == 1
+    assert 'Juh' in eleicao.votantes
 
-# Testa vitoria quando APROVAR possui mais de 50% dos votos não nulos
+# Testa se barra corretamente multiplos votos (CE9)
+def test_voto_multiplo():
+
+    eleicao = criar_eleicao()
+    eleicao.iniciar_votacao()
+
+    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
+
+    with pytest.raises(
+        ValueError,
+        match="O eleitor já registrou um voto nesta votação."
+    ):
+        eleicao.registrar_voto('Juh', OpcaoVoto.REJEITAR)
+
+# Testa vitoria quando APROVAR possui mais de 50% dos votos não nulos (CE10)
 def test_vitoria_aprovacao():
 
     eleicao = criar_eleicao()
@@ -121,8 +161,7 @@ def test_vitoria_aprovacao():
 
     assert eleicao.apurar_vencedor() == 'APROVADA'
 
-
-# Testa vitoria quando REJEITAR possui mais de 50% dos votos não nulos
+# Testa vitoria quando REJEITAR possui mais de 50% dos votos não nulos (CE11)
 def test_vitoria_rejeicao():
 
     eleicao = criar_eleicao()
@@ -139,7 +178,7 @@ def test_vitoria_rejeicao():
     assert eleicao.apurar_vencedor() == 'VETADA'
 
 
-# Testa empate em APROVAR e REJEITAR
+# Testa empate em APROVAR e REJEITAR (CE11)
 def test_empate():
     
     eleicao = criar_eleicao()
@@ -155,7 +194,7 @@ def test_empate():
 
     assert eleicao.apurar_vencedor() == 'VETADA'
 
-# Testa abstencão total
+# Testa abstencão total (CE12)
 def test_todos_abstiveram():
     eleicao = criar_eleicao()
     eleicao.iniciar_votacao()
@@ -170,19 +209,18 @@ def test_todos_abstiveram():
 
     assert eleicao.apurar_vencedor() == 'VETADA'
 
-# Testa se barra corretamente multiplos votos
-def test_voto_unico():
+# Cria eleicão teste
+def criar_eleicao():
+    alunos = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo',
+        'Ana', 'Carol', 'Leticia', 'Naomi', 'Estrela'
+    ]
 
-    eleicao = criar_eleicao()
-    eleicao.iniciar_votacao()
+    eleitores = [
+        'Juh', 'Samuel', 'Gi', 'Caio', 'Leo'
+    ]
 
-    eleicao.registrar_voto('Juh', OpcaoVoto.APROVAR)
-
-    with pytest.raises(
-        ValueError,
-        match="O eleitor já registrou um voto nesta votação."
-    ):
-        eleicao.registrar_voto('Juh', OpcaoVoto.REJEITAR)
+    return EleicaoAssembleia(alunos, eleitores, 30)
 
 def test_eleitor_nao_autorizado():
     """Verifica se o sistema impede votos de alunos que não estão na lista de eleitores daquela pauta."""
