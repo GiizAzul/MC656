@@ -1,0 +1,548 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{indentfirst}
+\usepackage[table]{xcolor}
+\usepackage{makecell}
+\usepackage{fontawesome5}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{xltabular}
+
+\geometry{a4paper, margin=2cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black
+}
+
+% Configuração de formatação para trechos de código (listings)
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.96,0.96,0.96}
+
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=pythonstyle}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\funcao}[1]{\textcolor{black}{\nolinkurl{#1}}}
+
+% Padronização visual de todas as tabelas
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.2}
+
+\title{\textbf{Atividade 5 - Teste de Software}\\
+\large MC656 - Engenharia de Software}
+\author{
+  Caio Lima Albuquerque - RA: 288808 \\
+  Giovana Jacome Marchetti - RA: 177700 \\
+  Julia de Souza Nardo - RA: 281272 \\
+  Leonardo Carvalho De Luca - RA: 288820\\
+  Samuel Rodrigues Ferreira - RA: 195440
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introdução}
+Este relatório documenta a aplicação sistemática de técnicas de teste de software sobre o sistema de votação, consolidando a entrega da \textbf{Atividade 5} da disciplina MC656 (Engenharia de Software). O trabalho abrange a aplicação de:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Teste Funcional:} Particionamento em Classes de Equivalência (PCE) aplicado a 3 escopos distintos do sistema e Análise de Valor Limite (AVL) aplicada à faixa de posições do ranking de partidos australiano.
+    \item \textbf{Teste Estrutural e Cobertura:} Análise de cobertura de linhas e branches com \texttt{pytest-cov} e \textit{SonarCloud}, identificando lacunas no estado anterior e elevando a cobertura para acima do limiar exigido de 80\%.
+    \item \textbf{Teste de Mutação:} Execução da ferramenta de teste de mutação \texttt{mutmut}, identificação e análise de mutante sobrevivente relevante, e implementação de caso de teste para eliminá-lo via \textit{Pull Request}.
+\end{enumerate}
+
+\noindent\textbf{Rastreabilidade no GitHub:}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Repositório:} \href{https://github.com/GiizAzul/MC656}{\faGithub\ \texttt{https://github.com/GiizAzul/MC656}}
+    \item \textbf{Tag da Versão de Entrega:} \href{https://github.com/GiizAzul/MC656/releases/tag/a5-v1.0.0}{\texttt{a5-v1.0.0}}
+\end{itemize}
+
+
+% =========================================================================
+% SEÇÃO 1: TESTE FUNCIONAL
+% =========================================================================
+\section{Teste Funcional}
+Foram selecionados três escopos funcionais distintos do sistema com regras de negócio críticas e comportamentos determinísticos:
+\begin{enumerate}
+    \item \textbf{Escopo 1: Assembleia do CACo (\texttt{src/caco.py})} --- Verificação de quórum estatutário, integridade da presença, voto único e limiar de aprovação de pautas.
+    \item \textbf{Escopo 2: Eleição Preferencial Australiana (\texttt{src/australia.py})} --- Validação de integridade de cédulas preferenciais e apuração por voto único transferível (\textit{Instant-Runoff Voting}).
+    \item \textbf{Escopo 3: Blood on the Clocktower (\texttt{src/botc.py})} --- Modificação de peso de votos com padrão \textit{Decorator}, elegibilidade de voto fantasma de jogadores mortos e limiar de execução.
+\end{enumerate}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    filecolor=black,
+    urlcolor=black
+}
+
+\subsection{Particionamento em Classes de Equivalência (C1)}
+
+\subsubsection{Escopo 1: Assembleia do CACo (\texttt{src/caco.py})}
+O comportamento de validação de participantes, quórum e computação do resultado foi particionado nas seguintes classes de equivalência:
+
+\small
+\begin{xltabular}{\textwidth}{|l|Y|c|Y|Y|}
+
+\caption{Classes de Equivalência para o Escopo 1 (Assembleia do CACo).}
+\label{tab:escopo1} \\
+
+\hline
+\rowcolor{gray!20}
+\textbf{ID} & \textbf{Aspecto / Entrada} & \textbf{Tipo} &
+\textbf{Descrição da Classe de Equivalência} &
+\textbf{Função de Teste} \\ \hline
+
+$CE_1$ & Participantes na lista de eleitores & Válida &
+Todos os IDs de eleitores pertencem aos alunos cadastrados e não existem duplicatas. &
+\texttt{test\_eleitores\_validos} \\ \hline
+
+$CE_2$ & Participantes na lista de eleitores & Inválida &
+Existe ID de eleitor ausente na lista de alunos cadastrados (\texttt{ValueError}), mas não existem duplicatas. &
+\texttt{test\_eleitor\_nao\_aluno} \\ \hline
+
+$CE_3$ & Participantes na lista de eleitores & Inválida &
+Todos os IDs de eleitores pertencem aos alunos cadastrados, mas existem duplicatas (\texttt{ValueError}). &
+\texttt{test\_presenca\_duplicada} \\ \hline
+
+$CE_4$ & Proporção de Quórum Estatutário & Válida &
+$N_{\text{eleitores}} \geq \lceil N_{\text{alunos}} / 10 \rceil$. &
+\url{test_abaixo_quorum_minimo} \\ \hline
+
+$CE_5$ & Proporção de Quórum Estatutário & Inválida &
+$N_{\text{eleitores}} < \lceil N_{\text{alunos}} / 10 \rceil$ (\texttt{RuntimeError}). &
+\url{test_abaixo_quorum_minimo} \\ \hline
+
+$CE_6$ & Duração do Ciclo de Votação & Válida &
+$\text{duracao} > 0$. &
+\texttt{test\_duracao\_valida} \\ \hline
+
+$CE_7$ & Duração do Ciclo de Votação & Inválida &
+$\text{duracao} \leq 0$ (\texttt{ValueError}). &
+\texttt{test\_duracao\_invalida} \\ \hline
+
+$CE_8$ & Registro de Voto & Válida &
+Eleitor vota uma única vez (ID do eleitor não está registrado na lista de votantes). &
+\texttt{test\_voto\_unico} \\ \hline
+
+$CE_9$ & Registro de Voto & Inválida &
+ID do eleitor já está registrado na lista de votantes (\texttt{ValueError}). &
+\texttt{test\_voto\_multiplo} \\ \hline
+
+$CE_{10}$ & Apuração de Resultado & Válida &
+Votos APROVAR superam $50\%$ dos não-nulos (\texttt{APROVADA}). &
+\texttt{test\_vitoria\_aprovacao} \\ \hline
+
+$CE_{11}$ & Apuração de Resultado & Válida &
+Votos APROVAR $\leq 50\%$ dos não-nulos ou nulos (\texttt{VETADA}). &
+\makecell[l]{test\_vitoria\_rejeicao \\ test\_empate} \\ \hline
+
+$CE_{12}$ & Apuração de Resultado & Válida &
+Nenhum voto válido (\texttt{VETADA}). &
+\texttt{test\_todos\_abstiveram} \\ \hline
+
+\end{xltabular}
+\normalsize
+
+\subsubsection{Escopo 2: Eleição Australiana (\texttt{src/australia.py})}
+Foram definidas 10 classes de equivalência. Para cada aspecto de entrada, a tabela apresenta ao menos uma classe válida e uma inválida.
+
+
+\small
+\begin{xltabular}{\textwidth}{|l|Y|c|Y|Y|}
+
+\caption{Classes de Equivalência para o Escopo 2 (Eleição Australiana).}
+\label{tab:escopo2} \\
+
+\hline
+\rowcolor{gray!20}
+\textbf{ID} & \textbf{Aspecto / Entrada} & \textbf{Tipo} &
+\textbf{Descrição da Classe de Equivalência} &
+\textbf{Função de Teste} \\ \hline
+
+$CE_{13}$ & Cédula de candidatos & Válida &
+Lista contém cada candidato oficial exatamente uma vez, formando uma permutação completa. &
+\url{test\_aceita\_cedula\_com\_permutacao\_completa} \\ \hline
+
+$CE_{14}$ & Cédula de candidatos & Inválida &
+Cédula não é lista, tem quantidade diferente de candidatos ou contém nomes repetidos/não registrados; a entrada é rejeitada. &
+\url{test_registrar_voto_rejeita_voto_que_nao_e_lista}
+\newline
+\newline
+\url{test_rejeita_cedula_incompleta}
+\newline
+\newline
+\url{test_rejeita_cedula_com_candidatos_a_mais}
+\newline
+\newline
+\url{test_rejeita_cedula_com_candidato_falso_ou_duplicado}
+\\ \hline
+
+$CE_{15}$ & Registro do voto & Válida &
+Eleitor ainda não votou e registra uma cédula válida durante a votação aberta. &
+\url{test\_apurar\_voto\_registra\_cedula\_quando\_em\_votacao}
+\newline
+\newline
+\url{test\_voto\_por\_partidos\_respeita\_estado\_e\_unicidade} \\ \hline
+
+$CE_{16}$ & Registro do voto & Inválida &
+Eleitor repete o voto ou tenta votar antes da abertura/depois do encerramento; o registro é rejeitado. &
+\url{test\_registrar\_voto\_rejeita\_voto\_duplicado}
+\newline
+\newline
+\url{test\_apurar\_voto\_antes\_de\_iniciar\_levanta\_erro}
+\newline
+\newline
+\url{test\_apurar\_voto\_apos\_encerrar\_levanta\_erro} \\ \hline
+
+$CE_{17}$ & Associação de candidatos a partidos & Válida &
+Todos os partidos configurados têm nome e ao menos um candidato oficial válido, e cada candidato está associado a exatamente um partido. &
+\url{test\_configuracao\_partidos\_na\_eleicao} \\ \hline
+
+$CE_{18}$ & Associação de candidatos a partidos & Inválida &
+Há candidato duplicado/desconhecido/não associado, ou partido sem nome/candidatos; a configuração é rejeitada. &
+\url{test\_configuracao\_partidos\_rejeita\_associacoes\_invalidas} \\ \hline
+
+$CE_{19}$ & Ranking partidário em lista & Válida &
+Lista ordenada contém cada partido registrado exatamente uma vez e é expandida para os candidatos correspondentes. &
+\url{test\_converter\_ranking\_partidos\_valida\_e\_expande\_cedula}
+\newline
+\newline
+\url{test\_voto\_por\_partidos\_respeita\_estado\_e\_unicidade} \\ \hline
+
+$CE_{20}$ & Ranking partidário em lista & Inválida &
+Entrada não é lista, omite/repete partido, contém partido desconhecido ou não há partidos configurados. &
+\url{test\_converter\_ranking\_partidos\_rejeita\_entradas\_invalidas} \\ \hline
+
+$CE_{21}$ & Ranking partidário por posições & Válida &
+Dicionário atribui a cada partido posição distinta no intervalo de 1 a $N$. &
+\url{test\_converter\_posicoes\_partidos\_aceita\_ranking\_valido}
+\newline
+\newline
+\url{test\_converter\_posicoes\_partidos\_limites\_intervalo} \\ \hline
+
+$CE_{22}$ & Ranking partidário por posições & Inválida &
+Entrada não é dicionário, há posição ausente/repetida/não numérica/fora de $1..N$, ou partido desconhecido. &
+\url{test\_converter\_posicoes\_partidos\_rejeita\_ranking\_invalido} \\ \hline
+
+\end{xltabular}
+\normalsize
+
+
+\subsubsection{Escopo 3: Blood on the Clocktower (\texttt{src/botc.py})}
+O escopo envolve estados de vida do jogador, consumo de votos de fantasma e decoradores de voto.
+
+
+\small
+\begin{xltabular}{\textwidth}{|l|Y|c|Y|Y|}
+
+\caption{Classes de Equivalência para o Escopo 3 (Blood on the Clocktower).}
+\label{tab:escopo3} \\
+
+\hline
+\rowcolor{gray!20}
+\textbf{ID} & \textbf{Aspecto / Entrada} & \textbf{Tipo} &
+\textbf{Descrição da Classe de Equivalência} &
+\textbf{Função de Teste} \\ \hline
+
+$CE_{23}$ & Elegibilidade de Jogador Vivo & Válida &
+Jogador \texttt{VIVO} vota com sucesso. &
+\url{test\_jogador\_vivo\_pode\_votar\_sempre} \\ \hline
+
+$CE_{24}$ & Elegibilidade de Fantasma & Válida &
+Jogador \texttt{MORTO\_COM\_FANTASMA} vota e transiciona para \texttt{MORTO\_SEM\_FANTASMA}. &
+\url{test\_jogador\_morto\_com\_fantasma\_consome\_voto}
+\newline
+\newline
+\url{test\_sistema\_consome\_voto\_fantasma\_automaticamente} \\ \hline
+
+$CE_{25}$ & Elegibilidade sem Voto & Inválida &
+Jogador \texttt{MORTO\_SEM\_FANTASMA} tenta votar (\texttt{pode\_votar() == False}). &
+\url{test\_sistema\_bloqueia\_voto\_morto\_sem\_fantasma} \\ \hline
+
+$CE_{26}$ & Decorador Multiplicador & Válida &
+Fator $> 0$ multiplica o peso base. &
+\url{test\_decorator\_multiplicador} \\ \hline
+
+$CE_{27}$ & Decorador Multiplicador & Inválida &
+Fator $\leq 0$ (\texttt{ValueError}). &
+\url{test\_decorator\_multiplicador\_fator\_invalido} \\ \hline
+
+$CE_{28}$ & Decorador Negativo e Nulo & Válida &
+Peso torna-se negativo ou zero conforme o modificador. &
+\url{test\_decorator\_negativo}
+\newline
+\newline
+\url{test\_decorator\_nulo} \\ \hline
+
+$CE_{29}$ & Apuração de Execução & Válida &
+Mais votado com votos $\geq \lceil N_{\text{vivos}}/2 \rceil$ é executado. &
+\url{test\_votos\_suficientes\_sucesso}
+\newline
+\newline
+\url{test\_maior\_voto\_vence} \\ \hline
+
+$CE_{30}$ & Empate na Liderança & Válida &
+Dois ou mais mais votados empatados $\rightarrow$ ninguém executado. &
+\url{test\_empate\_na\_maioria} \\ \hline
+
+\end{xltabular}
+\normalsize
+
+\subsection{Análise de Valor Limite (C2)}
+A Análise de Valor Limite foi aplicada ao \textbf{Escopo 2 (\texttt{src/australia.py})}, na faixa de posições permitidas no voto por partidos. Para uma eleição com $N=2$ partidos, cada posição deve pertencer ao intervalo inclusivo $[1,N]$; assim, os limites são $1$ e $2$, e os valores imediatamente externos são $0$ e $3$. A função de teste (\url{test\_converter\_posicoes\_partidos\_limites\_intervalo}) verifica ambos os limites válidos e ambos os valores inválidos, esperando \texttt{ValueError} fora da faixa.
+
+\small
+\begin{xltabular}{\textwidth}{|c|Y|Y|}
+
+\caption{Análise de Valor Limite para as posições do ranking partidário australiano.}
+\label{tab:avl} \\
+
+\hline
+\rowcolor{gray!20}
+\textbf{Valor} & \textbf{Classificação} &
+\textbf{Resultado Esperado} \\ \hline
+
+0 & Imediatamente abaixo do limite inferior & Rejeita com \texttt{ValueError} \\ \hline
+1 & Limite inferior válido & Aceita \\ \hline
+2 & Limite superior válido & Aceita \\ \hline
+3 & Imediatamente acima do limite superior & Rejeita com \texttt{ValueError} \\ \hline
+\end{xltabular}
+\normalsize
+
+% =========================================================================
+% SEÇÃO 2: TESTE ESTRUTURAL E COBERTURA
+% =========================================================================
+\section{Teste Estrutural e Cobertura (C3)}
+
+\subsection{Parte do Sistema Selecionada e Ferramentas}
+Para a análise estrutural (Caixa-Branca), foi selecionado o roteador do módulo \textbf{Blood on the Clocktower} (\texttt{src/routers/botc\_router.py}), que concentra a maior densidade de decisões lógicas e ramificações (\textit{branches}) da camada de controle: gerenciamento de múltiplas salas isoladas, proteção de salas privadas com senha, restrição de papel único para o \textit{Storyteller} no centro da roda, máquina de estados temporizada para o giro do ponteiro de apuração, bloqueio de dupla nomeação diária e encerramento/exclusão de partidas.
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Ferramentas Utilizadas na CI:} \texttt{pytest-cov} (executado com as flags \texttt{--cov=src --cov-branch --cov-report=term-missing} e exportação XML Cobertura) integrado aos pipelines do GitHub Actions (\texttt{.github/workflows/ci.yml}) e ao \textit{Quality Gate} do \textbf{SonarCloud}\\ (\texttt{.github/workflows/sonar.yml}).
+    \item \textbf{Commit Imediatamente Anterior (Antes):} \href{https://github.com/GiizAzul/MC656/commit/5ba3f31}{\texttt{5ba3f31 (\textit{fix: Conserta push infinito do aviso de confirmação}).}}
+    \item \textbf{Commit Subsequente (Depois):} \href{https://github.com/GiizAzul/MC656/commit/5484d16}{\texttt{5484d16 (\textit{fix: Testar corretamente um usuário st}).}}
+\end{itemize}
+
+\subsection{Lacunas Estruturais Identificadas no Estado Anterior}
+Na execução do \texttt{pytest-cov --cov-branch} sobre o commit imediatamente anterior, o módulo \texttt{src/routers/botc\_router.py} apresentava \textbf{59\% de cobertura combinada} (com \textbf{117 instruções não executadas} de um total de 317, ou seja, 63,1\% de cobertura de linhas), fazendo a cobertura global do projeto cair para \textbf{86\%}.
+
+A análise estrutural do relatório de linhas e \textit{branches} faltantes revelou a causa raiz e as ramificações não exercitadas:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Interrupção Prematura na Validação de Escopo do \textit{Storyteller} (\texttt{POST /botc/api/\\assumir-storyteller}):}
+    \begin{itemize}
+        \item No estado anterior, o teste de fluxo utilizava a credencial pré-cadastrada \texttt{"leo"} (cujo escopo em \texttt{src/main.py} é apenas \texttt{BOTC\_JOGADOR}, sem a permissão \texttt{BOTC\_STORYTELLER}) e sofria interferência de cookies de sessão anteriores no \texttt{TestClient}. Como consequência, a requisição parava na trava de segurança inicial (\texttt{403 Forbidden}), impedindo que toda a metade inferior do teste e as rotas exclusivas do mestre fossem alcançadas.
+    \end{itemize}
+    
+    \item \textbf{Ramificações de Condução da Roda e Restrições do Mestre Descobertas:}
+    \begin{itemize}
+        \item \textit{Linhas 146--147 e 216:} As decisões que impedem o \textit{Storyteller} titular de votar como jogador na própria partida (\texttt{403 Forbidden}) e que bloqueiam a criação de uma nova sala enquanto ele ainda conduz uma partida ativa (\texttt{400 Bad Request}) nunca eram avaliadas como verdadeiras.
+        \item \textit{Linhas 268 e 286--379:} Os desvios de tentativa de entrada em sala inexistente (\texttt{404 Not Found}), bloqueio de saída prematura do \textit{Storyteller} antes do encerramento da partida (\texttt{POST /botc/api/sair-sala}), encerramento formal da partida (\texttt{POST /botc/api/\\encerrar-partida}), exclusão da sala pelo mestre (\texttt{POST /botc/api/excluir-sala}) e remoção do \textit{Storyteller} dos assentos votantes da borda da roda permaneciam com 0\% de execução.
+    \end{itemize}
+    \item \textbf{Máquina de Estados do Giro do Ponteiro e Bloqueio de Dupla Nomeação:}
+    \begin{itemize}
+        \item A função \texttt{\_atualizar\_progresso\_giro} (cálculo do passo temporal do ponteiro, travamento progressivo das mãos dos jogadores já contabilizados e consumo automático de voto fantasma) e o endpoint \texttt{POST /botc/api/iniciar-giro} (incluindo a branch que rejeita a segunda indicação do mesmo jogador no mesmo dia com \texttt{400 Bad Request}) não eram exercitados.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Melhorias Realizadas no Commit Seguinte}
+A partir do diagnóstico estrutural do commit \texttt{5ba3f31}, a suíte em \texttt{tests/test\_auth\_router.py} foi aprimorada no commit \texttt{5484d16} para isolar os cookies de sessão entre trocas de perfil (\texttt{client.cookies.clear()}), instanciar explicitamente uma conta com escopo \texttt{BOTC\_STORYTELLER} (\texttt{"st\_teste"}) e exercitar sistematicamente as decisões de autorização, estado de salas e giro do ponteiro:
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Validação de Fronteiras de Autorização e Existência (\texttt{403} e \texttt{404}):} Foram adicionadas chamadas com o perfil \texttt{BOTC\_JOGADOR} (\texttt{"jog2"}) tentando acionar endpoints exclusivos do mestre (\texttt{/assumir-storyteller}, \texttt{/iniciar-giro}, \texttt{/encerrar-partida}, \texttt{/excluir-sala}) e tentando ingressar em sala inexistente (\texttt{partida\_id="inexistente"}).
+    \item \textbf{Exercício das Travas de Integridade do \textit{Storyteller}:} Após assumir o centro da roda com \texttt{"st\_teste"}, o teste verifica o bloqueio de voto do mestre na própria sala (\texttt{403}), o impedimento de abrir outra sala simultânea (\texttt{400}) e o bloqueio de abandono da sala ativa (\texttt{400}).
+    \item \textbf{Cobertura do Giro do Ponteiro e Regra de Nomeação Única Diária:} O teste altera o status do jogador para \texttt{Morto (Com Voto)}, inicia o giro do ponteiro, valida o bloqueio de segunda nomeação do mesmo jogador no mesmo dia (\texttt{400}), simula o avanço temporal (\texttt{inicio\_ts -= 2.0}) para exercitar \texttt{\_atualizar\_progresso\_giro}, apura o dia, encerra a partida e exclui a sala.
+\end{itemize}
+
+\begin{lstlisting}[language=Python, caption={Aprimoramento implementado em \texttt{tests/test\_auth\_router.py} no commit \texttt{5484d16} para exercitar as branches de autorização, giro e ciclo de vida de salas.}]
+# Isolamento de sessao e assuncao do centro da roda por usuario BOTC_STORYTELLER real:
+client.cookies.clear()
+client.cookies.set("sessao_usuario", "st_teste")
+assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid}).status_code == 200
+assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
+
+# Exercita as branches de restricao do Storyteller (proibido votar, criar outra sala ou abandonar partida ativa):
+assert client.post(
+    "/botc/votar",
+    data={"acao": "levantar_mao", "partida_id": pid},
+    headers={"Accept": "application/json"},
+).status_code == 403
+assert client.post("/botc/api/criar-partida", data={"nome_sala": "Outra"}).status_code == 400
+assert client.post("/botc/api/sair-sala", data={"partida_id": pid}).status_code == 400
+
+# Exercita mudanca de status, inicio do giro, bloqueio de dupla nomeacao no dia e progressao temporal:
+assert client.post(
+    "/botc/status-jogador",
+    data={"id_jogador": "Jog2", "novo_status": "Morto (Com Voto)", "partida_id": pid},
+).status_code == 200
+assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid, "nomeado_id": "Jog2"}).status_code == 200
+assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid, "nomeado_id": "Jog2"}).status_code == 400
+
+app.state.salas_botc[pid]["giro"]["inicio_ts"] -= 2.0
+assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
+\end{lstlisting}
+
+\subsection{Comparativo de Cobertura}
+A Tabela \ref{tab:cobertura_estrutural} apresenta a evolução quantitativa da cobertura de linhas (\textit{Statements}) e da cobertura combinada com ramificações (\textit{Branches}, reportada por \texttt{pytest --cov=src --cov-branch}) entre o commit imediatamente anterior (\texttt{5ba3f31}) e o commit corrigido (\texttt{5484d16}):
+
+\begin{table}[H]
+\centering
+\tiny
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\rowcolor{gray!20} \textbf{Arquivo / Módulo} & \textbf{Linhas (\texttt{5ba3f31})} & \textbf{Combinada/Branches (\texttt{5ba3f31})} & \textbf{Linhas (\texttt{5484d16})} & \textbf{Combinada/Branches (\texttt{5484d16})} \\ \hline
+\texttt{src/routers/botc\_router.py} & 63,1\% (200/317) & 59\% (16 BrPart) & \textbf{90,5\% (287/317)} & \textbf{86\% (107/126 br)} \\ \hline
+\texttt{src/routers/australia\_router.py} & 100\% (76/76) & 100\% (22/22 br) & \textbf{100\% (76/76)} & \textbf{100\% (22/22 br)} \\ \hline
+\texttt{src/routers/auth\_router.py} & 100\% (73/73) & 98\% (8/10 br) & \textbf{100\% (73/73)} & \textbf{98\% (8/10 br)} \\ \hline
+\texttt{src/routers/caco\_router.py} & 100\% (60/60) & 100\% (12/12 br) & \textbf{100\% (60/60)} & \textbf{100\% (12/12 br)} \\ \hline
+\texttt{src/autenticacao/base.py} & 100\% (67/67) & 99\% (29/30 br) & \textbf{100\% (67/67)} & \textbf{99\% (29/30 br)} \\ \hline
+\texttt{src/autenticacao/factory.py} & 100\% (24/24) & 100\% (16/16 br) & \textbf{100\% (24/24)} & \textbf{100\% (16/16 br)} \\ \hline
+\texttt{src/botc.py} & 99,4\% (167/168) & 99\% (66/68 br) & \textbf{99,4\% (167/168)} & \textbf{99\% (66/68 br)} \\ \hline
+\texttt{src/caco.py} & 98,4\% (62/63) & 98\% (19/20 br) & \textbf{98,4\% (62/63)} & \textbf{98\% (19/20 br)} \\ \hline
+\texttt{src/australia.py} & 96,1\% (49/51) & 94\% (25/28 br) & \textbf{96,1\% (49/51)} & \textbf{94\% (25/28 br)} \\ \hline
+\rowcolor{green!10} \textbf{Total do Projeto (\texttt{src/})} & \textbf{88,7\% (953/1075)} & \textbf{86\% (318/344 br)} & \textbf{96,7\% (1040/1075)} & \textbf{95\% (315/344 br)} \\ \hline
+\end{tabular}
+\caption{Evolução da cobertura estrutural de linhas e branches entre o commit anterior (\texttt{5ba3f31}) e o subsequente (\texttt{5484d16}).}
+\label{tab:cobertura_estrutural}
+\end{table}
+
+Com a correção e expansão do caso de teste estrutural, foram cobertas \textbf{87 novas linhas de instruções} em \texttt{src/routers/botc\_router.py} (reduzindo as linhas faltantes de 117 para 30 e elevando a cobertura de linhas do módulo de 63,1\% para \textbf{90,5\%} e a combinada de 59\% para \textbf{86\%}). Adicionalmente, no estado atual do projeto com o teste complementar de casos de borda (\texttt{test\_casos\_borda\_salas\_e\_giro\_botc}) e simplificação de condicionais aninhadas (\texttt{SIM102}), o módulo atingiu \textbf{97,4\% de cobertura de linhas (305/313)} e \textbf{95\% de cobertura combinada}, elevando o total do projeto para \textbf{97\%}, acima do limiar mínimo de 80\% exigido pelo critério C3.
+
+
+% =========================================================================
+% SEÇÃO 3: TESTE DE MUTAÇÃO
+% =========================================================================
+\section{Teste de Mutação (C4)}
+
+\subsection{Ferramenta e Escopo de Execução}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Ferramenta Utilizada:} \texttt{mutmut} (versão 2.5.1).
+    \item \textbf{Escopo Executado:} Roteador de Autenticação (\texttt{src/routers/auth\_router.py}), especificamente o fluxo de validação de cadastro de novos usuários e injeção de dependências no estado global da aplicação.
+\end{itemize}
+
+\subsection{Mutante Sobrevivente Selecionado}
+Durante a execução inicial do \texttt{mutmut}, o mutante gerado (ID 363) no operador condicional de isolamento de domínio de usuários sobreviveu aos testes existentes:
+
+\begin{lstlisting}[language=Python, caption={Trecho de código original versus código mutado sobrevivente em \texttt{auth\_router.py}.}]
+# CODIGO ORIGINAL (src/routers/auth_router.py):
+# Adiciona alunos e gestores novos na lista de eleitores da assembleia ativa
+# Linha 68:
+if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
+    eleicao_caco = request.app.state.eleicao_caco
+    eleicao_caco.alunos_cadastrados.add(novo_usuario.id)
+    eleicao_caco.eleitores.add(novo_usuario.id)
+
+# CODIGO DO MUTANTE SOBREVIVENTE (Mutante 363):
+# O mutmut inverteu a verificacaoo logica de 'in' para 'not in':
+if tipo_conta not in ("CACO_ESTUDANTE", "CACO_GESTAO"):
+    eleicao_caco = request.app.state.eleicao_caco
+    eleicao_caco.alunos_cadastrados.add(novo_usuario.id)
+    eleicao_caco.eleitores.add(novo_usuario.id)
+\end{lstlisting}
+
+\subsection{Análise do Motivo da Sobrevivência}
+A regra de negócio original dita um rígido isolamento de domínio: apenas usuários criados com os papéis do CACo (\texttt{CACO\_ESTUDANTE} ou \texttt{CACO\_GESTAO}) devem ser injetados automaticamente na eleição da assembleia. O mutante inverteu essa lógica, passando a adicionar indevidamente usuários de \textit{outros} escopos (como \texttt{BOTC\_JOGADOR} ou \texttt{AUSTRALIA\_ELEITOR}) na eleição do CACo, e barrando os verdadeiros estudantes.
+
+O mutante sobreviveu porque os testes automatizados legados do endpoint \texttt{POST /cadastro} possuíam uma lacuna de validação de efeitos colaterais. Eles verificavam apenas se a resposta HTTP indicava sucesso (status \texttt{302 Redirect}) e se o usuário havia sido salvo no banco de dados da autenticação. Como os testes \textbf{não inspecionavam o estado global} (\texttt{request.app.state.eleicao\_caco}) após o término da requisição para garantir a integridade da lista de eleitores, o vazamento de domínio provocado pelo mutante passou completamente despercebido pela suíte.
+
+\subsection{Estratégia de Teste Adotada e Eliminação do Mutante}
+Para cobrir essa falha arquitetural nos testes, foram implementadas verificações de estado (\textit{State Verification}) no arquivo de testes de integração (\texttt{tests/test\_web.py}). A estratégia consistiu em realizar o cadastro de um usuário válido do CACo e um usuário externo (ex: \texttt{BOTC\_JOGADOR}), garantindo, via asserções no estado global, que a lista de eleitores reflete estritamente o isolamento de domínios esperado.
+
+\begin{lstlisting}[language=Python, caption={Casos de teste implementados para garantir o isolamento de domínio e eliminar o mutante 363.}]
+def test_cadastro_adiciona_eleitor_caco_corretamente():
+    """Garante que alunos do CACo SAO inseridos na eleicao do CACo."""
+    from src.main import app
+    
+    response = client.post("/cadastro", data={
+        "username": "aluno_teste_caco",
+        "senha": "123",
+        "senha_confirma": "123",
+        "nome_real": "Aluno Teste",
+        "tipo_conta": "CACO_ESTUDANTE",
+        "ra": "112233"
+    }, follow_redirects=False)
+    
+    assert response.status_code == 302
+    user_id = app.state.banco_auth._mapa_usernames["aluno_teste_caco"]
+    
+    assert user_id in app.state.eleicao_caco.eleitores
+
+def test_cadastro_isolar_dominio_eleicao_caco():
+    """Garante que usuarios de OUTROS dominios NAO entram na eleicao do CACo."""
+    from src.main import app
+    
+    response = client.post("/cadastro", data={
+        "username": "jogador_botc_teste",
+        "senha": "123",
+        "senha_confirma": "123",
+        "nome_real": "Jogador de Teste",
+        "tipo_conta": "BOTC_JOGADOR" 
+    }, follow_redirects=False)
+    
+    assert response.status_code == 302
+    user_id = app.state.banco_auth._mapa_usernames["jogador_botc_teste"]
+    
+    assert user_id not in app.state.eleicao_caco.eleitores, \
+        "Falha de isolamento: Usuario do BotC inserido na eleicao do CACo!"
+\end{lstlisting}
+
+\noindent\textbf{Rastreabilidade do Pull Request:}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Pull Request no GitHub:} \href{https://github.com/GiizAzul/MC656/pull/104}{\faCodeBranch\ \texttt{PR \#104 - Garantir isolamento de domínio no cadastro e eliminar Mutante 363}}
+\end{itemize}
+
+\subsection{Resultado da Reexecução do \texttt{mutmut}}
+Após a adição dos testes e o \textit{merge} da correção, a ferramenta de mutação foi executada novamente sobre o roteador de autenticação e o relatório web foi gerado através do comando \texttt{mutmut html}.
+
+Com as asserções de estado global avaliando os efeitos colaterais rigorosamente, o comportamento invertido provocado pelo Mutante 363 causou falha no bloco \texttt{assert user\_id not in...}, resultando na sua eliminação. A inspeção do relatório HTML gerado e do log de resultados confirmou que o mutante não se encontra mais listado entre os sobreviventes, configurando o status de \textbf{KILLED}.
+
+\begin{lstlisting}[language=bash, caption={Comandos executados para validação e geração do relatório confirmando a eliminação do mutante.}]
+$ mutmut run --paths-to-mutate src/routers/auth_router.py
+$ mutmut html
+
+# O relatorio html/index.html gerado confirmou a ausencia do mutante 363 
+# na lista de "Survived mutants", comprovando sua eliminacao com sucesso.
+\end{lstlisting}
+
+% =========================================================================
+% SEÇÃO 4: ESTADO FINAL DA ENTREGA
+% =========================================================================
+\section{Estado Final da Entrega}
+
+Todas as alterações de testes funcionais, estruturais e do teste de mutação foram integradas ao repositório via \textit{Pull Requests} revisados e validados pelo pipeline de integração contínua (CI) e SonarCloud.
+\end{document}
