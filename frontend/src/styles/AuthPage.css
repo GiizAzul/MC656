@@ -9,7 +9,7 @@
 .auth-card {
   background: var(--surface);
   width: 100%;
-  max-width: 460px;
+  max-width: 500px;
   padding: 2.25rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
