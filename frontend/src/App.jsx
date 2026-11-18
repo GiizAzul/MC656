@@ -40,6 +40,10 @@ export default function App() {
     }
   }, []);
 
+  const limparSessaoLocal = useCallback(() => {
+    setUsuario(null);
+  }, []);
+
   useEffect(() => {
     carregarSessao();
   }, [carregarSessao]);
@@ -56,8 +60,8 @@ export default function App() {
       />
       <main className="app-shell">
         <Routes>
-          <Route path="/" element={<LoginPage onLoginSuccess={carregarSessao} />} />
-          <Route path="/cadastro" element={<CadastroPage onAuthSuccess={carregarSessao} />} />
+          <Route path="/" element={<LoginPage onLoginSuccess={carregarSessao} onLogout={limparSessaoLocal} />} />
+          <Route path="/cadastro" element={<CadastroPage onAuthSuccess={carregarSessao} onLogout={limparSessaoLocal} />} />
           <Route
             path="/dashboard"
             element={
