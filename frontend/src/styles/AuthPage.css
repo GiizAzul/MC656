@@ -60,9 +60,10 @@
 }
 
 .ra-collapse-box {
-  background-color: #f8fafc;
+  background-color: var(--surface-alt);
+  border: 1px solid var(--border-color);
   border-left: 4px solid var(--caco-purple);
-  padding: 0.85rem;
+  padding: 0.95rem;
   border-radius: 8px;
   margin-bottom: 1.15rem;
 }
