@@ -1,15 +1,15 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from src.australia import EleicaoAustralia
-from src.autenticacao.australia import EleitorAustralia
+from src.autenticacao.australia import EleitorAustralia, GestaoAustralia
 from src.autenticacao.base import ServicoAutenticacao
-from src.autenticacao.botc import JogadorBOTC
-from src.autenticacao.caco import GestaoCACo
+from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
+from src.autenticacao.caco import GestaoCACo, EstudanteCACo
 from src.botc import SistemaEleitoralBotC
 from src.caco import EleicaoAssembleia
 from src.routers import australia_router, auth_router, botc_router, caco_router
@@ -26,6 +26,10 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Configuração do Frontend com caminhos absolutos
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
+if (FRONTEND_DIST / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="react_assets")
+
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # --- INICIALIZAÇÃO DO BANCO EM MEMÓRIA ---
@@ -64,6 +68,7 @@ app.state.eleitores_caco_votaram = set()
 # Cria a partida do BoTC
 sistema_botc = SistemaEleitoralBotC(jogadores_vivos=10)
 app.state.sistema_botc = sistema_botc
+app.state.maos_botc = {}
 
 # Registro dos controladores
 app.include_router(auth_router.router)
@@ -71,11 +76,26 @@ app.include_router(australia_router.router)
 app.include_router(botc_router.router)
 app.include_router(caco_router.router)
 
-@app.get("/")
+@app.middleware("http")
+async def servir_spa_react_em_producao(request: Request, call_next):
+    """Serve o frontend React em produção no Render quando o navegador pede uma página HTML.
+    """
+    is_test_client = request.headers.get("user-agent", "").startswith("testclient")
+    accepts_html = "text/html" in request.headers.get("accept", "")
+    path = request.url.path
+
+    if (
+        not is_test_client
+        and request.method == "GET"
+        and accepts_html
+        and not path.startswith(("/api", "/botc/api", "/australia/api", "/caco/api", "/static", "/assets", "/logout"))
+        and (FRONTEND_DIST / "index.html").exists()
+    ):
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+    return await call_next(request)
+
+@app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     # Redireciona a raiz direto para o login
     return templates.TemplateResponse(request=request, name="login.html", context={})
-    
-FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-if FRONTEND_DIST.exists():
-    app.mount("/app", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="react_app")
