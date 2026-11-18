@@ -1,15 +1,15 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from src.australia import EleicaoAustralia
-from src.autenticacao.australia import EleitorAustralia, GestaoAustralia
+from src.autenticacao.australia import EleitorAustralia
 from src.autenticacao.base import ServicoAutenticacao
-from src.autenticacao.botc import JogadorBOTC, StoryTellerBOTC
-from src.autenticacao.caco import GestaoCACo, EstudanteCACo
+from src.autenticacao.botc import JogadorBOTC
+from src.autenticacao.caco import GestaoCACo
 from src.botc import SistemaEleitoralBotC
 from src.caco import EleicaoAssembleia
 from src.routers import australia_router, auth_router, botc_router, caco_router
