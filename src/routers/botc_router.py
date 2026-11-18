@@ -310,7 +310,15 @@ async def sair_da_sala_botc(
     sistema.jogadores.pop(usuario.id, None)
     sistema.jogadores.pop(usuario.username, None)
     sistema.jogadores.pop(usuario.nome_real, None)
-    sala["maos"].pop(usuario.username, None)
+    # Remove o estado de mão levantada
+    for chave_mao in (usuario.username, usuario.nome_real, usuario.id):
+      sala["maos"].pop(chave_mao, None)
+      if hasattr(request.app.state, "maos_botc"):
+          request.app.state.maos_botc.pop(chave_mao, None)
+    sala["giro"].get("trancados", {}).pop(usuario.id, None)
+    sala["giro"].get("trancados_nomes", set()).discard(usuario.nome_real)
+    sala["giro"].get("trancados_nomes", set()).discard(usuario.username)
+
     sala.get("autorizados", set()).discard(usuario.id)
 
     if sala["storyteller_id"] == usuario.id:
