@@ -6,10 +6,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from src.australia import EleicaoAustralia
-from src.autenticacao.australia import EleitorAustralia
+from src.autenticacao.australia import EleitorAustralia, CandidatoAustralia, GestaoAustralia
 from src.autenticacao.base import ServicoAutenticacao
-from src.autenticacao.botc import JogadorBOTC
-from src.autenticacao.caco import GestaoCACo
+from src.autenticacao.botc import JogadorBOTC, StorytellerBOTC
+from src.autenticacao.caco import EstudanteCACo, GestaoCACo
 from src.botc import SistemaEleitoralBotC
 from src.caco import EleicaoAssembleia
 from src.routers import australia_router, auth_router, botc_router, caco_router
