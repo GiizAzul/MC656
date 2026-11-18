@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/AuthPage.css';
 
 export default function CadastroPage({ onAuthSuccess }) {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch('/logout', { method: 'GET' }).catch(() => {});
+    if (onLogout) onLogout();
+  }, [onLogout]);
+
   const [tipoConta, setTipoConta] = useState('AUSTRALIA_ELEITOR');
   const [nomeReal, setNomeReal] = useState('');
   const [username, setUsername] = useState('');
