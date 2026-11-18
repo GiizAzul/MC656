@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState,  useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/AuthPage.css';
 
-export default function LoginPage({ onLoginSuccess }) {
+export default function LoginPage({ onLoginSuccess, onLogout }) {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
+
+  useEffect(() => {
+    fetch('/logout', { method: 'GET' }).catch(() => {});
+    if (onLogout) onLogout();
+  }, [onLogout]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
