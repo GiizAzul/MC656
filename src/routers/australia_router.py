@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
@@ -170,13 +170,49 @@ async def estado_australia_json(
     request: Request,
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
 ):
-    from fastapi.responses import JSONResponse
-
     eleicao = request.app.state.eleicao_australia
+    vencedor = None
+    if eleicao.estado.nome == "ENCERRADO" and eleicao.cedulas:
+        try:
+            vencedor = eleicao.apurar_vencedor()
+        except ValueError:
+            vencedor = None
+            
     return JSONResponse({
         "candidatos": list(eleicao.candidatos),
+        "partidos": getattr(eleicao, "partidos_candidatos", {}),
         "estado_eleicao": eleicao.estado.nome,
         "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
+        "pode_votar": "AUSTRALIA_ELEITOR" in usuario.escopo,
         "ja_votou": usuario.id in request.app.state.eleitores_australia_votaram,
         "total_votos": len(eleicao.cedulas),
+        "vencedor": vencedor,
     })
+
+@router.post("/api/votar-partidos")
+async def processar_voto_partidos_api(
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+):
+    from fastapi.responses import JSONResponse
+
+    if "AUSTRALIA_ELEITOR" not in usuario.escopo:
+        return JSONResponse({"erro": "Sem permissão no escopo AUSTRALIA."}, status_code=403)
+
+    eleicao = request.app.state.eleicao_australia
+    if usuario.id in request.app.state.eleitores_australia_votaram:
+        return JSONResponse({"erro": "Você já registrou seu voto nesta eleição."}, status_code=400)
+
+    payload = await request.json()
+    ranking_partidos = payload.get("ranking_partidos", [])
+
+    try:
+        eleicao.apurar_voto_partidos(usuario.id, ranking_partidos)
+        request.app.state.eleitores_australia_votaram.add(usuario.id)
+        return JSONResponse({
+            "status": "ok",
+            "mensagem": "Voto por ranking de partidos registrado com sucesso!",
+            "total_votos": len(eleicao.cedulas),
+        })
+    except (RuntimeError, ValueError) as exc:
+        return JSONResponse({"erro": str(exc)}, status_code=400)
