@@ -5,21 +5,24 @@ import '../styles/AuthPage.css';
 export default function CadastroPage({ onAuthSuccess }) {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      try {
-        await fetch('/logout', { method: 'GET', credentials: 'include' });
-      } catch {
-        // ignora falha de rede
-      }
-      if (ativo && onLogout) onLogout();
-    })();
-    return () => {
-      ativo = false;
-    };
-  }, [onLogout]);
-
+  // useEffect(() => {
+  //   let ativo = true;
+  //   (async () => {
+  //     try {
+  //       await fetch('/logout', { method: 'GET', credentials: 'include' });
+  //     } catch {
+  //       // ignora falha de rede
+  //     }
+  //     if (ativo && onLogout) onLogout();
+  //   })();
+  //   return () => {
+  //     ativo = false;
+  //   };
+  // }, [onLogout]);
+  // useEffect(() => {
+  //   if (onLogout) onLogout();
+  //   fetch('/logout', { method: 'GET', credentials: 'include' }).catch(() => {});
+  // }, [onLogout]);
   const [tipoConta, setTipoConta] = useState('AUSTRALIA_ELEITOR');
   const [nomeReal, setNomeReal] = useState('');
   const [username, setUsername] = useState('');

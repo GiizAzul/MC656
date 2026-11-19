@@ -60,7 +60,7 @@ export default function CACoPage({ usuario }) {
   return (
     <div className="caco-container">
       <div className="caco-header">
-        <h1>🏛️ Assembleia Geral do CACo</h1>
+        <h1>🐸 Assembleia Geral do CACo</h1>
         <p>Pauta: Aprovação do novo estatuto de representação discente.</p>
       </div>
 

@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import '../styles/AustraliaPage.css';
 
 export default function AustraliaPage() {
+  const [modoVotacao, setModoVotacao] = useState('candidatos');
+  const [partidosMap, setPartidosMap] = useState({});
+  const [ordemPartidos, setOrdemPartidos] = useState([]);
+
   const [candidatos, setCandidatos] = useState([]);
   const [estadoEleicao, setEstadoEleicao] = useState('AGUARDANDO');
   const [isGestao, setIsGestao] = useState(false);
@@ -19,6 +23,9 @@ export default function AustraliaPage() {
       const res = await fetch('/australia/api/estado');
       if (res.ok) {
         const data = await res.json();
+        setPartidosMap(data.partidos || {});
+        const nomesPartidos = Object.keys(data.partidos || {});
+        setOrdemPartidos((prev) => (prev.length === 0 ? nomesPartidos : prev));
         setCandidatos((prev) => (prev.length === 0 ? data.candidatos : prev));
         setEstadoEleicao(data.estado_eleicao);
         setIsGestao(data.is_gestao);
@@ -33,7 +40,25 @@ export default function AustraliaPage() {
   useEffect(() => {
     carregarEstadoAustralia();
   }, [carregarEstadoAustralia]);
-
+  
+  const submeterVotoPorPartidos = async (e) => {
+    e.preventDefault();
+    setErro('');
+    setMensagemSucesso('');
+    const res = await fetch('/australia/api/votar-partidos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ranking_partidos: ordemPartidos }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMensagemSucesso(`🎉 ${data.mensagem}`);
+      await carregarEstadoAustralia();
+    } else {
+      setErro(data.erro || 'Não foi possível registrar o voto por partidos.');
+    }
+  };
+  
   const controlarEleicaoAustralia = async (acao) => {
     setErro('');
     setMensagemSucesso('');
@@ -140,6 +165,25 @@ export default function AustraliaPage() {
             onClick={() => controlarEleicaoAustralia('encerrar')}
           >
             ⏹ Encerrar Votação
+          </button>
+        </div>
+      )}
+
+      {Object.keys(partidosMap).length > 0 && (
+        <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1rem' }}>
+          <button
+            type="button"
+            className={modoVotacao === 'candidatos' ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setModoVotacao('candidatos')}
+          >
+            👤 Ranquear Candidatos
+          </button>
+          <button
+            type="button"
+            className={modoVotacao === 'partidos' ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setModoVotacao('partidos')}
+          >
+            🏛️ Ranquear Partidos
           </button>
         </div>
       )}

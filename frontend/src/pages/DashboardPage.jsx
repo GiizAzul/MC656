@@ -80,7 +80,7 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
         {temCACo && (
           <div className="context-card caco">
             <div>
-              <h2>🏛️ Assembleia Geral CACo</h2>
+              <h2>🐸 Assembleia Geral CACo</h2>
               <p>Deliberação estudantil com verificação de quórum e voto único anônimo.</p>
             </div>
             <Link to="/caco/assembleia" className="btn-primary">

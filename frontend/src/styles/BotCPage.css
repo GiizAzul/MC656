@@ -41,16 +41,6 @@
   }
 }
 
-.wheel-wrapper {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
 .town-wheel {
   position: relative;
   width: 480px;
@@ -69,8 +59,8 @@
   width: 146px;
   height: 146px;
   border-radius: 50%;
-  background: #0f172a;
-  border: 3px solid #ef4444;
+  background: var(--surface-alt);
+  border: 3px solid var(--border-color);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -104,7 +94,16 @@
   font-size: 1.25rem;
 }
 
-/* === BOLAS (CÍRCULOS PERFEITOS) PARA CADA JOGADOR NA RODA === */
+.wheel-wrapper {
+  background: var(--surface-alt);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .seat-node {
   position: absolute;
   width: 86px;
@@ -112,7 +111,8 @@
   margin-left: -43px;
   margin-top: -43px;
   border-radius: 50%;
-  background: #1e293b;
+  background: var(--surface-alt);
+  color: var(--text-primary);
   border: 3px solid #475569;
   display: flex;
   flex-direction: column;
@@ -122,7 +122,7 @@
   text-align: center;
   z-index: 4;
   transition: all 0.3s ease;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
 .seat-node.nominated {
