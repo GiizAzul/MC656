@@ -6,8 +6,18 @@ export default function CadastroPage({ onAuthSuccess }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('/logout', { method: 'GET' }).catch(() => {});
-    if (onLogout) onLogout();
+    let ativo = true;
+    (async () => {
+      try {
+        await fetch('/logout', { method: 'GET', credentials: 'include' });
+      } catch {
+        // ignora falha de rede
+      }
+      if (ativo && onLogout) onLogout();
+    })();
+    return () => {
+      ativo = false;
+    };
   }, [onLogout]);
 
   const [tipoConta, setTipoConta] = useState('AUSTRALIA_ELEITOR');

@@ -9,8 +9,18 @@ export default function LoginPage({ onLoginSuccess, onLogout }) {
   const [erro, setErro] = useState('');
 
   useEffect(() => {
-    fetch('/logout', { method: 'GET' }).catch(() => {});
-    if (onLogout) onLogout();
+    let ativo = true;
+    (async () => {
+      try {
+        await fetch('/logout', { method: 'GET', credentials: 'include' });
+      } catch {
+        // ignora falha de rede
+      }
+      if (ativo && onLogout) onLogout();
+    })();
+    return () => {
+      ativo = false;
+    };
   }, [onLogout]);
 
   const handleSubmit = async (e) => {

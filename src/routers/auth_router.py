@@ -182,6 +182,6 @@ async def obter_perfil_json(
 
 @router.get("/logout")
 async def sair(request: Request):
-    resposta = RedirectResponse(url="/")
-    resposta.delete_cookie("sessao_usuario")
+    resposta = RedirectResponse(url="/", status_code=302)
+    resposta.delete_cookie("sessao_usuario", path="/", samesite="lax")
     return resposta
