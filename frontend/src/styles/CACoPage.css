@@ -31,7 +31,8 @@
   padding: 1.1rem;
   border: 2px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: #f8fafc;
+  background: var(--surface-alt);
+  color: var(--text-primary);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s;
