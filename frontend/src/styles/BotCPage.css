@@ -1,9 +1,15 @@
 .botc-page {
-  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-  color: #f8fafc;
+  background: var(--surface);
+  color: var(--text-primary);
   padding: 2rem;
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='dark'] .botc-page {
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  color: #f8fafc;
 }
 
 .botc-header {
@@ -169,10 +175,16 @@
 }
 
 .botc-panel-box {
-  background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-alt);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 1.35rem;
+}
+
+[data-theme='dark'] .botc-panel-box {
+  background: rgba(30, 41, 59, 0.9);
+  color: #f8fafc;
 }
 
 .btn-hand-toggle {
