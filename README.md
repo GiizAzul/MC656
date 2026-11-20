@@ -38,7 +38,17 @@ disciplina (em `docs/`):
   análise de requisitos, épicos, histórias de usuário com critérios de aceitação
   e backlog priorizado.
 - **`docs/A4_report/`** — relatório da Atividade 4 (LaTeX e PDF): projeto e arquitetura de software, com identificação de problemas e code smells, além da documentação da refatoração.
+- **`docs/A5_report/`** — relatório da Atividade 5 (LaTeX e PDF): testes funcionais por classes de equivalência e análise de valor limite, cobertura estrutural e teste de mutação.
 - **`.github/workflows/`** — pipelines de CI (`ci.yml`) e de análise estática de qualidade (`sonar.yml`). 
+
+Na Atividade 5, foram especificadas e testadas 30 classes de equivalência nos módulos
+do CACo, da eleição australiana e do Blood on the Clocktower. A entrega também aplica
+análise de valor limite ao ranking partidário australiano, amplia a cobertura de
+testes estruturais e usa `mutmut` para identificar e eliminar um mutante sobrevivente.
+O relatório registra cobertura total de 97%, acima do limiar de 80% definido para a
+atividade. Consulte o [relatório em PDF](docs/A5_report/Atividade_5___Teste_de_Software.pdf)
+ou sua [fonte LaTeX](docs/A5_report/A5_teste_de_software.tex).
+
 ## Estrutura do projeto
 
 ```
@@ -59,8 +69,9 @@ disciplina (em `docs/`):
 ├── tests/                         # testes automatizados (pytest): motores, autenticação, estados e rotas web
 ├── docs/
 │   ├── A1_report/                 # Atividade 1: processo de desenvolvimento
-│   └── A3_report/                 # Atividade 3: requisitos
-│   └── A4_report/                 # Atividade 4: projeto e arquitetura de software
+│   ├── A3_report/                 # Atividade 3: requisitos
+│   ├── A4_report/                 # Atividade 4: projeto e arquitetura de software
+│   └── A5_report/                 # Atividade 5: testes funcionais, estruturais e de mutação
 └── .github/workflows/             # CI: build, lint (ruff) e testes (pytest + cobertura)
 ```
 
