@@ -57,10 +57,14 @@ class ServicoAutenticacao:
             existente = self._banco_por_id[self._mapa_usernames[usuario.username]]
             if existente.validar_senha(usuario.senha) and usuario.escopo not in existente.escopo:
                 ra_novo = getattr(usuario, "ra", None)
-                if ra_novo and str(ra_novo) in self._mapa_usernames:
-                    raise ValueError(f"Erro: RA {ra_novo} já existente.")
+                if ra_novo is not None:
+                    dono_ra = self._mapa_usernames.get(str(ra_novo))
+                    if dono_ra is not None and dono_ra != existente.id:
+                        raise ValueError(f"Erro: RA {ra_novo} já existente.")
+                    if getattr(existente, "ra", None) is not None and existente.ra != ra_novo:
+                        raise ValueError("Erro: Esta conta já possui um RA vinculado.")
                 existente.adicionar_escopo(usuario.escopo, ra=ra_novo)
-                if ra_novo:
+                if ra_novo is not None:
                     self._mapa_usernames[str(ra_novo)] = existente.id
                 return
             raise ValueError(f"Erro: username {usuario.username} já existente.")
