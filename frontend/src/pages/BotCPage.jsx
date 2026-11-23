@@ -84,9 +84,10 @@ export default function BotCPage() {
 
   useEffect(() => {
     carregarRoda();
-    const poll = setInterval(carregarRoda, 400);
+    const intervaloMs = giro.ativo ? 500 : 2000;
+    const poll = setInterval(carregarRoda, intervaloMs);
     return () => clearInterval(poll);
-  }, [carregarRoda]);
+  }, [carregarRoda, giro.ativo]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
