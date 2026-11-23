@@ -107,6 +107,28 @@ export default function AustraliaPage() {
     setDragOverIdx(null);
   };
 
+  const handleTouchMove = (e) => {
+    if (draggedIdx === null) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const li = el?.closest('li[data-dnd-index]');
+    if (li) {
+      const idx = Number(li.getAttribute('data-dnd-index'));
+      if (!Number.isNaN(idx) && idx !== dragOverIdx) {
+        setDragOverIdx(idx);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (draggedIdx !== null && dragOverIdx !== null) {
+      handleDrop(dragOverIdx);
+    } else {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+    }
+  };
+
   const moverItemLista = (index, direcao) => {
     const novoIndex = index + direcao;
     if (novoIndex < 0 || novoIndex >= listaAtiva.length) return;
@@ -223,6 +245,7 @@ export default function AustraliaPage() {
             return (
               <li
                 key={itemNome}
+                data-dnd-index={index}
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
@@ -278,7 +301,13 @@ export default function AustraliaPage() {
                   >
                     ▼
                   </button>
-                  <span className="drag-handle" title="Arraste para reordenar">
+                  <span 
+                    className="drag-handle" 
+                    title="Arraste para reordenar"
+                    onTouchStart={() => handleDragStart(index)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
                     ⠿
                   </span>
                 </div>
