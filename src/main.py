@@ -97,17 +97,31 @@ async def servir_spa_react_em_producao(request: Request, call_next):
     """Serve o frontend React em produção no Render quando o navegador pede uma página HTML.
     """
     is_test_client = request.headers.get("user-agent", "").startswith("testclient")
-    accepts_html = "text/html" in request.headers.get("accept", "")
     path = request.url.path
+    accept = request.headers.get("accept", "")
+    pede_json = "application/json" in accept and "text/html" not in accept
 
+    rotas_backend = (
+        "/api",
+        "/botc/api",
+        "/australia/api",
+        "/caco/api",
+        "/static",
+        "/assets",
+        "/logout",
+    )
+    
     if (
         not is_test_client
         and request.method == "GET"
-        and accepts_html
-        and not path.startswith(("/api", "/botc/api", "/australia/api", "/caco/api", "/static", "/assets", "/logout"))
+        and not pede_json
+        and not path.startswith(rotas_backend)
         and (FRONTEND_DIST / "index.html").exists()
     ):
-        return FileResponse(FRONTEND_DIST / "index.html")
+        return FileResponse(
+            FRONTEND_DIST / "index.html",
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+        )
 
     return await call_next(request)
 
