@@ -183,7 +183,7 @@ async def estado_australia_json(
 ):
     eleicao = request.app.state.eleicao_australia
     vencedor = None
-    if eleicao.estado.nome == "ENCERRADO" and eleicao.cedulas:
+    if eleicao.estado.nome in ("ENCERRADO", "ENCERRADA") and eleicao.cedulas:
         try:
             vencedor = eleicao.apurar_vencedor()
         except ValueError:

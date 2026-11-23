@@ -395,7 +395,7 @@ async def criar_pauta_na_assembleia(
         raise HTTPException(status_code=400, detail="Título e descrição da pauta são obrigatórios.")
 
     ids_base = list(request.app.state.eleicao_caco.alunos_cadastrados | {usuario.id})
-    novo_motor = EleicaoAssembleia(alunos_cadastrados=ids_base, eleitores=ids_base, duracao=60)
+    novo_motor = EleicaoAssembleia(alunos_cadastrados_ids=ids_base, eleitores_ids=ids_base, duracao_ciclo=60)
     nova_pauta = {
         "id": f"pauta_{int(time.time() * 1000)}_{len(asm['pautas'])}",
         "titulo": titulo.strip(),
