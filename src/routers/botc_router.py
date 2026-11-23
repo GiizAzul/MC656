@@ -13,11 +13,11 @@ from src.botc import (
     StatusJogador,
 )
 
-from .dependencias import obter_usuario_logado
+from .dependencias import exigir_autorizacao_rota, obter_usuario_logado
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-router = APIRouter(prefix="/botc", tags=["BOTC"])
+router = APIRouter(prefix="/botc", tags=["BOTC"], dependencies=[Depends(exigir_autorizacao_rota)])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 

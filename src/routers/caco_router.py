@@ -8,12 +8,12 @@ from fastapi.templating import Jinja2Templates
 from src.autenticacao.base import Usuario
 from src.caco import OpcaoVoto
 
-from .dependencias import obter_usuario_logado
+from .dependencias import exigir_autorizacao_rota, obter_usuario_logado
 
 # Pega o diretório absoluto onde o main.py está (a pasta src/)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-router = APIRouter(prefix="/caco", tags=["CACo"])
+router = APIRouter(prefix="/caco", tags=["CACo"], dependencies=[Depends(exigir_autorizacao_rota)])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.post("/iniciar")

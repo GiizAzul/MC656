@@ -1,10 +1,11 @@
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from src.autenticacao.autorizacao import ControleDeAcesso
 from src.autenticacao.base import Usuario
 from src.autenticacao.factory import UsuarioFactory
 
@@ -15,6 +16,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+controle_acesso = ControleDeAcesso()
 
 @router.get("/admin", response_class=HTMLResponse)
 async def painel_admin(
@@ -67,7 +70,8 @@ async def processar_cadastro(
             eleicao_caco.eleitores.add(id_final)
 
         # Faz o login automático após cadastro
-        resposta = RedirectResponse(url="/dashboard", status_code=302)
+        rota_destino = controle_acesso.despachar_apos_login(novo_usuario)
+        resposta = RedirectResponse(url=rota_destino, status_code=status.HTTP_303_SEE_OTHER)
         resposta.set_cookie(
             key="sessao_usuario",
             value=username,
@@ -133,9 +137,9 @@ async def processar_login(
     try:
         usuario = banco.login(username, senha)
         
-        # Redireciona para o painel principal após sucesso
-        resposta = RedirectResponse(url="/dashboard", status_code=302)
-        
+        rota_destino = controle_acesso.despachar_apos_login(usuario)
+        resposta = RedirectResponse(url=rota_destino, status_code=status.HTTP_303_SEE_OTHER)
+
         # Salva o ID/Username no Cookie do navegador
         resposta.set_cookie(
             key="sessao_usuario", 

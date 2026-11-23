@@ -1,5 +1,6 @@
-from fastapi import Request
+from fastapi import Depends, Request
 
+from src.autenticacao.autorizacao import ControleDeAcesso
 from src.autenticacao.base import Usuario
 
 
@@ -23,4 +24,13 @@ async def obter_usuario_logado(request: Request) -> Usuario:
     if not usuario:
         raise RequerRedirecionamentoException()
         
+    return usuario
+
+controle_acesso = ControleDeAcesso()
+
+def exigir_autorizacao_rota(
+    request: Request,
+    usuario: Usuario = Depends(obter_usuario_logado),
+) -> Usuario:
+    controle_acesso.acessar_recurso(usuario, request.url.path)
     return usuario

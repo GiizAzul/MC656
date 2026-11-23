@@ -7,12 +7,12 @@ from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
 
-from .dependencias import obter_usuario_logado
+from .dependencias import exigir_autorizacao_rota, obter_usuario_logado
 
 # Pega o diretório absoluto onde o main.py está (a pasta src/)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-router = APIRouter(prefix="/australia", tags=["Australia"])
+router = APIRouter(prefix="/australia", tags=["Austrália"], dependencies=[Depends(exigir_autorizacao_rota)])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 def _contexto_cedula(eleicao, usuario: Usuario, **extra) -> dict:

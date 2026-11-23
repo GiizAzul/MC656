@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from src.australia import EleicaoAustralia
 from src.autenticacao.australia import EleitorAustralia
+from src.autenticacao.autorizacao import ErroAcessoNaoAutorizado
 from src.autenticacao.base import ServicoAutenticacao
 from src.autenticacao.botc import JogadorBOTC
 from src.autenticacao.caco import GestaoCACo
@@ -20,6 +21,20 @@ app = FastAPI(title="Sistema de Votação Web")
 @app.exception_handler(RequerRedirecionamentoException)
 async def auth_exception_handler(request: Request, exc: RequerRedirecionamentoException):
     return RedirectResponse(url="/", status_code=302)
+
+@app.exception_handler(ErroAcessoNaoAutorizado)
+async def erro_acesso_nao_autorizado_handler(
+    request: Request, exc: ErroAcessoNaoAutorizado
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="erro_403.html",
+        context={
+            "mensagem": str(exc),
+            "painel_redirecionamento": exc.painel_redirecionamento,
+        },
+        status_code=403,
+    )
 
 # Pega o diretório absoluto onde o main.py está (a pasta src/)
 BASE_DIR = Path(__file__).resolve().parent
