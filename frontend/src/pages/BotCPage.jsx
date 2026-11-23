@@ -41,7 +41,6 @@ export default function BotCPage() {
 
   const [nomeadoSelecionado, setNomeadoSelecionado] = useState('');
   const [erro, setErro] = useState('');
-  const [veredito, setVeredito] = useState('');
 
   // Ângulo cumulativo contínuo para o ponteiro nunca girar para trás ao cruzar o topo da roda
   const anguloAcumuladoRef = useRef(null);
@@ -296,7 +295,6 @@ export default function BotCPage() {
   const iniciarGiroStoryteller = async () => {
     if (!nomeadoSelecionado) return;
     setErro('');
-    setVeredito('');
 
     const form = new URLSearchParams();
     form.append('nomeado_id', nomeadoSelecionado);
@@ -362,8 +360,6 @@ export default function BotCPage() {
       body: form.toString(),
     });
     const html = await res.text();
-    const match = html.match(/O jogador executado foi:[^<]+|Ninguém foi executado[^<]+/);
-    setVeredito(match ? match[0] : 'Apuração concluída.');
     await carregarRoda();
   };
 
