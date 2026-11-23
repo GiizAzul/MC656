@@ -936,3 +936,261 @@ def test_cadastro_isolar_dominio_eleicao_caco():
     # Garante que jogadores de BotC NÃO foram inseridos na eleição do CACo
     assert user_id not in app.state.eleicao_caco.eleitores, \
         "Falha de isolamento: Usuário do BotC foi inserido na eleição do CACo!"
+
+def _resetar_salas_botc():
+    """Auxiliar para isolar o estado de salas_botc entre os testes da API."""
+    if hasattr(app.state, "salas_botc"):
+        delattr(app.state, "salas_botc")
+    app.state._salas_botc_iniciadas = False
+    app.state.maos_botc = {}
+
+
+def test_botc_api_estado_lobby_e_principal():
+    """Cobre /botc/api/estado no modo lobby e na partida principal."""
+    _resetar_salas_botc()
+    client.cookies.set("sessao_usuario", "leo")
+
+    # 1. Quando salas_botc já foi iniciada mas está vazia, apenas_lobby=True retorna sem_salas=True
+    app.state.salas_botc = {}
+    app.state._salas_botc_iniciadas = True
+    res_lobby_vazio = client.get("/botc/api/estado?apenas_lobby=true")
+    assert res_lobby_vazio.status_code == 200
+    assert res_lobby_vazio.json()["sem_salas"] is True
+
+    # 2. Resetando para iniciar a partida principal automaticamente
+    _resetar_salas_botc()
+    res_estado = client.get("/botc/api/estado?partida_id=id_inexistente")
+    assert res_estado.status_code == 200
+    dados = res_estado.json()
+    assert dados["partida_atual"]["id"] == "principal"
+    assert len(dados["jogadores"]) >= 5
+
+    # 3. Com sala existente, apenas_lobby=True lista as partidas disponíveis
+    res_lobby2 = client.get("/botc/api/estado?apenas_lobby=true")
+    assert res_lobby2.status_code == 200
+    assert len(res_lobby2.json()["partidas_disponiveis"]) >= 1
+    client.cookies.clear()
+
+
+def test_botc_api_fluxo_completo_salas_senha_storyteller():
+    """Cobre criar-partida, entrar-sala (com e sem senha), assumir-storyteller, encerrar e excluir."""
+    _resetar_salas_botc()
+
+    # Cadastra um Storyteller e um Jogador
+    client.post("/cadastro", data={
+        "tipo_conta": "BOTC_STORYTELLER",
+        "nome_real": "ST API",
+        "username": "st_api",
+        "senha": "123",
+        "senha_confirma": "123",
+    })
+    client.post("/cadastro", data={
+        "tipo_conta": "BOTC_JOGADOR",
+        "nome_real": "Jog API",
+        "username": "jog_api",
+        "senha": "123",
+        "senha_confirma": "123",
+    })
+
+    # 1. Jogador comum tenta assumir Storyteller -> 403
+    client.cookies.set("sessao_usuario", "jog_api")
+    res_st_403 = client.post("/botc/api/assumir-storyteller", data={"partida_id": "principal"})
+    assert res_st_403.status_code == 403
+
+    # 2. Storyteller cria sala com senha
+    client.cookies.set("sessao_usuario", "st_api")
+    res_criar = client.post(
+        "/botc/api/criar-partida",
+        data={"nome_sala": "Sala Secreta", "senha_sala": "ravenswood"},
+    )
+    assert res_criar.status_code == 200
+    sala_id = res_criar.json()["partida_id"]
+
+    # 3. Storyteller assume a cadeira da sala
+    res_assumir = client.post("/botc/api/assumir-storyteller", data={"partida_id": sala_id})
+    assert res_assumir.status_code == 200
+
+    # 4. Storyteller com partida ativa não pode criar outra sala (400) nem sair dela (400)
+    res_criar_dup = client.post("/botc/api/criar-partida", data={"nome_sala": "Segunda Sala"})
+    assert res_criar_dup.status_code == 400
+    res_sair_st = client.post("/botc/api/sair-sala", data={"partida_id": sala_id})
+    assert res_sair_st.status_code == 400
+
+    # 5. Outro storyteller não pode roubar a cadeira da mesma sala (400)
+    client.post("/cadastro", data={
+        "tipo_conta": "BOTC_STORYTELLER",
+        "nome_real": "ST Intruso",
+        "username": "st_intruso",
+        "senha": "123",
+        "senha_confirma": "123",
+    })
+    client.cookies.set("sessao_usuario", "st_intruso")
+    res_roubar_st = client.post("/botc/api/assumir-storyteller", data={"partida_id": sala_id})
+    assert res_roubar_st.status_code == 400
+
+    # 6. Storyteller titular não pode votar (403 JSON)
+    client.cookies.set("sessao_usuario", "st_api")
+    res_st_votar = client.post(
+        "/botc/votar",
+        data={"acao": "levantar_mao", "partida_id": sala_id},
+        headers={"Accept": "application/json"},
+    )
+    assert res_st_votar.status_code == 403
+
+    # 7. Jogador tenta entrar sem senha ou ver estado -> 403
+    client.cookies.set("sessao_usuario", "jog_api")
+    res_estado_bloqueado = client.get(f"/botc/api/estado?partida_id={sala_id}")
+    assert res_estado_bloqueado.status_code == 403
+    assert res_estado_bloqueado.json()["requer_senha"] is True
+
+    res_senha_errada = client.post(
+        "/botc/api/entrar-sala",
+        data={"partida_id": sala_id, "senha_sala": "errada"},
+    )
+    assert res_senha_errada.status_code == 403
+
+    # 8. Jogador entra com a senha correta e depois sai da sala
+    res_entrar_ok = client.post(
+        "/botc/api/entrar-sala",
+        data={"partida_id": sala_id, "senha_sala": "ravenswood"},
+    )
+    assert res_entrar_ok.status_code == 200
+    assert client.get(f"/botc/api/estado?partida_id={sala_id}").status_code == 200
+
+    res_sair_jog = client.post("/botc/api/sair-sala", data={"partida_id": sala_id})
+    assert res_sair_jog.status_code == 200
+
+    # 9. Jogador tenta encerrar ou excluir sala (403) e operações em salas inexistentes (404)
+    assert client.post("/botc/api/encerrar-partida", data={"partida_id": sala_id}).status_code == 403
+    assert client.post("/botc/api/excluir-sala", data={"partida_id": sala_id}).status_code == 403
+    assert client.post("/botc/api/entrar-sala", data={"partida_id": "nao_existe"}).status_code == 404
+    assert client.post("/botc/api/encerrar-partida", data={"partida_id": "nao_existe"}).status_code == 404
+    assert client.post("/botc/api/excluir-sala", data={"partida_id": "nao_existe"}).status_code == 404
+    assert client.post("/botc/api/sair-sala", data={"partida_id": "nao_existe"}).status_code == 200
+
+    # 10. Storyteller encerra partida, sai (ou exclui sala)
+    client.cookies.set("sessao_usuario", "st_api")
+    res_encerrar = client.post("/botc/api/encerrar-partida", data={"partida_id": sala_id})
+    assert res_encerrar.status_code == 200
+
+    res_excluir = client.post("/botc/api/excluir-sala", data={"partida_id": sala_id})
+    assert res_excluir.status_code == 200
+    assert res_excluir.json()["status"] == "excluida"
+    client.cookies.clear()
+
+
+def test_botc_api_sair_sala_vazia_exclui_automaticamente():
+    """Cobre exclusão automática da sala quando o último participante sai."""
+    _resetar_salas_botc()
+    client.cookies.set("sessao_usuario", "leo")
+
+    res_criar = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Temporaria"})
+    sala_id = res_criar.json()["partida_id"]
+
+    res_sair = client.post("/botc/api/sair-sala", data={"partida_id": sala_id})
+    assert res_sair.status_code == 200
+    assert sala_id not in app.state.salas_botc
+    client.cookies.clear()
+
+
+def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
+    """Cobre /botc/api/iniciar-giro, avanço do ponteiro, trava de mão e consumo de voto fantasma."""
+    import time as time_mod
+
+    from src.botc import StatusJogador
+
+    _resetar_salas_botc()
+
+    client.post("/cadastro", data={
+        "tipo_conta": "BOTC_STORYTELLER",
+        "nome_real": "ST Giro",
+        "username": "st_giro",
+        "senha": "123",
+        "senha_confirma": "123",
+    })
+    client.post("/cadastro", data={
+        "tipo_conta": "BOTC_JOGADOR",
+        "nome_real": "Fantasma Giro",
+        "username": "fantasma_giro",
+        "senha": "123",
+        "senha_confirma": "123",
+    })
+
+    # 1. Jogador comum não pode iniciar giro -> 403
+    client.cookies.set("sessao_usuario", "fantasma_giro")
+    assert client.post("/botc/api/iniciar-giro", data={"nomeado_id": "Jogador 1"}).status_code == 403
+
+    # 2. Storyteller tenta iniciar giro numa sala vazia -> 400
+    client.cookies.set("sessao_usuario", "st_giro")
+    res_sala_vazia = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Sozinho"})
+    sala_vazia_id = res_sala_vazia.json()["partida_id"]
+    client.post("/botc/api/assumir-storyteller", data={"partida_id": sala_vazia_id})
+    assert client.post(
+        "/botc/api/iniciar-giro",
+        data={"nomeado_id": "ninguem", "partida_id": sala_vazia_id},
+    ).status_code == 400
+    client.post("/botc/api/excluir-sala", data={"partida_id": sala_vazia_id})
+
+    # 3. Entra na partida principal e coloca o fantasma_giro com voto fantasma e mão levantada
+    client.cookies.set("sessao_usuario", "fantasma_giro")
+    client.get("/botc/api/estado?partida_id=principal")
+    sala_principal = app.state.salas_botc["principal"]
+    jog_fantasma = sala_principal["sistema"].obter_jogador("Fantasma Giro")
+    jog_fantasma.status = StatusJogador.MORTO_COM_FANTASMA
+    client.post(
+        "/botc/votar",
+        data={"acao": "levantar_mao", "partida_id": "principal"},
+        headers={"Accept": "application/json"},
+    )
+
+    # 4. Storyteller inicia o giro nomeando 'Jogador 1'
+    client.cookies.set("sessao_usuario", "st_giro")
+    t_inicio = 1_000_000.0
+    monkeypatch.setattr(time_mod, "time", lambda: t_inicio)
+
+    res_giro = client.post(
+        "/botc/api/iniciar-giro",
+        data={"nomeado_id": "Jogador 1", "partida_id": "principal"},
+    )
+    assert res_giro.status_code == 200
+    assert res_giro.json()["nomeado"] == "Jogador 1"
+
+    # 5. Não pode nomear o mesmo jogador duas vezes no mesmo dia -> 400
+    res_giro_dup = client.post(
+        "/botc/api/iniciar-giro",
+        data={"nomeado_id": "Jogador 1", "partida_id": "principal"},
+    )
+    assert res_giro_dup.status_code == 400
+
+    # 6. Avança o relógio 1.6s (1 passo) para travar o primeiro jogador e verifica estado parcial
+    monkeypatch.setattr(time_mod, "time", lambda: t_inicio + 1.6)
+    client.cookies.set("sessao_usuario", "fantasma_giro")
+    res_parcial = client.get("/botc/api/estado?partida_id=principal")
+    assert res_parcial.status_code == 200
+    assert res_parcial.json()["giro"]["ativo"] is True
+
+    # Trava explicitamente o fantasma_giro e testa que ele não consegue mais mexer na mão (400)
+    sala_principal["giro"]["trancados"][jog_fantasma.id_jogador] = True
+    res_travado = client.post(
+        "/botc/votar",
+        data={"acao": "abaixar_mao", "partida_id": "principal"},
+        headers={"Accept": "application/json"},
+    )
+    assert res_travado.status_code == 400
+    del sala_principal["giro"]["trancados"][jog_fantasma.id_jogador]
+
+    # 7. Avança o relógio 30s para concluir o giro completo, computar votos e gastar voto fantasma
+    monkeypatch.setattr(time_mod, "time", lambda: t_inicio + 30.0)
+    res_fim = client.get("/botc/api/estado?partida_id=principal")
+    assert res_fim.status_code == 200
+    dados_fim = res_fim.json()
+    assert dados_fim["giro"]["ativo"] is False
+    assert "Contagem concluída" in dados_fim["giro"]["mensagem_final"]
+    assert jog_fantasma.status == StatusJogador.MORTO_SEM_FANTASMA
+
+    # 8. Apurar limpa nomeados do dia e trancados
+    client.cookies.set("sessao_usuario", "st_giro")
+    res_apurar = client.post("/botc/apurar", data={"partida_id": "principal"})
+    assert res_apurar.status_code == 200
+    assert len(sala_principal["nomeados_hoje"]) == 0
+    client.cookies.clear()
