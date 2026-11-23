@@ -208,8 +208,6 @@ async def processar_voto_partidos_api(
     request: Request,
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
 ):
-    from fastapi.responses import JSONResponse
-
     if "AUSTRALIA_ELEITOR" not in usuario.escopo:
         return JSONResponse({"erro": "Sem permissão no escopo AUSTRALIA."}, status_code=403)
 
@@ -230,4 +228,3 @@ async def processar_voto_partidos_api(
         })
     except (RuntimeError, ValueError) as exc:
         return JSONResponse({"erro": str(exc)}, status_code=400)
-    })
