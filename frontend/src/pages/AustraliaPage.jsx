@@ -4,6 +4,7 @@ import '../styles/AustraliaPage.css';
 
 export default function AustraliaPage() {
   const [modoVotacao, setModoVotacao] = useState('candidatos');
+  const [podeVotar, setPodeVotar] = useState(true);
   const [partidosMap, setPartidosMap] = useState({});
   const [ordemPartidos, setOrdemPartidos] = useState([]);
 
@@ -25,6 +26,7 @@ export default function AustraliaPage() {
         const data = await res.json();
         setPartidosMap(data.partidos || {});
         const nomesPartidos = Object.keys(data.partidos || {});
+        setPodeVotar(data.pode_votar !== undefined ? data.pode_votar : true);
         setOrdemPartidos((prev) => (prev.length === 0 ? nomesPartidos : prev));
         setCandidatos((prev) => (prev.length === 0 ? data.candidatos : prev));
         setEstadoEleicao(data.estado_eleicao);
@@ -85,28 +87,31 @@ export default function AustraliaPage() {
     if (index !== dragOverIdx) setDragOverIdx(index);
   };
 
+  const listaAtiva = modoVotacao === 'partidos' ? ordemPartidos : candidatos;
+  const setListaAtiva = modoVotacao === 'partidos' ? setOrdemPartidos : setCandidatos;
+
   const handleDrop = (indexDestino) => {
     if (draggedIdx === null || draggedIdx === indexDestino) {
       setDraggedIdx(null);
       setDragOverIdx(null);
       return;
     }
-    const novaLista = [...candidatos];
+    const novaLista = [...listaAtiva];
     const [itemMovido] = novaLista.splice(draggedIdx, 1);
     novaLista.splice(indexDestino, 0, itemMovido);
 
-    setCandidatos(novaLista);
+    setListaAtiva(novaLista);
     setDraggedIdx(null);
     setDragOverIdx(null);
   };
 
-  const moverCandidato = (index, direcao) => {
+  const moverItemLista = (index, direcao) => {
     const novoIndex = index + direcao;
-    if (novoIndex < 0 || novoIndex >= candidatos.length) return;
-    const novaLista = [...candidatos];
+    if (novoIndex < 0 || novoIndex >= listaAtiva.length) return;
+    const novaLista = [...listaAtiva];
     const [item] = novaLista.splice(index, 1);
     novaLista.splice(novoIndex, 0, item);
-    setCandidatos(novaLista);
+    setListaAtiva(novaLista);
   };
 
   const submeterCedula = async (e) => {
@@ -189,21 +194,33 @@ export default function AustraliaPage() {
       )}
 
       <div className="australia-instructions">
-        <strong>Como votar:</strong> Segure e arraste os candidatos abaixo (ou use as setas ▲/▼) para definir sua ordem
-        de preferência de 1º a {candidatos.length}º lugar.
+        {modoVotacao === 'partidos' ? (
+          <>
+            <strong>Votação por Ranking de Partidos:</strong> Segure e arraste os <strong>partidos</strong> abaixo (ou use as setas
+            ▲/▼) para definir sua ordem de preferência (de 1º ao {ordemPartidos.length}º lugar). O sistema expandirá automaticamente o seu voto para os candidatos filiados a cada partido.
+          </>
+        ) : (
+          <>
+            <strong>Votação Individual por Candidatos:</strong> Segure e arraste os <strong>candidatos</strong> abaixo (ou use as setas
+            ▲/▼) para definir sua ordem de preferência (de 1º a {candidatos.length}º lugar).
+          </>
+        )}
       </div>
 
       {erro && <div className="alert-banner alert-error">{erro}</div>}
       {mensagemSucesso && <div className="alert-banner alert-success">{mensagemSucesso}</div>}
 
-      <form onSubmit={submeterCedula}>
+      <form onSubmit={modoVotacao === 'partidos' ? submeterVotoPorPartidos : submeterCedula}>
         <ul className="dnd-list">
-          {candidatos.map((candidato, index) => {
+          {listaAtiva.map((itemNome, index) => {
             const isDragging = draggedIdx === index;
             const isDragOver = dragOverIdx === index;
+            const isPartido = modoVotacao === 'partidos';
+            const filiados = isPartido ? partidosMap[itemNome] || [] : [];
+
             return (
               <li
-                key={candidato}
+                key={itemNome}
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
@@ -212,14 +229,26 @@ export default function AustraliaPage() {
                   setDraggedIdx(null);
                   setDragOverIdx(null);
                 }}
+                style={isPartido ? { borderLeft: '6px solid var(--caco-purple)' } : { borderLeft: '6px solid var(--aus-green)' }}
                 className={`dnd-item ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
               >
                 <div className="dnd-left">
-                  <span className="rank-badge">{index + 1}º</span>
+                  <span
+                    className="rank-badge"
+                    style={isPartido ? { backgroundColor: 'var(--caco-purple)' } : { backgroundColor: 'var(--aus-green)' }}
+                  >
+                    {index + 1}º
+                  </span>
                   <div className="candidate-info">
-                    <span className="candidate-name">{candidato}</span>
+                    <span className="candidate-name">
+                      {isPartido ? `🏛️ ${itemNome}` : `👤 ${itemNome}`}
+                    </span>
                     <span className="candidate-hint">
-                      {index === 0 ? '1ª Preferência Principal' : `${index + 1}ª Preferência de Transferência`}
+                      {isPartido
+                        ? `Candidatos da legenda: ${filiados.join(', ') || 'Nenhum'}`
+                        : index === 0
+                        ? '1ª Preferência Principal'
+                        : `${index + 1}ª Preferência de Transferência`}
                     </span>
                   </div>
                 </div>
@@ -228,7 +257,7 @@ export default function AustraliaPage() {
                   <button
                     type="button"
                     className="btn-move"
-                    onClick={() => moverCandidato(index, -1)}
+                    onClick={() => moverItemLista(index, -1)}
                     disabled={index === 0}
                     title="Subir posição"
                   >
@@ -237,8 +266,8 @@ export default function AustraliaPage() {
                   <button
                     type="button"
                     className="btn-move"
-                    onClick={() => moverCandidato(index, 1)}
-                    disabled={index === candidatos.length - 1}
+                    onClick={() => moverItemLista(index, 1)}
+                    disabled={index === listaAtiva.length - 1}
                     title="Descer posição"
                   >
                     ▼
@@ -252,16 +281,20 @@ export default function AustraliaPage() {
           })}
         </ul>
 
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <button
             type="submit"
             className="btn-primary"
-            disabled={jaVotou || estadoEleicao !== 'VOTACAO'}
+            disabled={!podeVotar || jaVotou || estadoEleicao !== 'VOTACAO'}
           >
-            {jaVotou
+            {!podeVotar
+              ? '🔒 Apenas Eleitores Podem Votar'
+              : jaVotou
               ? '✓ Voto Já Registrado'
               : estadoEleicao !== 'VOTACAO'
               ? `Aguardando Abertura (${estadoEleicao})`
+              : modoVotacao === 'partidos'
+              ? 'Confirmar Voto por Partidos'
               : 'Confirmar Cédula Preferencial'}
           </button>
           <Link to="/dashboard" className="btn-secondary">
