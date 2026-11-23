@@ -58,3 +58,17 @@
   background: var(--caco-purple);
   transition: width 0.3s ease;
 }
+
+.caco-pauta-item {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-alt);
+  color: var(--text-primary);
+}
+
+.caco-gestao-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.25rem;
+}
