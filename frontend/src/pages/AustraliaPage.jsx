@@ -4,6 +4,7 @@ import '../styles/AustraliaPage.css';
 
 export default function AustraliaPage() {
   const [candidatos, setCandidatos] = useState([]);
+  const [nomesFormatados, setNomesFormatados] = useState({});
   const [estadoEleicao, setEstadoEleicao] = useState('AGUARDANDO');
   const [isGestao, setIsGestao] = useState(false);
   const [jaVotou, setJaVotou] = useState(false);
@@ -20,6 +21,7 @@ export default function AustraliaPage() {
       if (res.ok) {
         const data = await res.json();
         setCandidatos((prev) => (prev.length === 0 ? data.candidatos : prev));
+        setNomesFormatados(data.nomes_formatados || {});
         setEstadoEleicao(data.estado_eleicao);
         setIsGestao(data.is_gestao);
         setJaVotou(data.ja_votou);
@@ -173,7 +175,9 @@ export default function AustraliaPage() {
                 <div className="dnd-left">
                   <span className="rank-badge">{index + 1}º</span>
                   <div className="candidate-info">
-                    <span className="candidate-name">{candidato}</span>
+                    <span className="candidate-name">
+                      {nomesFormatados[candidato] || candidato}
+                    </span>
                     <span className="candidate-hint">
                       {index === 0 ? '1ª Preferência Principal' : `${index + 1}ª Preferência de Transferência`}
                     </span>
