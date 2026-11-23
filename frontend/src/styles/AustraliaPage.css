@@ -148,9 +148,10 @@
   }
 
   .drag-handle {
-    display: none;
+    touch-action: none;
+    padding: 0.4rem;
   }
-
+  
   .btn-move {
     width: 42px;
     height: 42px;
