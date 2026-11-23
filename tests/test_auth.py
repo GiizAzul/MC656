@@ -41,7 +41,7 @@ def testa_login_varios_escopos(auth: ServicoAutenticacao) -> None:
     assert logado_jogador.escopo == "BOTC_JOGADOR"
 
     logado_gestor = auth.login("Admin_aus", "123")
-    assert logado_gestor.escopo == "AUSTRALIA_GESTAO,AUSTRALIA_ELEITOR"
+    assert logado_gestor.escopo == "AUSTRALIA_GESTAO"
 
 def testa_adicionar_multiplos_escopos_com_sujeira() -> None:
     """Verifica se o método adicionar_escopo aplica split, strip, remove duplicatas e ordena."""

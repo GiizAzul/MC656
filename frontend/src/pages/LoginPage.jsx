@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState,  useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/AuthPage.css';
 
-export default function LoginPage({ onLoginSuccess }) {
+export default function LoginPage({ onLoginSuccess, onLogout }) {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
+
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        await fetch('/logout', { method: 'GET', credentials: 'include' });
+      } catch {
+        // ignora falha de rede
+      }
+      if (ativo && onLogout) onLogout();
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [onLogout]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
