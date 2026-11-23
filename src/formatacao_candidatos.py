@@ -2,7 +2,6 @@
 
 from collections import Counter
 
-
 _PARTICULAS_SOBRENOME = {"da", "das", "de", "do", "dos", "e"}
 
 
