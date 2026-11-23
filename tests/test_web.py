@@ -951,6 +951,7 @@ def _resetar_salas_botc():
 def test_botc_api_estado_lobby_e_principal():
     """Cobre /botc/api/estado no modo lobby e na partida principal."""
     _resetar_salas_botc()
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "leo")
 
     # 1. Quando salas_botc já foi iniciada mas está vazia, apenas_lobby=True retorna sem_salas=True
@@ -995,6 +996,7 @@ def test_botc_api_fluxo_completo_salas_senha_storyteller():
         "senha": "123",
         "senha_confirma": "123",
     })
+    client.cookies.clear()
 
     # 1. Jogador comum tenta assumir Storyteller -> 403
     client.cookies.set("sessao_usuario", "jog_api")
@@ -1002,6 +1004,7 @@ def test_botc_api_fluxo_completo_salas_senha_storyteller():
     assert res_st_403.status_code == 403
 
     # 2. Storyteller cria sala com senha
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "st_api")
     res_criar = client.post(
         "/botc/api/criar-partida",
@@ -1028,11 +1031,13 @@ def test_botc_api_fluxo_completo_salas_senha_storyteller():
         "senha": "123",
         "senha_confirma": "123",
     })
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "st_intruso")
     res_roubar_st = client.post("/botc/api/assumir-storyteller", data={"partida_id": sala_id})
     assert res_roubar_st.status_code == 400
 
     # 6. Storyteller titular não pode votar (403 JSON)
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "st_api")
     res_st_votar = client.post(
         "/botc/votar",
@@ -1042,6 +1047,7 @@ def test_botc_api_fluxo_completo_salas_senha_storyteller():
     assert res_st_votar.status_code == 403
 
     # 7. Jogador tenta entrar sem senha ou ver estado -> 403
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "jog_api")
     res_estado_bloqueado = client.get(f"/botc/api/estado?partida_id={sala_id}")
     assert res_estado_bloqueado.status_code == 403
@@ -1073,6 +1079,7 @@ def test_botc_api_fluxo_completo_salas_senha_storyteller():
     assert client.post("/botc/api/sair-sala", data={"partida_id": "nao_existe"}).status_code == 200
 
     # 10. Storyteller encerra partida, sai (ou exclui sala)
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "st_api")
     res_encerrar = client.post("/botc/api/encerrar-partida", data={"partida_id": sala_id})
     assert res_encerrar.status_code == 200
@@ -1086,6 +1093,7 @@ def test_botc_api_fluxo_completo_salas_senha_storyteller():
 def test_botc_api_sair_sala_vazia_exclui_automaticamente():
     """Cobre exclusão automática da sala quando o último participante sai."""
     _resetar_salas_botc()
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "leo")
 
     res_criar = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Temporaria"})
@@ -1121,10 +1129,12 @@ def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
     })
 
     # 1. Jogador comum não pode iniciar giro -> 403
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "fantasma_giro")
     assert client.post("/botc/api/iniciar-giro", data={"nomeado_id": "Jogador 1"}).status_code == 403
 
     # 2. Storyteller tenta iniciar giro numa sala vazia -> 400
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "st_giro")
     res_sala_vazia = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Sozinho"})
     sala_vazia_id = res_sala_vazia.json()["partida_id"]
@@ -1136,6 +1146,7 @@ def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
     client.post("/botc/api/excluir-sala", data={"partida_id": sala_vazia_id})
 
     # 3. Entra na partida principal e coloca o fantasma_giro com voto fantasma e mão levantada
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "fantasma_giro")
     client.get("/botc/api/estado?partida_id=principal")
     sala_principal = app.state.salas_botc["principal"]
@@ -1148,6 +1159,7 @@ def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
     )
 
     # 4. Storyteller inicia o giro nomeando 'Jogador 1'
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "st_giro")
     t_inicio = 1_000_000.0
     monkeypatch.setattr(time_mod, "time", lambda: t_inicio)
@@ -1168,6 +1180,7 @@ def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
 
     # 6. Avança o relógio 1.6s (1 passo) para travar o primeiro jogador e verifica estado parcial
     monkeypatch.setattr(time_mod, "time", lambda: t_inicio + 1.6)
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "fantasma_giro")
     res_parcial = client.get("/botc/api/estado?partida_id=principal")
     assert res_parcial.status_code == 200
@@ -1193,6 +1206,7 @@ def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
     assert jog_fantasma.status == StatusJogador.MORTO_SEM_FANTASMA
 
     # 8. Apurar limpa nomeados do dia e trancados
+    client.cookies.clear()
     client.cookies.set("sessao_usuario", "st_giro")
     res_apurar = client.post("/botc/apurar", data={"partida_id": "principal"})
     assert res_apurar.status_code == 200
