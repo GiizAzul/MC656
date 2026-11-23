@@ -199,7 +199,7 @@ export default function CACoPage({ usuario }) {
               📍 {assembleiaAtual.local} | 📅 {assembleiaAtual.data} às {assembleiaAtual.horario}
             </p>
           </div>
-          <div style={{minWidth: '250px'}}>
+          <div style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>            
             <select
               aria-label="Selecionar Assembleia"
               className="form-control"

@@ -73,6 +73,13 @@
   gap: 1.25rem;
 }
 
+.caco-header select.form-control {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 560px) {
   .caco-header,
   .caco-card {
