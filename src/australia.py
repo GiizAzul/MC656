@@ -161,6 +161,11 @@ class EleicaoAustralia(SistemaEleitoral):
         preferencias = self.converter_posicoes_partidos(posicoes)
         self.apurar_voto_partidos(eleitor_id, preferencias)
 
+    def apurar_voto(self, eleitor_id: str, voto: object) -> None:
+        """Valida voto único no motor antes de encaminhar a cédula ao estado atual."""
+        self._validar_voto_unico(eleitor_id)
+        super().apurar_voto(eleitor_id, voto)
+
     def _contar_primeiras_preferencias(self) -> dict[str, int]:
         """Método privado para contabilizar os votos válidos da rodada atual."""
         contagem = {cid: 0 for cid, ativo in self.candidatos.items() if ativo}
@@ -212,11 +217,16 @@ class EleicaoAustralia(SistemaEleitoral):
         if not isinstance(voto, list):
             raise TypeError("Erro de cédula inválida: o voto deve ser uma lista ordenada de candidatos.")
 
-        # Garante voto único
-        if eleitor_id in self.votantes:
-            raise ValueError("Você já registrou seu voto nesta eleição.")
+        # Mantém a validação também para chamadas diretas ao registro, sem passar
+        # pela entrada pública `apurar_voto`.
+        self._validar_voto_unico(eleitor_id)
 
         self._validar_cedula(voto, "cédula")
 
         self.cedulas.append(voto[:])
         self.votantes.add(eleitor_id)
+
+    def _validar_voto_unico(self, eleitor_id: str) -> None:
+        """Impede que um eleitor já registrado envie outra cédula."""
+        if eleitor_id in self.votantes:
+            raise ValueError("Você já registrou seu voto nesta eleição.")

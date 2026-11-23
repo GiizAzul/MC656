@@ -9,7 +9,9 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
+
 from src.caco import OpcaoVoto, EleicaoAssembleia
+from src.database import carregar_estado_sql, salvar_estado_sql
 
 from .dependencias import obter_usuario_logado
 
@@ -36,7 +38,7 @@ def _validar_data_hora_assembleia(data_str: str, hora_str: str) -> datetime:
 def _obter_assembleias_caco(app_state) -> dict:
     """Gerencia o dicionário de múltiplas assembleias, sincronizando a 'principal' com app_state.eleicao_caco."""
     if not hasattr(app_state, "assembleias_caco"):
-        app_state.assembleias_caco = {}
+        app_state.assembleias_caco = carregar_estado_sql("assembleias_caco") or {}
     if not hasattr(app_state, "eleitores_caco_votaram"):
         app_state.eleitores_caco_votaram = set()
 
@@ -76,34 +78,54 @@ def _sincronizar_participante_caco(motor: EleicaoAssembleia, usuario: Usuario) -
         motor.alunos_cadastrados.add(usuario.id)
         motor.eleitores.add(usuario.id)
 
-# @router.post("/iniciar")
-# async def iniciar_votacao_caco(
-#     request: Request, 
-#     usuario: Annotated [Usuario, Depends(obter_usuario_logado)]
-# ):
-#     if "CACO_GESTAO" not in usuario.escopo:
-#         return RedirectResponse(url="/", status_code=302)
+@router.post("/iniciar")
+async def iniciar_votacao_caco(
+    request: Request, 
+    usuario: Annotated [Usuario, Depends(obter_usuario_logado)]
+):
+    if "CACO_GESTAO" not in usuario.escopo:
+        return RedirectResponse(url="/", status_code=302)
 
-#     eleicao = request.app.state.eleicao_caco
+    eleicao = request.app.state.eleicao_caco
 
-#     try:
-#         eleicao.iniciar_votacao()
+    try:
+        eleicao.iniciar_votacao()
+        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         
-#         return templates.TemplateResponse(
-#             request=request,
-#             name="sucesso.html",
-#             context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
-#         )
-#     except RuntimeError as e:
-#         return templates.TemplateResponse(
-#             request=request,
-#             name="caco.html",
-#             context={
-#                 "erro": str(e),
-#                 "estado_eleicao": eleicao.estado.nome,
-#                 "is_gestao": True
-#             }
-#         )
+        return templates.TemplateResponse(
+            request=request,
+            name="sucesso.html",
+            context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
+        )
+    except RuntimeError as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="caco.html",
+            context={
+                "erro": str(e),
+                "estado_eleicao": eleicao.estado.nome,
+                "is_gestao": True
+            }
+        )
+        eleicao.iniciar_votacao()
+        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
+        return templates.TemplateResponse(
+            request=request,
+            name="sucesso.html",
+            context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
+        )
+    except RuntimeError as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="caco.html",
+            context={
+                "erro": str(e),
+                "estado_eleicao": eleicao.estado.nome,
+                "is_gestao": True
+            }
+        )
 
 @router.get("/assembleia", response_class=HTMLResponse)
 async def tela_assembleia(
@@ -161,7 +183,8 @@ async def processar_voto_caco(
         
         # Assina a lista de presença marcando que o ID já votou
         request.app.state.eleitores_caco_votaram.add(usuario.id)
-        
+        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         return templates.TemplateResponse(
             request=request, 
             name="sucesso.html", 
@@ -178,36 +201,6 @@ async def processar_voto_caco(
             }
         )
 
-@router.post("/iniciar")
-async def iniciar_assembleia_caco(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
-):
-    if "CACO_GESTAO" not in usuario.escopo:
-        return RedirectResponse(url="/", status_code=302)
-
-    eleicao = request.app.state.eleicao_caco
-    _sincronizar_participante_caco(eleicao, usuario)
-    try:
-        eleicao.iniciar_votacao()
-    except RuntimeError as e:
-        return templates.TemplateResponse(
-            name="caco.html",
-            request=request,
-            context={
-                "estado_votacao": eleicao.estado.nome,
-                "is_gestao": True,
-                "ja_votou": usuario.id in getattr(eleicao, "votantes", set()),
-                "erro": str(e),
-            },
-        )
-
-    return templates.TemplateResponse(
-        name="sucesso.html",
-        request=request,
-        context={"mensagem": "Assembleia CACo aberta para votação."},
-    )
-
 @router.post("/encerrar")
 async def encerrar_votacao_caco(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
     if "CACO_GESTAO" not in usuario.escopo:
@@ -218,7 +211,8 @@ async def encerrar_votacao_caco(request: Request, usuario: Annotated [Usuario, D
     try:
         # Garante que a votação será fechada
         eleicao.encerrar_votacao()
-        
+        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         return templates.TemplateResponse(
             request=request,
             name="sucesso.html",
@@ -305,6 +299,7 @@ async def estado_caco_json(
             "historico_falas": list(p["historico_falas"]),
         })
 
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({
         "is_gestao": "CACO_GESTAO" in usuario.escopo,
         "assembleia_atual": {
@@ -366,6 +361,7 @@ async def criar_nova_assembleia(
         "encerrada": False,
         "pautas": [],
     }
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "criada", "assembleia_id": novo_id})
 
 
@@ -389,6 +385,7 @@ async def encerrar_assembleia_completa(
                 p["motor"].encerrar_votacao()
         asm["encerrada"] = True
 
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "encerrada"})
 
 
@@ -428,6 +425,7 @@ async def criar_pauta_na_assembleia(
         "historico_falas": [],
     }
     asm["pautas"].append(nova_pauta)
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "criada", "pauta_id": nova_pauta["id"]})
 
 
@@ -476,7 +474,7 @@ async def iniciar_pauta_concorrente(
             alvo["ja_iniciada"] = True
         except RuntimeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "iniciada", "pauta_id": pauta_id})
 
 
@@ -504,6 +502,7 @@ async def encerrar_pauta_especifica(
         alvo["motor"].encerrar_votacao()
 
     res = alvo["motor"].apurar_vencedor()
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "encerrada", "resultado": getattr(res, "name", str(res)) if res else None})
 
 @router.post("/api/assembleias/{assembleia_id}/pautas/{pauta_id}/votar")
@@ -538,7 +537,8 @@ async def votar_na_pauta_caco(
         alvo["votantes"].add(usuario.id)
     except (RuntimeError, KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
+        
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "ok", "mensagem": f"Voto '{opcao}' registrado na pauta '{alvo['titulo']}'!"})
 
 @router.post("/api/assembleias/{assembleia_id}/pautas/{pauta_id}/falas/inscrever")
@@ -573,6 +573,7 @@ async def inscrever_fala_pauta(
         "tipo": tipo_fala.strip() or "Fala Ordinária",
         "inscrito_em": datetime.now().strftime("%H:%M:%S"),
     })
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "inscrito"})
 
 
@@ -604,4 +605,5 @@ async def chamar_proximo_orador(
         proximo["inicio_fala"] = datetime.now().strftime("%H:%M:%S")
         alvo["orador_atual"] = proximo
 
+    salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "ok", "orador_atual": alvo["orador_atual"]})

@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
 from src.autenticacao.factory import UsuarioFactory
+from src.database import salvar_estado_sql
 
 from .dependencias import obter_usuario_logado
 
@@ -59,12 +60,14 @@ async def processar_cadastro(
 
         usuario_registrado = banco.registrar(novo_usuario)
         id_final = usuario_registrado.id if usuario_registrado else novo_usuario.id
+        salvar_estado_sql("banco_auth", request.app.state.banco_auth)
 
         # Adiciona alunos e gestores novos na lista de eleitores da assembleia ativa 
         if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
             eleicao_caco = request.app.state.eleicao_caco
             eleicao_caco.alunos_cadastrados.add(id_final)
             eleicao_caco.eleitores.add(id_final)
+            salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
 
         # Faz o login automático após cadastro
         resposta = RedirectResponse(url="/dashboard", status_code=302)
@@ -105,16 +108,16 @@ async def adicionar_escopo_usuario(
             tipo_conta, usuario.username, "senha_temp", usuario.nome_real, ra
         )
         ra_int = getattr(temp_user, "ra", None)
-        usuario.adicionar_escopo(temp_user.escopo, ra=ra_int)
-
-        if ra_int is not None:
-            request.app.state.banco_auth._mapa_usernames[str(ra_int)] = usuario.id
+        
+        banco = request.app.state.banco_auth
+        banco.vincular_escopo(usuario, temp_user.escopo, ra=ra_int)
+        salvar_estado_sql("banco_auth", request.app.state.banco_auth)
 
         if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
             eleicao_caco = request.app.state.eleicao_caco
             eleicao_caco.alunos_cadastrados.add(usuario.id)
             eleicao_caco.eleitores.add(usuario.id)
-
+            salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)   
         return RedirectResponse(url="/dashboard", status_code=302)
     except ValueError as erro:
         return templates.TemplateResponse(
