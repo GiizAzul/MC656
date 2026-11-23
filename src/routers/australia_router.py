@@ -22,7 +22,7 @@ def _contexto_cedula(eleicao, usuario: Usuario, **extra) -> dict:
     return {
         "candidatos": list(eleicao.candidatos),
         "nomes_formatados": formatar_nomes_candidatos(
-            list(eleicao.candidatos), eleicao.partidos_candidatos
+            list(eleicao.candidatos), getattr(eleicao, "partidos_candidatos", {})
         ),
         "estado_eleicao": eleicao.estado.nome,
         "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
@@ -180,7 +180,7 @@ async def estado_australia_json(
     return JSONResponse({
         "candidatos": list(eleicao.candidatos),
         "nomes_formatados": formatar_nomes_candidatos(
-            list(eleicao.candidatos), eleicao.partidos_candidatos
+            list(eleicao.candidatos), getattr(eleicao, "partidos_candidatos", {})
         ),
         "estado_eleicao": eleicao.estado.nome,
         "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
