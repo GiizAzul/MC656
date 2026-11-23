@@ -108,10 +108,9 @@ async def adicionar_escopo_usuario(
             tipo_conta, usuario.username, "senha_temp", usuario.nome_real, ra
         )
         ra_int = getattr(temp_user, "ra", None)
-        usuario.adicionar_escopo(temp_user.escopo, ra=ra_int)
-
-        if ra_int is not None:
-            request.app.state.banco_auth._mapa_usernames[str(ra_int)] = usuario.id
+        
+        banco = request.app.state.banco_auth
+        banco.vincular_escopo(usuario, temp_user.escopo, ra=ra_int)
         salvar_estado_sql("banco_auth", request.app.state.banco_auth)
 
         if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):

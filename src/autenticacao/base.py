@@ -50,6 +50,19 @@ class ServicoAutenticacao:
         # Mapeamento secundário apenas para permitir o login via username
         self._mapa_usernames: dict[str, str] = {}
 
+    def vincular_escopo(self, usuario: Usuario, novo_escopo: str, ra: int | None = None) -> None:
+        """Valida unicidade/titularidade do RA e adiciona um novo escopo a um usuário existente."""
+        if ra is not None:
+            dono_ra = self._mapa_usernames.get(str(ra))
+            if dono_ra is not None and dono_ra != usuario.id:
+                raise ValueError(f"Erro: RA {ra} já existente.")
+            if getattr(usuario, "ra", None) is not None and usuario.ra != ra:
+                raise ValueError("Erro: Esta conta já possui um RA vinculado.")
+
+        usuario.adicionar_escopo(novo_escopo, ra=ra)
+        if ra is not None:
+            self._mapa_usernames[str(ra)] = usuario.id
+
     def registrar(self, usuario: Usuario) -> None:
         if not usuario.username.strip() or not usuario.senha.strip():
             raise ValueError("Erro: Username e senha não podem ser vazios")
@@ -57,11 +70,7 @@ class ServicoAutenticacao:
             existente = self._banco_por_id[self._mapa_usernames[usuario.username]]
             if existente.validar_senha(usuario.senha) and usuario.escopo not in existente.escopo:
                 ra_novo = getattr(usuario, "ra", None)
-                if ra_novo and str(ra_novo) in self._mapa_usernames:
-                    raise ValueError(f"Erro: RA {ra_novo} já existente.")
-                existente.adicionar_escopo(usuario.escopo, ra=ra_novo)
-                if ra_novo:
-                    self._mapa_usernames[str(ra_novo)] = existente.id
+                self.vincular_escopo(existente, usuario.escopo, ra=ra_novo)
                 return
             raise ValueError(f"Erro: username {usuario.username} já existente.")
         if hasattr(usuario, 'ra') and usuario.ra and str(usuario.ra) in self._mapa_usernames:
