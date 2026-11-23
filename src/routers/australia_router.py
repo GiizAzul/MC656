@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
+from src.formatacao_candidatos import formatar_nomes_candidatos
 
 from .dependencias import obter_usuario_logado
 
@@ -20,6 +21,9 @@ def _contexto_cedula(eleicao, usuario: Usuario, **extra) -> dict:
     pois a tela depende de `estado_eleicao` para decidir se mostra a cédula."""
     return {
         "candidatos": list(eleicao.candidatos),
+        "nomes_formatados": formatar_nomes_candidatos(
+            list(eleicao.candidatos), eleicao.partidos_candidatos
+        ),
         "estado_eleicao": eleicao.estado.nome,
         "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
         **extra,
@@ -175,6 +179,9 @@ async def estado_australia_json(
     eleicao = request.app.state.eleicao_australia
     return JSONResponse({
         "candidatos": list(eleicao.candidatos),
+        "nomes_formatados": formatar_nomes_candidatos(
+            list(eleicao.candidatos), eleicao.partidos_candidatos
+        ),
         "estado_eleicao": eleicao.estado.nome,
         "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
         "ja_votou": usuario.id in request.app.state.eleitores_australia_votaram,
