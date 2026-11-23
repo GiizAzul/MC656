@@ -539,17 +539,17 @@ async def apurar_execucao_botc(
     sistema = sala["sistema"]
 
     resultado = sistema.apurar_vencedor()
+    mensagem = (
+        f"⚖️ O jogador executado foi: {resultado}"
+        if resultado
+        else "⚖️ Ninguém foi executado. Empate ou votos insuficientes."
+    )
     # Ao encerrar o dia e apurar o executado, limpa os nomeados do dia para o próximo ciclo!
     sala.setdefault("nomeados_hoje", set()).clear()
     sala["giro"]["trancados"] = {}
     sala["giro"]["trancados_nomes"] = set()
     sala["giro"]["mensagem_final"] = ""
 
-    mensagem = (
-        f"O jogador executado foi: {resultado}"
-        if resultado
-        else "Ninguém foi executado. Empate ou votos insuficientes."
-    )
 
     _persistir_botc(request)
     return templates.TemplateResponse(
@@ -557,7 +557,7 @@ async def apurar_execucao_botc(
         request=request,
         context={"mensagem": mensagem},
     )
-    
+
 def _atualizar_progresso_giro(sala: dict) -> dict:
     """Atualiza o ponteiro do Storyteller no servidor (1.5s por jogador) e trava as mãos."""
     giro = sala["giro"]
