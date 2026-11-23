@@ -362,3 +362,115 @@ def test_adicionar_escopo_bloqueia_alteracao_de_ra_ja_vinculado(client, app_stat
     assert "Erro: Esta conta já possui um RA vinculado." in response.text
     assert "999888" not in banco._mapa_usernames
     assert estudante.ra == 555444
+
+
+def test_caco_multiplas_assembleias_pautas_concorrentes_e_falas(client):
+    """Cobre criação de assembleias (com validação de data/hora), pautas concorrentes e falas."""
+    client.cookies.clear()
+    client.cookies.set("sessao_usuario", "julia")  # CACO_GESTAO
+
+    # 1. Rejeita data/hora no passado ou inexistente (400)
+    assert client.post(
+        "/caco/api/assembleias",
+        data={"titulo": "Passada", "descricao": "D", "local": "IC", "data": "2020-01-10", "horario": "10:00"},
+    ).status_code == 400
+    assert client.post(
+        "/caco/api/assembleias",
+        data={"titulo": "Invalida", "descricao": "D", "local": "IC", "data": "2099-02-31", "horario": "25:99"},
+    ).status_code == 400
+
+    # 2. Cria assembleia futura válida e duas pautas
+    res_asm = client.post(
+        "/caco/api/assembleias",
+        data={
+            "titulo": "Assembleia Extraordinária 2027",
+            "descricao": "Pautas estatutárias",
+            "local": "Auditório IC",
+            "data": "2027-05-20",
+            "horario": "14:00",
+        },
+    )
+    assert res_asm.status_code == 200
+    asm_id = res_asm.json()["assembleia_id"]
+
+    p1 = client.post(
+        f"/caco/api/assembleias/{asm_id}/pautas", data={"titulo": "Pauta 1", "descricao": "D1"}
+    ).json()["pauta_id"]
+    p2 = client.post(
+        f"/caco/api/assembleias/{asm_id}/pautas", data={"titulo": "Pauta 2", "descricao": "D2"}
+    ).json()["pauta_id"]
+
+    # 3. Inicia Pauta 1 e valida trava de concorrência (409) ao tentar iniciar Pauta 2 juntas
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/iniciar").status_code == 200
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p2}/iniciar").status_code == 409
+
+    # 4. Inscrição na fila de falas, bloqueio de duplicata, próximo orador e voto na Pauta 1
+    assert client.post(
+        f"/caco/api/assembleias/{asm_id}/pautas/{p1}/falas/inscrever",
+        data={"tipo_fala": "Questão de Ordem"},
+    ).status_code == 200
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/falas/inscrever").status_code == 400
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/falas/proximo").status_code == 200
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/falas/proximo").status_code == 200
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/votar", data={"opcao": "APROVAR"}).status_code == 200
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/votar", data={"opcao": "APROVAR"}).status_code == 400
+
+    # 5. Encerra Pauta 1, valida proibição de reabrir (400) e abre Pauta 2 (200)
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/encerrar").status_code == 200
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p1}/iniciar").status_code == 400
+    assert client.post(f"/caco/api/assembleias/{asm_id}/pautas/{p2}/iniciar").status_code == 200
+
+    # 6. Encerra assembleia inteira e consulta estado
+    assert client.post(f"/caco/api/assembleias/{asm_id}/encerrar").status_code == 200
+    assert client.get(f"/caco/api/estado?assembleia_id={asm_id}").status_code == 200
+    client.cookies.clear()
+
+
+def test_australia_api_votar_partidos_e_vencedor(client):
+    """Cobre POST /australia/api/votar-partidos e apuração de vencedor em GET /australia/api/estado."""
+    import copy
+
+    from src.main import app
+
+    eleicao_original = copy.deepcopy(app.state.eleicao_australia)
+    votaram_original = set(app.state.eleitores_australia_votaram)
+
+    try:
+        client.cookies.clear()
+        client.post(
+            "/cadastro",
+            data={
+                "tipo_conta": "AUSTRALIA_GESTAO",
+                "nome_real": "Gestao Aus Teste",
+                "username": "gestao_aus_teste",
+                "senha": "1",
+                "senha_confirma": "1",
+            },
+        )
+        client.cookies.clear()
+        client.cookies.set("sessao_usuario", "gestao_aus_teste")
+        client.post("/australia/iniciar")
+
+        # Sem escopo AUSTRALIA_ELEITOR -> 403
+        assert client.post("/australia/api/votar-partidos", json={"ranking_partidos": []}).status_code == 403
+
+        client.cookies.clear()
+        client.cookies.set("sessao_usuario", "caio")
+        estado = client.get("/australia/api/estado").json()
+        partidos = list(estado["partidos"].keys())
+
+        # Voto válido por partidos (200) e tentativa duplicada (400)
+        assert client.post("/australia/api/votar-partidos", json={"ranking_partidos": partidos}).status_code == 200
+        assert client.post("/australia/api/votar-partidos", json={"ranking_partidos": partidos}).status_code == 400
+
+        # Encerra e consulta vencedor no estado JSON
+        client.cookies.clear()
+        client.cookies.set("sessao_usuario", "gestao_aus_teste")
+        client.post("/australia/encerrar")
+        res_final = client.get("/australia/api/estado")
+        assert res_final.status_code == 200
+        assert res_final.json()["vencedor"] is not None
+    finally:
+        app.state.eleicao_australia = eleicao_original
+        app.state.eleitores_australia_votaram = votaram_original
+        client.cookies.clear()

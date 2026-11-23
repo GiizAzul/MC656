@@ -31,7 +31,8 @@
   padding: 1.1rem;
   border: 2px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: #f8fafc;
+  background: var(--surface-alt);
+  color: var(--text-primary);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s;
@@ -56,4 +57,18 @@
   height: 100%;
   background: var(--caco-purple);
   transition: width 0.3s ease;
+}
+
+.caco-pauta-item {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-alt);
+  color: var(--text-primary);
+}
+
+.caco-gestao-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.25rem;
 }

@@ -326,7 +326,15 @@ async def sair_da_sala_botc(
     sistema.jogadores.pop(usuario.id, None)
     sistema.jogadores.pop(usuario.username, None)
     sistema.jogadores.pop(usuario.nome_real, None)
-    sala["maos"].pop(usuario.username, None)
+    # Remove o estado de mão levantada
+    for chave_mao in (usuario.username, usuario.nome_real, usuario.id):
+      sala["maos"].pop(chave_mao, None)
+      if hasattr(request.app.state, "maos_botc"):
+          request.app.state.maos_botc.pop(chave_mao, None)
+    sala["giro"].get("trancados", {}).pop(usuario.id, None)
+    sala["giro"].get("trancados_nomes", set()).discard(usuario.nome_real)
+    sala["giro"].get("trancados_nomes", set()).discard(usuario.username)
+
     sala.get("autorizados", set()).discard(usuario.id)
 
     if sala["storyteller_id"] == usuario.id:
@@ -535,17 +543,17 @@ async def apurar_execucao_botc(
     sistema = sala["sistema"]
 
     resultado = sistema.apurar_vencedor()
+    mensagem = (
+        f"⚖️ O jogador executado foi: {resultado}"
+        if resultado
+        else "⚖️ Ninguém foi executado. Empate ou votos insuficientes."
+    )
     # Ao encerrar o dia e apurar o executado, limpa os nomeados do dia para o próximo ciclo!
     sala.setdefault("nomeados_hoje", set()).clear()
     sala["giro"]["trancados"] = {}
     sala["giro"]["trancados_nomes"] = set()
     sala["giro"]["mensagem_final"] = ""
 
-    mensagem = (
-        f"O jogador executado foi: {resultado}"
-        if resultado
-        else "Ninguém foi executado. Empate ou votos insuficientes."
-    )
 
     _persistir_botc(request)
     return templates.TemplateResponse(
@@ -553,7 +561,7 @@ async def apurar_execucao_botc(
         request=request,
         context={"mensagem": mensagem},
     )
-    
+
 def _atualizar_progresso_giro(sala: dict) -> dict:
     """Atualiza o ponteiro do Storyteller no servidor (1.5s por jogador) e trava as mãos."""
     giro = sala["giro"]
