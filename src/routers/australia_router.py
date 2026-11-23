@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
+from src.formatacao_candidatos import formatar_nomes_candidatos
 
 from .dependencias import obter_usuario_logado
 
@@ -20,6 +21,9 @@ def _contexto_cedula(eleicao, usuario: Usuario, **extra) -> dict:
     pois a tela depende de `estado_eleicao` para decidir se mostra a cédula."""
     return {
         "candidatos": list(eleicao.candidatos),
+        "nomes_formatados": formatar_nomes_candidatos(
+            list(eleicao.candidatos), getattr(eleicao, "partidos_candidatos", {})
+        ),
         "estado_eleicao": eleicao.estado.nome,
         "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
         **extra,
@@ -180,7 +184,10 @@ async def estado_australia_json(
             
     return JSONResponse({
         "candidatos": list(eleicao.candidatos),
-        "partidos": getattr(eleicao, "partidos_candidatos", {}),
+        "partidos": getattr(eleicao,"partidos_candidatos", {}),
+        "nomes_formatados": formatar_nomes_candidatos(
+            list(eleicao.candidatos), getattr(eleicao, "partidos_candidatos", {})
+        ),
         "estado_eleicao": eleicao.estado.nome,
         "is_gestao": "AUSTRALIA_GESTAO" in usuario.escopo,
         "pode_votar": "AUSTRALIA_ELEITOR" in usuario.escopo,
@@ -216,3 +223,4 @@ async def processar_voto_partidos_api(
         })
     except (RuntimeError, ValueError) as exc:
         return JSONResponse({"erro": str(exc)}, status_code=400)
+    })

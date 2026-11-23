@@ -9,6 +9,7 @@ export default function AustraliaPage() {
   const [ordemPartidos, setOrdemPartidos] = useState([]);
 
   const [candidatos, setCandidatos] = useState([]);
+  const [nomesFormatados, setNomesFormatados] = useState({});
   const [estadoEleicao, setEstadoEleicao] = useState('AGUARDANDO');
   const [isGestao, setIsGestao] = useState(false);
   const [jaVotou, setJaVotou] = useState(false);
@@ -29,6 +30,7 @@ export default function AustraliaPage() {
         setPodeVotar(data.pode_votar !== undefined ? data.pode_votar : true);
         setOrdemPartidos((prev) => (prev.length === 0 ? nomesPartidos : prev));
         setCandidatos((prev) => (prev.length === 0 ? data.candidatos : prev));
+        setNomesFormatados(data.nomes_formatados || {});
         setEstadoEleicao(data.estado_eleicao);
         setIsGestao(data.is_gestao);
         setJaVotou(data.ja_votou);
@@ -241,15 +243,19 @@ export default function AustraliaPage() {
                   </span>
                   <div className="candidate-info">
                     <span className="candidate-name">
-                      {isPartido ? `🏛️ ${itemNome}` : `👤 ${itemNome}`}
-                    </span>
+                    {isPartido
+                      ? `🏛️ ${itemNome}`
+                      : `👤 ${nomesFormatados[itemNome] || itemNome}`}
+                  </span>
                     <span className="candidate-hint">
-                      {isPartido
-                        ? `Candidatos da legenda: ${filiados.join(', ') || 'Nenhum'}`
-                        : index === 0
-                        ? '1ª Preferência Principal'
-                        : `${index + 1}ª Preferência de Transferência`}
-                    </span>
+                    {isPartido
+                      ? `Candidatos da legenda: ${
+                          filiados.map((c) => nomesFormatados[c] || c).join(', ') || 'Nenhum'
+                        }`
+                      : index === 0
+                      ? '1ª Preferência Principal'
+                      : `${index + 1}ª Preferência de Transferência`}
+                  </span>
                   </div>
                 </div>
 
