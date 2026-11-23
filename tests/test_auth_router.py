@@ -325,6 +325,7 @@ def test_casos_borda_salas_e_giro_botc(client):
     assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid_vazia, "nomeado_id": "ninguem"}).status_code == 400
     assert client.post("/botc/api/excluir-sala", data={"partida_id": pid_vazia}).status_code == 200
     client.cookies.clear()
+
 def test_adicionar_escopo_bloqueia_ra_de_outro_usuario(client, app_state_mock):
     """Impede que POST /adicionar-escopo vincule um RA já pertencente a outra conta."""
     banco = app_state_mock.banco_auth

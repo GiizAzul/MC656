@@ -12,9 +12,12 @@ client = TestClient(app, base_url="https://testserver")
 @pytest.fixture(autouse=True)
 def votacao_australia_aberta():
     """A eleição não é mais iniciada no main.py: os testes abrem a votação."""
+    client.cookies.clear()
     eleicao = app.state.eleicao_australia
     if isinstance(eleicao.estado, AguardandoVotacao):
         eleicao.iniciar_votacao()
+    yield
+    client.cookies.clear()
 
 # Testes padrões de interface
 def test_renderizacao_telas_get():
@@ -977,6 +980,7 @@ def test_botc_api_fluxo_completo_salas_senha_storyteller():
     _resetar_salas_botc()
 
     # Cadastra um Storyteller e um Jogador
+    client.cookies.clear()
     client.post("/cadastro", data={
         "tipo_conta": "BOTC_STORYTELLER",
         "nome_real": "ST API",
