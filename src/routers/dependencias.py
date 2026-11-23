@@ -1,3 +1,4 @@
+from typing import Annotated
 from fastapi import Depends, Request
 
 from src.autenticacao.autorizacao import ControleDeAcesso
@@ -30,7 +31,7 @@ controle_acesso = ControleDeAcesso()
 
 def exigir_autorizacao_rota(
     request: Request,
-    usuario: Usuario = Depends(obter_usuario_logado),
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
 ) -> Usuario:
     controle_acesso.acessar_recurso(usuario, request.url.path)
     return usuario
