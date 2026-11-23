@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
 from src.caco import OpcaoVoto
+from src.database import salvar_estado_sql
 
 from .dependencias import exigir_autorizacao_rota, obter_usuario_logado
 
@@ -25,7 +26,8 @@ async def iniciar_votacao_caco(request: Request, usuario: Annotated [Usuario, De
 
     try:
         eleicao.iniciar_votacao()
-        
+        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         return templates.TemplateResponse(
             request=request,
             name="sucesso.html",
@@ -86,7 +88,8 @@ async def processar_voto_caco(request: Request, usuario: Annotated [Usuario, Dep
         
         # Assina a lista de presença marcando que o ID já votou
         request.app.state.eleitores_caco_votaram.add(usuario.id)
-        
+        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         return templates.TemplateResponse(
             request=request, 
             name="sucesso.html", 
@@ -113,7 +116,8 @@ async def encerrar_votacao_caco(request: Request, usuario: Annotated [Usuario, D
     try:
         # Garante que a votação será fechada
         eleicao.encerrar_votacao()
-        
+        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         return templates.TemplateResponse(
             request=request,
             name="sucesso.html",

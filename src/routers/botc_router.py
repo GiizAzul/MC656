@@ -12,6 +12,7 @@ from src.botc import (
     SistemaEleitoralBotC,
     StatusJogador,
 )
+from src.database import salvar_estado_sql
 
 from .dependencias import exigir_autorizacao_rota, obter_usuario_logado
 
@@ -19,6 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 router = APIRouter(prefix="/botc", tags=["BOTC"], dependencies=[Depends(exigir_autorizacao_rota)])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+
+def _persistir_botc(request: Request) -> None:
+    salvar_estado_sql("sistema_botc", request.app.state.sistema_botc)
+    salvar_estado_sql("maos_botc", request.app.state.maos_botc)
+    if hasattr(request.app.state, "salas_botc"):
+        salvar_estado_sql("salas_botc", request.app.state.salas_botc)
 
 
 def _obter_salas_botc(app_state) -> dict:
@@ -173,6 +181,7 @@ async def processar_voto_botc(
 
     if usuario is not None and "BOTC" in usuario.escopo:
         jogador = _obter_ou_criar_jogador(sistema, usuario)
+        _persistir_botc(request)
 
         # Se a requisição vier via fetch/React (Accept: application/json), responde sem trocar de tela!
         if "application/json" in request.headers.get("accept", ""):
@@ -201,6 +210,7 @@ async def processar_voto_botc(
                 },
             )
 
+    _persistir_botc(request)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -260,6 +270,7 @@ async def criar_nova_partida_botc(
             "mensagem_final": "",
         },
     }
+    _persistir_botc(request)
     return JSONResponse({"status": "criada", "partida_id": novo_id})
 
 @router.post("/api/entrar-sala")
@@ -283,6 +294,7 @@ async def entrar_sala_botc(
         raise HTTPException(status_code=403, detail="Senha da sala incorreta!")
 
     sala["autorizados"].add(usuario.id)
+    _persistir_botc(request)
     return JSONResponse({"status": "ok", "partida_id": partida_id})
 
 
@@ -321,6 +333,7 @@ async def sair_da_sala_botc(
     if len(sistema.jogadores) == 0 and sala["storyteller_id"] is None:
         salas.pop(partida_id, None)
 
+    _persistir_botc(request)
     return JSONResponse({"status": "saiu"})
 
 
@@ -340,6 +353,7 @@ async def encerrar_partida_inteira_botc(
     sala["encerrada"] = True
     sala["giro"]["ativo"] = False
     sala["giro"]["mensagem_final"] = "🏁 Partida encerrada pelo Storyteller! Todos estão liberados para sair ou criar nova sala."
+    _persistir_botc(request)
     return JSONResponse({"status": "encerrada"})
 
 @router.post("/api/excluir-sala")
@@ -358,6 +372,7 @@ async def excluir_sala_storyteller(
 
     salas.pop(partida_id, None)
     proxima = next(iter(salas.keys()), "")
+    _persistir_botc(request)
     return JSONResponse({"status": "excluida", "partida_destino": proxima})
     
 @router.post("/api/assumir-storyteller")
@@ -385,6 +400,7 @@ async def assumir_storyteller_partida(
     sala["sistema"].jogadores.pop(usuario.username, None)
     sala["sistema"].jogadores.pop(usuario.nome_real, None)
 
+    _persistir_botc(request)
     return JSONResponse({"status": "ok", "storyteller_nome": sala["storyteller_nome"]})
 
 @router.post("/registrar")
@@ -418,6 +434,7 @@ async def registrar_votos_botc(
             },
         )
 
+    _persistir_botc(request)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -459,6 +476,7 @@ async def aplicar_modificador_botc(
         raise HTTPException(status_code=400, detail="Tipo de modificador desconhecido.")
 
     peso_final = jogador.calcular_peso_voto()
+    _persistir_botc(request)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -489,6 +507,7 @@ async def alterar_status_jogador_botc(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
+    _persistir_botc(request)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -524,6 +543,7 @@ async def apurar_execucao_botc(
         else "Ninguém foi executado. Empate ou votos insuficientes."
     )
 
+    _persistir_botc(request)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -632,6 +652,7 @@ async def iniciar_giro_storyteller(
         "votos_computados": 0,
         "mensagem_final": "",
     }
+    _persistir_botc(request)
     return JSONResponse({"status": "iniciado", "nomeado": nomeado_obj.nome})
 
 
@@ -716,7 +737,10 @@ async def estado_roda_botc(
                     JogadorBotC(id_jogador=nome.lower(), nome=nome, status=StatusJogador.VIVO)
                 )
 
+    giro_estava_ativo = bool(sala["giro"].get("ativo"))
     giro = _atualizar_progresso_giro(sala)
+    if giro_estava_ativo and not giro.get("ativo"):
+        _persistir_botc(request)
 
     jogadores_roda = []
     for jog in sistema.jogadores.values():
