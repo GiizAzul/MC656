@@ -528,7 +528,6 @@ export default function BotCPage() {
       {giro.mensagem_final && !giro.ativo && (
         <div className="alert-banner alert-success">✅ {giro.mensagem_final}</div>
       )}
-      {veredito && <div className="alert-banner alert-success">⚖️ {veredito}</div>}
 
       {semSalas ? (
         <div className="botc-panel-box" style={{ maxWidth: '480px', margin: '2rem auto', textAlign: 'center' }}>
