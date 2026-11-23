@@ -74,7 +74,7 @@ async def processar_cadastro(
 
         # Faz o login automático após cadastro
         rota_destino = controle_acesso.despachar_apos_login(novo_usuario)
-        resposta = RedirectResponse(url=rota_destino, status_code=status.HTTP_303_SEE_OTHER)
+        resposta = RedirectResponse(url=rota_destino, status_code=302)
         resposta.set_cookie(
             key="sessao_usuario",
             value=username,
@@ -142,7 +142,7 @@ async def processar_login(
         usuario = banco.login(username, senha)
         
         rota_destino = controle_acesso.despachar_apos_login(usuario)
-        resposta = RedirectResponse(url=rota_destino, status_code=status.HTTP_303_SEE_OTHER)
+        resposta = RedirectResponse(url=rota_destino, status_code=302)
 
         # Salva o ID/Username no Cookie do navegador
         resposta.set_cookie(

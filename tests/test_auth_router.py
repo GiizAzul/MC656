@@ -41,7 +41,7 @@ def test_rota_cadastro_delega_para_factory(mock_criar, client, app_state_mock):
         "CACO_ESTUDANTE", "giovana", "password123", "Giovana", "123456"
     )
     assert response.status_code == 302
-    assert response.headers["location"] == "/dashboard"
+    assert response.headers["location"] == "/caco/assembleia"
     client.cookies.clear()
 
 

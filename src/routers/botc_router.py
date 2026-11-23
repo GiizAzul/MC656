@@ -107,7 +107,11 @@ async def tela_partida(
     mao_levantada = maos.get(usuario.username, False)
     
     is_storyteller = "STORYTELLER" in usuario.escopo
-    jogador_atual = _obter_ou_criar_jogador(sistema, usuario)
+    jogador_atual = (
+        None
+        if is_storyteller
+        else _obter_ou_criar_jogador(sistema, usuario, sala=sala)
+    )
 
     jogadores_view = [
         {

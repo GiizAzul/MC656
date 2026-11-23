@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from src.australia import EleicaoAustralia
 from src.autenticacao.base import Usuario
+from src.botc import JogadorBotC, StatusJogador
 from src.estados import AguardandoVotacao, EmVotacao, Encerrada
 from src.main import app
 
@@ -61,7 +62,7 @@ def test_fluxo_login_sucesso():
     
     # O servidor deve responder com 302 (Found) redirecionando para o Dashboard
     assert response_login.status_code == 302
-    assert response_login.headers["location"] == "/dashboard"
+    assert response_login.headers["location"] == "/australia/votar"
     
     # O cookie de sessão deve ter sido definido no navegador simulado
     assert "sessao_usuario" in response_login.cookies
@@ -282,19 +283,19 @@ def test_cadastro_estudante_ra_nao_numerico():
 def test_fraude_de_escopos_cross_router():
     """Testa se as verificações de escopo expulsam intrusos também nas renderizações de telas."""
     client.cookies.set("sessao_usuario", "caio") # Austrália tentando acessar CACo e BOTC
-    assert client.post("/caco/votar", data={"opcao": "APROVAR"}, follow_redirects=False).status_code in [302, 307]
-    assert client.post("/caco/iniciar", follow_redirects=False).status_code in [302, 307]
-    assert client.post("/caco/encerrar", follow_redirects=False).status_code in [302, 307]
+    assert client.post("/caco/votar", data={"opcao": "APROVAR"}, follow_redirects=False).status_code == 403
+    assert client.post("/caco/iniciar", follow_redirects=False).status_code == 403
+    assert client.post("/caco/encerrar", follow_redirects=False).status_code == 403
     assert client.get("/caco/resultados", follow_redirects=False).status_code in [403, 302, 307]
-    assert client.get("/caco/assembleia", follow_redirects=False).status_code in [302, 307] # NOVO
+    assert client.get("/caco/assembleia", follow_redirects=False).status_code == 403 # NOVO
     
     assert client.post("/botc/registrar", data={"nomeado": "x", "num_votos": 1}, follow_redirects=False).status_code in [302, 307, 403]
     assert client.post("/botc/apurar", follow_redirects=False).status_code in [302, 307, 403]
-    assert client.get("/botc/partida", follow_redirects=False).status_code in [302, 307] # NOVO
+    assert client.get("/botc/partida", follow_redirects=False).status_code == 403 # NOVO
     
     client.cookies.set("sessao_usuario", "julia") # CACo tentando acessar Austrália
-    assert client.post("/australia/votar", data={"posicao_Candidato A": "1"}, follow_redirects=False).status_code in [302, 307]
-    assert client.get("/australia/votar", follow_redirects=False).status_code in [302, 307] # NOVO
+    assert client.post("/australia/votar", data={"posicao_Candidato A": "1"}, follow_redirects=False).status_code == 403
+    assert client.get("/australia/votar", follow_redirects=False).status_code == 403 # NOVO
     client.cookies.clear()
     
 # Testes caco_router.py
@@ -324,7 +325,7 @@ def test_caco_acoes_gestao_bloqueadas():
     client.cookies.set("sessao_usuario", "caio") # EleitorAustrália
     # O sistema redireciona intrusos para a página de login (302/307)
     response = client.post("/caco/iniciar", follow_redirects=False)
-    assert response.status_code in [302, 307] 
+    assert response.status_code == 403
     client.cookies.clear()
 
 def test_cadastro_todos_os_tipos_restantes_e_autorizacao_caco():
@@ -946,6 +947,10 @@ def _resetar_salas_botc():
         delattr(app.state, "salas_botc")
     app.state._salas_botc_iniciadas = False
     app.state.maos_botc = {}
+    app.state.sistema_botc.jogadores.clear()
+    app.state.sistema_botc.adicionar_jogador(
+        JogadorBotC(id_jogador="Jogador 1", nome="Jogador 1", status=StatusJogador.VIVO)
+    )
 
 
 def test_botc_api_estado_lobby_e_principal():
@@ -1113,14 +1118,14 @@ def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
 
     _resetar_salas_botc()
 
-    client.post("/cadastro", data={
+    client.post("/cadastro",follow_redirects=False, data={
         "tipo_conta": "BOTC_STORYTELLER",
         "nome_real": "ST Giro",
         "username": "st_giro",
         "senha": "123",
         "senha_confirma": "123",
     })
-    client.post("/cadastro", data={
+    client.post("/cadastro",follow_redirects=False, data={
         "tipo_conta": "BOTC_JOGADOR",
         "nome_real": "Fantasma Giro",
         "username": "fantasma_giro",
