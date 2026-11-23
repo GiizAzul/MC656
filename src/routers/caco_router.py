@@ -37,6 +37,8 @@ def _obter_assembleias_caco(app_state) -> dict:
     """Gerencia o dicionário de múltiplas assembleias, sincronizando a 'principal' com app_state.eleicao_caco."""
     if not hasattr(app_state, "assembleias_caco"):
         app_state.assembleias_caco = {}
+    if not hasattr(app_state, "eleitores_caco_votaram"):
+        app_state.eleitores_caco_votaram = set()
 
     eleicao_legada: EleicaoCACo = app_state.eleicao_caco
     if "principal" not in app_state.assembleias_caco:
@@ -63,6 +65,7 @@ def _obter_assembleias_caco(app_state) -> dict:
         }
     else:
         app_state.assembleias_caco["principal"]["pautas"][0]["motor"] = eleicao_legada
+        app_state.assembleias_caco["principal"]["pautas"][0]["votantes"] = app_state.eleitores_caco_votaram
 
     return app_state.assembleias_caco
 
@@ -252,6 +255,10 @@ async def resultados_caco(
         },
     )
 
+def _serializar_contadores(motor: EleicaoCACo) -> dict[str, int]:
+    """Converte as chaves de obter_contadores() (OpcaoVoto ou str) para dict JSON seguro."""
+    return {getattr(k, "name", str(k)): int(v) for k, v in motor.obter_contadores().items()}
+
 @router.get("/api/estado")
 async def estado_caco_json(
     request: Request,
@@ -267,14 +274,17 @@ async def estado_caco_json(
 
     asm = assembleias[assembleia_id]
     pautas_serializadas = []
-    pauta_ativa = None
+    pauta_ativa_id = None
 
     for p in asm["pautas"]:
         motor: EleicaoCACo = p["motor"]
         _sincronizar_participante_caco(motor, usuario)
         estado_nome = motor.estado.nome
         if estado_nome == "VOTACAO":
-            pauta_ativa = p
+            pauta_ativa_id = p["id"]
+
+        contadores = _serializar_contadores(motor)
+        res_vencedor = motor.apurar_vencedor() if estado_nome == "ENCERRADO" else None
 
         pautas_serializadas.append({
             "id": p["id"],
@@ -283,9 +293,9 @@ async def estado_caco_json(
             "estado": estado_nome,
             "ja_iniciada": p.get("ja_iniciada", estado_nome != "AGUARDANDO"),
             "ja_votou": usuario.id in motor.votantes,
-            "votos": dict(motor.votos),
+            "contadores": contadores,
             "total_votos": len(motor.votantes),
-            "resultado": motor.apurar_vencedor() if estado_nome == "ENCERRADO" else None,
+            "resultado": getattr(res_vencedor, "name", str(res_vencedor)) if res_vencedor is not None else None,
             "fila_falas": list(p["fila_falas"]),
             "orador_atual": p["orador_atual"],
             "historico_falas": list(p["historico_falas"]),
@@ -293,7 +303,6 @@ async def estado_caco_json(
 
     return JSONResponse({
         "is_gestao": "CACO_GESTAO" in usuario.escopo,
-        "usuario": {"id": usuario.id, "username": usuario.username, "nome": usuario.nome_real},
         "assembleia_atual": {
             "id": asm["id"],
             "titulo": asm["titulo"],
@@ -315,7 +324,7 @@ async def estado_caco_json(
             }
             for a in assembleias.values()
         ],
-        "pauta_ativa_id": pauta_ativa["id"] if pauta_ativa else None,
+        "pauta_ativa_id": pauta_ativa_id,
         "pautas": pautas_serializadas,
     })
 
@@ -391,10 +400,10 @@ async def criar_pauta_na_assembleia(
         raise HTTPException(status_code=403, detail="Apenas a Gestão do CACo pode criar pautas.")
 
     assembleias = _obter_assembleias_caco(request.app.state)
-    if assembleia_id not in assembleias:
+    asm = assembleias.get(assembleia_id)
+    if not asm:
         raise HTTPException(status_code=404, detail="Assembleia não encontrada.")
 
-    asm = assembleias[assembleia_id]
     if asm["encerrada"]:
         raise HTTPException(status_code=400, detail="Não é possível adicionar pautas a uma assembleia encerrada.")
 
@@ -408,6 +417,7 @@ async def criar_pauta_na_assembleia(
         "titulo": titulo.strip(),
         "descricao": descricao.strip(),
         "motor": novo_motor,
+        "votantes": set(),
         "ja_iniciada": False,
         "fila_falas": [],
         "orador_atual": None,
@@ -429,10 +439,10 @@ async def iniciar_pauta_concorrente(
         raise HTTPException(status_code=403, detail="Apenas a Gestão do CACo pode iniciar pautas.")
 
     assembleias = _obter_assembleias_caco(request.app.state)
-    if assembleia_id not in assembleias:
+    asm = assembleias.get(assembleia_id)
+    if not asm:
         raise HTTPException(status_code=404, detail="Assembleia não encontrada.")
 
-    asm = assembleias[assembleia_id]
     if asm["encerrada"]:
         raise HTTPException(status_code=400, detail="Esta assembleia já foi encerrada.")
 
@@ -489,7 +499,8 @@ async def encerrar_pauta_especifica(
             raise HTTPException(status_code=400, detail="Apenas pautas em votação podem ser encerradas.")
         alvo["motor"].encerrar_votacao()
 
-    return JSONResponse({"status": "encerrada", "resultado": alvo["motor"].apurar_vencedor()})
+    res = alvo["motor"].apurar_vencedor()
+    return JSONResponse({"status": "encerrada", "resultado": getattr(res, "name", str(res)) if res else None})
 
 @router.post("/api/assembleias/{assembleia_id}/pautas/{pauta_id}/votar")
 async def votar_na_pauta_caco(
@@ -512,12 +523,16 @@ async def votar_na_pauta_caco(
     alvo = next((p for p in asm["pautas"] if p["id"] == pauta_id), None)
     if not alvo:
         raise HTTPException(status_code=404, detail="Pauta não encontrada.")
+    if usuario.id in alvo["votantes"]:
+        raise HTTPException(status_code=400, detail="VOTO NEGADO: Você já registrou seu voto nesta pauta.")
 
     motor: EleicaoCACo = alvo["motor"]
     _sincronizar_participante_caco(motor, usuario)
     try:
-        motor.apurar_voto(usuario.id, opcao)
-    except (RuntimeError, ValueError) as exc:
+        opcao_enum = OpcaoVoto[opcao]
+        motor.apurar_voto(usuario.id, opcao_enum)
+        alvo["votantes"].add(usuario.id)
+    except (RuntimeError, KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return JSONResponse({"status": "ok", "mensagem": f"Voto '{opcao}' registrado na pauta '{alvo['titulo']}'!"})
