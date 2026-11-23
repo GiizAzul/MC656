@@ -72,3 +72,19 @@
   grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
   gap: 1.25rem;
 }
+
+@media (max-width: 560px) {
+  .caco-header,
+  .caco-card {
+    padding: 1.15rem;
+  }
+
+  .vote-options-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .caco-gestao-grid {
+    grid-template-columns: 1fr;
+  }
+}

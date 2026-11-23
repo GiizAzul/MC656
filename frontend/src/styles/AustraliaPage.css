@@ -136,3 +136,24 @@
   color: #94a3b8;
   padding-left: 0.5rem;
 }
+
+@media (max-width: 600px) {
+  .australia-banner {
+    padding: 1.25rem;
+  }
+
+  .dnd-item {
+    padding: 0.85rem;
+    gap: 0.5rem;
+  }
+
+  .drag-handle {
+    display: none;
+  }
+
+  .btn-move {
+    width: 42px;
+    height: 42px;
+    font-size: 1.05rem;
+  }
+}

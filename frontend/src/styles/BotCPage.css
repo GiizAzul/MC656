@@ -239,3 +239,35 @@
   justify-content: center;
   box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
 }
+
+@media (max-width: 900px) {
+  .botc-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .botc-page {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .wheel-wrapper {
+    padding: 1rem 0.25rem;
+    overflow: hidden;
+    min-height: 360px;
+  }
+
+  .town-wheel {
+    transform: scale(0.68);
+    transform-origin: top center;
+    margin-bottom: -145px;
+  }
+}
+
+@media (max-width: 390px) {
+  .town-wheel {
+    transform: scale(0.58);
+    transform-origin: top center;
+    margin-bottom: -195px;
+  }
+}
