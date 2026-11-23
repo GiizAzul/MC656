@@ -40,7 +40,7 @@ def _obter_assembleias_caco(app_state) -> dict:
     if not hasattr(app_state, "eleitores_caco_votaram"):
         app_state.eleitores_caco_votaram = set()
 
-    eleicao_legada: EleicaoCACo = app_state.eleicao_caco
+    eleicao_legada: EleicaoAssembleia = app_state.eleicao_caco
     if "principal" not in app_state.assembleias_caco:
         app_state.assembleias_caco["principal"] = {
             "id": "principal",
@@ -56,6 +56,7 @@ def _obter_assembleias_caco(app_state) -> dict:
                     "titulo": "Pauta Geral da Assembleia",
                     "descricao": "Votação ordinária da ordem do dia.",
                     "motor": eleicao_legada,
+                    "votantes": app_state.eleitores_caco_votaram,
                     "ja_iniciada": eleicao_legada.estado.nome != "AGUARDANDO",
                     "fila_falas": [],
                     "orador_atual": None,
@@ -69,37 +70,40 @@ def _obter_assembleias_caco(app_state) -> dict:
 
     return app_state.assembleias_caco
 
-def _sincronizar_participante_caco(motor: EleicaoCACo, usuario: Usuario) -> None:
+def _sincronizar_participante_caco(motor: EleicaoAssembleia, usuario: Usuario) -> None:
     """Garante que o usuário autenticado no escopo CACo conste como aluno e eleitor elegível."""
     if "CACO" in usuario.escopo:
         motor.alunos_cadastrados.add(usuario.id)
         motor.eleitores.add(usuario.id)
 
-@router.post("/iniciar")
-async def iniciar_votacao_caco(request: Request, usuario: Annotated [Usuario, Depends(obter_usuario_logado)]):
-    if "CACO_GESTAO" not in usuario.escopo:
-        return RedirectResponse(url="/", status_code=302)
+# @router.post("/iniciar")
+# async def iniciar_votacao_caco(
+#     request: Request, 
+#     usuario: Annotated [Usuario, Depends(obter_usuario_logado)]
+# ):
+#     if "CACO_GESTAO" not in usuario.escopo:
+#         return RedirectResponse(url="/", status_code=302)
 
-    eleicao = request.app.state.eleicao_caco
+#     eleicao = request.app.state.eleicao_caco
 
-    try:
-        eleicao.iniciar_votacao()
+#     try:
+#         eleicao.iniciar_votacao()
         
-        return templates.TemplateResponse(
-            request=request,
-            name="sucesso.html",
-            context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
-        )
-    except RuntimeError as e:
-        return templates.TemplateResponse(
-            request=request,
-            name="caco.html",
-            context={
-                "erro": str(e),
-                "estado_eleicao": eleicao.estado.nome,
-                "is_gestao": True
-            }
-        )
+#         return templates.TemplateResponse(
+#             request=request,
+#             name="sucesso.html",
+#             context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
+#         )
+#     except RuntimeError as e:
+#         return templates.TemplateResponse(
+#             request=request,
+#             name="caco.html",
+#             context={
+#                 "erro": str(e),
+#                 "estado_eleicao": eleicao.estado.nome,
+#                 "is_gestao": True
+#             }
+#         )
 
 @router.get("/assembleia", response_class=HTMLResponse)
 async def tela_assembleia(
@@ -255,7 +259,7 @@ async def resultados_caco(
         },
     )
 
-def _serializar_contadores(motor: EleicaoCACo) -> dict[str, int]:
+def _serializar_contadores(motor: EleicaoAssembleia) -> dict[str, int]:
     """Converte as chaves de obter_contadores() (OpcaoVoto ou str) para dict JSON seguro."""
     return {getattr(k, "name", str(k)): int(v) for k, v in motor.obter_contadores().items()}
 
@@ -277,7 +281,7 @@ async def estado_caco_json(
     pauta_ativa_id = None
 
     for p in asm["pautas"]:
-        motor: EleicaoCACo = p["motor"]
+        motor: EleicaoAssembleia = p["motor"]
         _sincronizar_participante_caco(motor, usuario)
         estado_nome = motor.estado.nome
         if estado_nome == "VOTACAO":
@@ -292,9 +296,9 @@ async def estado_caco_json(
             "descricao": p["descricao"],
             "estado": estado_nome,
             "ja_iniciada": p.get("ja_iniciada", estado_nome != "AGUARDANDO"),
-            "ja_votou": usuario.id in motor.votantes,
+            "ja_votou": usuario.id in p["votantes"],
             "contadores": contadores,
-            "total_votos": len(motor.votantes),
+            "total_votos": sum(contadores.values()),
             "resultado": getattr(res_vencedor, "name", str(res_vencedor)) if res_vencedor is not None else None,
             "fila_falas": list(p["fila_falas"]),
             "orador_atual": p["orador_atual"],
@@ -411,7 +415,7 @@ async def criar_pauta_na_assembleia(
         raise HTTPException(status_code=400, detail="Título e descrição da pauta são obrigatórios.")
 
     ids_base = list(request.app.state.eleicao_caco.alunos_cadastrados | {usuario.id})
-    novo_motor = EleicaoCACo(alunos_cadastrados=ids_base, eleitores=ids_base, duracao=60)
+    novo_motor = EleicaoAssembleia(alunos_cadastrados=ids_base, eleitores=ids_base, duracao=60)
     nova_pauta = {
         "id": f"pauta_{int(time.time() * 1000)}_{len(asm['pautas'])}",
         "titulo": titulo.strip(),
@@ -526,7 +530,7 @@ async def votar_na_pauta_caco(
     if usuario.id in alvo["votantes"]:
         raise HTTPException(status_code=400, detail="VOTO NEGADO: Você já registrou seu voto nesta pauta.")
 
-    motor: EleicaoCACo = alvo["motor"]
+    motor: EleicaoAssembleia = alvo["motor"]
     _sincronizar_participante_caco(motor, usuario)
     try:
         opcao_enum = OpcaoVoto[opcao]
