@@ -3,6 +3,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from src.autenticacao.botc import JogadorBOTC
 from src.autenticacao.caco import EstudanteCACo
 from src.main import app
 
@@ -324,3 +325,40 @@ def test_casos_borda_salas_e_giro_botc(client):
     assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid_vazia, "nomeado_id": "ninguem"}).status_code == 400
     assert client.post("/botc/api/excluir-sala", data={"partida_id": pid_vazia}).status_code == 200
     client.cookies.clear()
+
+def test_adicionar_escopo_bloqueia_ra_de_outro_usuario(client, app_state_mock):
+    """Impede que POST /adicionar-escopo vincule um RA já pertencente a outra conta."""
+    banco = app_state_mock.banco_auth
+    vitima = EstudanteCACo("vitima_ra_unico", "senha123", "Vítima", 111999)
+    atacante = JogadorBOTC("atacante_ra_unico", "senha123", "Atacante")
+    banco.registrar(vitima)
+    banco.registrar(atacante)
+
+    client.cookies.set("sessao_usuario", "atacante_ra_unico")
+    response = client.post(
+        "/adicionar-escopo",
+        data={"tipo_conta": "CACO_ESTUDANTE", "ra": "111999"},
+    )
+
+    assert response.status_code == 200
+    assert "Erro: RA 111999 já existente." in response.text
+    assert banco._mapa_usernames["111999"] == vitima.id
+    assert "CACO_ESTUDANTE" not in atacante.escopo
+
+
+def test_adicionar_escopo_bloqueia_alteracao_de_ra_ja_vinculado(client, app_state_mock):
+    """Impede que uma conta que já possui RA vincule um RA diferente via /adicionar-escopo."""
+    banco = app_state_mock.banco_auth
+    estudante = EstudanteCACo("giovana_ra_unico", "senha123", "Giovana", 555444)
+    banco.registrar(estudante)
+
+    client.cookies.set("sessao_usuario", "giovana_ra_unico")
+    response = client.post(
+        "/adicionar-escopo",
+        data={"tipo_conta": "CACO_ESTUDANTE", "ra": "999888"},
+    )
+
+    assert response.status_code == 200
+    assert "Erro: Esta conta já possui um RA vinculado." in response.text
+    assert "999888" not in banco._mapa_usernames
+    assert estudante.ra == 555444

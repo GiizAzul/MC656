@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
+from src.database import salvar_estado_sql
 from src.formatacao_candidatos import formatar_nomes_candidatos
 
 from .dependencias import obter_usuario_logado
@@ -63,7 +64,8 @@ async def iniciar_votacao_australia(request: Request, usuario: Annotated[Usuario
             name="australia.html",
             context=_contexto_cedula(eleicao, usuario, erro=str(e)),
         )
-
+    salvar_estado_sql("eleicao_australia", request.app.state.eleicao_australia)
+    salvar_estado_sql("eleitores_australia_votaram", request.app.state.eleitores_australia_votaram)
     return templates.TemplateResponse(
         request=request,
         name="sucesso.html",
@@ -87,6 +89,8 @@ async def encerrar_votacao_australia(request: Request, usuario: Annotated[Usuari
             context=_contexto_cedula(eleicao, usuario, erro=str(e)),
         )
 
+    salvar_estado_sql("eleicao_australia", request.app.state.eleicao_australia)
+    salvar_estado_sql("eleitores_australia_votaram", request.app.state.eleitores_australia_votaram)
     return templates.TemplateResponse(
         request=request,
         name="sucesso.html",
@@ -156,6 +160,9 @@ async def processar_voto_australia(
 
         # Marca que este usuário já votou
         request.app.state.eleitores_australia_votaram.add(usuario.id)
+
+        salvar_estado_sql("eleicao_australia", request.app.state.eleicao_australia)
+        salvar_estado_sql("eleitores_australia_votaram", request.app.state.eleitores_australia_votaram)
 
         return templates.TemplateResponse(
             request=request,
