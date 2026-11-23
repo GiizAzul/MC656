@@ -189,7 +189,15 @@ export default function CACoPage({ usuario }) {
   const pautaEmVotacao = pautas.find((p) => p.id === pautaAtivaId);
 
   return (
-    <div className="caco-container">
+    <div 
+      className="caco-container"
+      onClickCapture={(e) => {
+        if (e.target.closest('button')) {
+          setMsg('');
+          setErro('');
+        }
+      }}
+    >
       <div className="caco-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
