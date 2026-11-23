@@ -31,7 +31,7 @@ async def tela_votacao(
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     # Valida apenas a permissão da pauta, pois o Depends já garantiu o login
-    if "AUSTRALIA" not in usuario.escopo:
+    if "AUSTRALIA_ELEITOR" not in usuario.escopo:
         return RedirectResponse(url="/", status_code=302)
 
     eleicao = request.app.state.eleicao_australia
@@ -95,7 +95,7 @@ async def processar_voto_australia(
     request: Request, 
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
-    if "AUSTRALIA" not in usuario.escopo:
+    if "AUSTRALIA_ELEITOR" not in usuario.escopo:
         # Redirect para a raiz em caso de fraude de escopo:
         return RedirectResponse(url="/", status_code=302)
 
