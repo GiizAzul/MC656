@@ -1,7 +1,7 @@
-from datetime import datetime
-from pathlib import Path
 import threading
 import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -9,8 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from src.autenticacao.base import Usuario
-
-from src.caco import OpcaoVoto, EleicaoAssembleia
+from src.caco import EleicaoAssembleia, OpcaoVoto
 from src.database import carregar_estado_sql, salvar_estado_sql
 
 from .dependencias import obter_usuario_logado
@@ -23,15 +22,18 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Mutex global para impedir condições de corrida quando 2 membros da gestão clicam ao mesmo tempo
 _CACO_PAUTA_LOCK = threading.Lock()
+_TZ_BRASIL = timezone(timedelta(hours=-3))
 
 def _validar_data_hora_assembleia(data_str: str, hora_str: str) -> datetime:
     """Valida formato, existência real da data/hora (ex: rejeita 31/02 ou 25:00) e bloqueia passado."""
     try:
-        dt_agendada = datetime.strptime(f"{data_str.strip()} {hora_str.strip()}", "%Y-%m-%d %H:%M")
+        dt_agendada = datetime.strptime(
+            f"{data_str.strip()} {hora_str.strip()}", "%Y-%m-%d %H:%M"
+        ).replace(tzinfo=_TZ_BRASIL)
     except ValueError as exc:
         raise ValueError("Data ou horário inexistente/inválido. Use data válida (AAAA-MM-DD) e hora (HH:MM).") from exc
 
-    if dt_agendada < datetime.now():
+    if dt_agendada < datetime.now(_TZ_BRASIL):
         raise ValueError("Não é permitido agendar uma assembleia em uma data ou horário no passado.")
     return dt_agendada
 
@@ -49,8 +51,8 @@ def _obter_assembleias_caco(app_state) -> dict:
             "titulo": "Assembleia Geral Ordinária — CACo",
             "descricao": "Deliberação estudantil geral do Centro Acadêmico da Computação.",
             "local": "Auditório do IC-3 / Unicamp",
-            "data": datetime.now().strftime("%Y-%m-%d"),
-            "horario": datetime.now().strftime("%H:%M"),
+            "data": datetime.now(_TZ_BRASIL).strftime("%Y-%m-%d"),
+            "horario": datetime.now(_TZ_BRASIL).strftime("%H:%M"),
             "encerrada": False,
             "pautas": [
                 {
@@ -93,24 +95,6 @@ async def iniciar_votacao_caco(
         salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
         salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         
-        return templates.TemplateResponse(
-            request=request,
-            name="sucesso.html",
-            context={"mensagem": "Votação da Assembleia iniciada com sucesso!"}
-        )
-    except RuntimeError as e:
-        return templates.TemplateResponse(
-            request=request,
-            name="caco.html",
-            context={
-                "erro": str(e),
-                "estado_eleicao": eleicao.estado.nome,
-                "is_gestao": True
-            }
-        )
-        eleicao.iniciar_votacao()
-        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
-        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
         return templates.TemplateResponse(
             request=request,
             name="sucesso.html",
@@ -238,7 +222,6 @@ async def resultados_caco(
     if "CACO_GESTAO" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Acesso negado.")  
     eleicao = request.app.state.eleicao_caco
-    resultado = eleicao.apurar_vencedor()
     contadores = eleicao.obter_contadores()
     # Calcula o total para fazer as barras de porcentagem no HTML
     total_votos = sum(contadores.values())
@@ -571,7 +554,7 @@ async def inscrever_fala_pauta(
         "username": usuario.username,
         "nome": usuario.nome_real,
         "tipo": tipo_fala.strip() or "Fala Ordinária",
-        "inscrito_em": datetime.now().strftime("%H:%M:%S"),
+        "inscrito_em": datetime.now(_TZ_BRASIL).strftime("%H:%M:%S"),
     })
     salvar_estado_sql("assembleias_caco", assembleias)
     return JSONResponse({"status": "inscrito"})
@@ -602,7 +585,7 @@ async def chamar_proximo_orador(
 
     if alvo["fila_falas"]:
         proximo = alvo["fila_falas"].pop(0)
-        proximo["inicio_fala"] = datetime.now().strftime("%H:%M:%S")
+        proximo["inicio_fala"] = datetime.now(_TZ_BRASIL).strftime("%H:%M:%S")
         alvo["orador_atual"] = proximo
 
     salvar_estado_sql("assembleias_caco", assembleias)
