@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -21,7 +21,22 @@ app = FastAPI(title="Sistema de Votação Web")
 
 @app.exception_handler(RequerRedirecionamentoException)
 async def auth_exception_handler(request: Request, exc: RequerRedirecionamentoException):
-    return RedirectResponse(url="/", status_code=302)
+    path = request.url.path
+    accept = request.headers.get("accept", "")
+    is_api = path.startswith("/api") or "/api/" in path or (
+        "application/json" in accept and "text/html" not in accept
+    )
+
+    if is_api:
+        resposta = JSONResponse(
+            {"detail": "Sessão ausente ou expirada."},
+            status_code=401,
+        )
+    else:
+        resposta = RedirectResponse(url="/", status_code=302)
+
+    resposta.delete_cookie("sessao_usuario", path="/", samesite="lax")
+    return resposta
 
 @app.exception_handler(ErroAcessoNaoAutorizado)
 async def erro_acesso_nao_autorizado_handler(

@@ -1,17 +1,30 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/BotCPage.css';
 
-export default function BotCPage() {
+export default function BotCPage({ usuario }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const chaveSala = `mc656_botc_sessao_${usuario?.id || 'anon'}`;
+
+  const sessaoSalva = (() => {
+    const daUrl = searchParams.get('partida_id');
+    if (daUrl) return { partidaId: daUrl, emPartida: true };
+    try {
+      return JSON.parse(localStorage.getItem(chaveSala)) || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const [emPartida, setEmPartida] = useState(Boolean(sessaoSalva?.emPartida));
+  const [partidaId, setPartidaId] = useState(sessaoSalva?.partidaId || 'principal');
   const [novaSenhaSala, setNovaSenhaSala] = useState('');
   const [semSalas, setSemSalas] = useState(false);
   const [requerSenha, setRequerSenha] = useState(false);
   const [senhaDigitadaSala, setSenhaDigitadaSala] = useState('');
   const [jogadorAlvoStatus, setJogadorAlvoStatus] = useState('');
-  const [emPartida, setEmPartida] = useState(false);
   const [novoStatusEscolhido, setNovoStatusEscolhido] = useState('Vivo');
-  const [partidaId, setPartidaId] = useState('principal');
   const [partidasDisponiveis, setPartidasDisponiveis] = useState([]);
   const [partidaAtualInfo, setPartidaAtualInfo] = useState({
     id: 'principal',
@@ -48,7 +61,7 @@ export default function BotCPage() {
   const carregarRoda = useCallback(async () => {
     try {
       const url = `/botc/api/estado?partida_id=${encodeURIComponent(partidaId)}&apenas_lobby=${!emPartida}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { credentials: 'include' });
       if (res.status === 403) {
         const data = await res.json();
         setRequerSenha(true);
@@ -112,6 +125,12 @@ export default function BotCPage() {
     window.addEventListener('popstate', impedirBotaoVoltarBrowser);
     return () => window.removeEventListener('popstate', impedirBotaoVoltarBrowser);
   }, [emPartida, giro.ativo, meuStatus.preso_como_storyteller]);
+
+  useEffect(() => {
+    if (emPartida && partidaId && !semSalas) {
+      localStorage.setItem(chaveSala, JSON.stringify({ partidaId, emPartida: true }));
+    }
+  }, [chaveSala, emPartida, partidaId, semSalas]);
 
   // Calcula o ângulo sempre avançando em sentido horário (delta >= 0)
   const idxPonteiro = jogadores.findIndex((j) => j.id === giro.id_ponteiro_atual);
@@ -225,7 +244,7 @@ export default function BotCPage() {
       setErro(d.detail || 'Não foi possível sair da sala.');
       return;
     }
-
+    localStorage.removeItem(chaveSala);
     if (irParaDashboard) {
       navigate('/dashboard');
     } else {
@@ -249,6 +268,7 @@ export default function BotCPage() {
       body: form.toString(),
     });
     if (res.ok) {
+      localStorage.removeItem(chaveSala);
       const d = await res.json();
       setPartidaId(d.partida_destino || '');
       setEmPartida(false);
@@ -268,6 +288,7 @@ export default function BotCPage() {
       body: form.toString(),
     });
     if (res.ok) {
+      localStorage.removeItem(chaveSala);
       await carregarRoda();
     }
   };
@@ -527,7 +548,6 @@ export default function BotCPage() {
       {giro.mensagem_final && !giro.ativo && (
         <div className="alert-banner alert-success">✅ {giro.mensagem_final}</div>
       )}
-      {veredito && <div className="alert-banner alert-success">⚖️ {veredito}</div>}
 
       {semSalas ? (
         <div className="botc-panel-box" style={{ maxWidth: '480px', margin: '2rem auto', textAlign: 'center' }}>

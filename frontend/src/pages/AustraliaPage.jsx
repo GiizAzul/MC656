@@ -2,8 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/AustraliaPage.css';
 
-export default function AustraliaPage() {
-  const [modoVotacao, setModoVotacao] = useState('candidatos');
+export default function AustraliaPage({ usuario }) {
+  const chaveRascunho = `mc656_rascunho_australia_${usuario?.id || 'anon'}`;
+
+  const [modoVotacao, setModoVotacao] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(chaveRascunho))?.modoVotacao || 'candidatos';
+    } catch {
+      return 'candidatos';
+    }
+  });
   const [podeVotar, setPodeVotar] = useState(true);
   const [partidosMap, setPartidosMap] = useState({});
   const [ordemPartidos, setOrdemPartidos] = useState([]);
@@ -22,24 +30,58 @@ export default function AustraliaPage() {
 
   const carregarEstadoAustralia = useCallback(async () => {
     try {
-      const res = await fetch('/australia/api/estado');
+      const res = await fetch('/australia/api/estado', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setPartidosMap(data.partidos || {});
         const nomesPartidos = Object.keys(data.partidos || {});
         setPodeVotar(data.pode_votar !== undefined ? data.pode_votar : true);
-        setOrdemPartidos((prev) => (prev.length === 0 ? nomesPartidos : prev));
-        setCandidatos((prev) => (prev.length === 0 ? data.candidatos : prev));
         setNomesFormatados(data.nomes_formatados || {});
         setEstadoEleicao(data.estado_eleicao);
         setIsGestao(data.is_gestao);
         setJaVotou(data.ja_votou);
         setTotalVotos(data.total_votos);
+
+        let rascunho = null;
+        try {
+          rascunho = JSON.parse(localStorage.getItem(chaveRascunho));
+        } catch {
+          rascunho = null;
+        }
+
+        if (data.ja_votou) {
+          localStorage.removeItem(chaveRascunho);
+        }
+
+        setOrdemPartidos((prev) => {
+          if (prev.length > 0) return prev;
+          if (!data.ja_votou && rascunho?.ordemPartidos?.length === nomesPartidos.length) {
+            return rascunho.ordemPartidos;
+          }
+          return nomesPartidos;
+        });
+
+        setCandidatos((prev) => {
+          if (prev.length > 0) return prev;
+          if (!data.ja_votou && rascunho?.candidatos?.length === data.candidatos.length) {
+            return rascunho.candidatos;
+          }
+          return data.candidatos;
+        });
       }
     } catch {
       // ignora erro temporário
     }
-  }, []);
+  }, [chaveRascunho]);
+
+  useEffect(() => {
+    if (!jaVotou && estadoEleicao === 'VOTACAO' && (candidatos.length > 0 || ordemPartidos.length > 0)) {
+      localStorage.setItem(
+        chaveRascunho,
+        JSON.stringify({ modoVotacao, candidatos, ordemPartidos })
+      );
+    }
+  }, [chaveRascunho, modoVotacao, candidatos, ordemPartidos, jaVotou, estadoEleicao]);
 
   useEffect(() => {
     carregarEstadoAustralia();
@@ -57,6 +99,7 @@ export default function AustraliaPage() {
     const data = await res.json();
     if (res.ok) {
       setMensagemSucesso(`🎉 ${data.mensagem}`);
+      localStorage.removeItem(chaveRascunho)
       await carregarEstadoAustralia();
     } else {
       setErro(data.erro || 'Não foi possível registrar o voto por partidos.');
@@ -131,9 +174,11 @@ export default function AustraliaPage() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),
     });
-
+    
+    
     const html = await response.text();
     if (html.toLowerCase().includes('voto registrado com sucesso')) {
+      localStorage.removeItem(chaveRascunho)
       setMensagemSucesso('🎉 Voto preferencial registrado com sucesso na Eleição Federal!');
       await carregarEstadoAustralia();
     } else {
