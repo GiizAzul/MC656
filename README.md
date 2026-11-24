@@ -1,142 +1,123 @@
-# MC656
+# MC656 — Sistema de Votação Multi-Escopo
 
-Repositório para o projeto da disciplina MC656 – Engenharia de Software (UNICAMP).
+Projeto desenvolvido para a disciplina MC656 — Engenharia de Software, na UNICAMP. A aplicação oferece uma interface web para três contextos de votação, com autenticação por perfil, regras próprias de apuração e persistência do estado em banco SQL.
 
-## Membros
+## Integrantes
 
-|Name|RA|
-|-|-|
-|Giovana Jacome Marchetti|177700|
-|Caio Lima Albuquerque|288808|
-|Samuel Rodrigues Ferreira|195440|
-|Julia de Souza Nardo|281272|
-|Leonardo Carvalho De Luca|288820|
+| Nome | RA |
+|---|---:|
+| Giovana Jacome Marchetti | 177700 |
+| Caio Lima Albuquerque | 288808 |
+| Samuel Rodrigues Ferreira | 195440 |
+| Julia de Souza Nardo | 281272 |
+| Leonardo Carvalho De Luca | 288820 |
 
-## Sobre o projeto
+## Escopos
 
-O projeto é um sistema de votação **web** (FastAPI + templates Jinja2) capaz de
-operar em três contextos eleitorais diferentes, cada um com suas próprias regras
-de apuração e perfis de usuário:
+- **Assembleia do CACo:** votação de pauta com opções aprovar, rejeitar e abster-se, controle de quórum fila de fala.
+- **Eleição da Austrália:** voto único transferível, com ranking de candidatos e apuração por rodadas, eliminação e transferência de votos.
+- **Blood on the Clocktower (BotC):** votação de execução de jogador, com modificadores de voto e limiar calculado a partir dos jogadores vivos.
 
-- **Assembleia do CACo** — votação de pauta por Aprovar / Rejeitar / Abster-se,
-  com quórum mínimo de eleitores e um ciclo de votação com duração definida.
-- **Eleição da Austrália** — voto único transferível (ranking de candidatos, com
-  eliminação e transferência de votos por rodadas até haver maioria absoluta).
-- **Blood on the Clocktower** — votação de execução, em que um jogador nomeado   precisa de votos maiores ou iguais à metade dos jogadores vivos para ser  executado.
+## Tecnologias
 
-## Organização do repositório
+- **Backend:** Python, FastAPI, SQLAlchemy e SQL.
+- **Frontend:** React 18, React Router e Vite.
+- **Qualidade:** pytest, pytest-cov, Ruff e SonarQube Cloud.
 
-O repositório reúne o código da aplicação e a documentação das atividades da
-disciplina (em `docs/`):
+## Como acessar e executar
 
-- **`src/` e `tests/`** — a aplicação web (motores de votação, autenticação,
-  rotas e telas) e sua suíte de testes.
-- **`docs/A1_report/`** — relatório da Atividade 1 (LaTeX e PDF) com a definição
-  do processo de desenvolvimento, incluindo diagramas (casos de uso, domínio,
-  processo) e protótipos de telas.
-- **`docs/A3_report/`** — relatório da Atividade 3 (LaTeX e PDF): elicitação e
-  análise de requisitos, épicos, histórias de usuário com critérios de aceitação
-  e backlog priorizado.
-- **`docs/A4_report/`** — relatório da Atividade 4 (LaTeX e PDF): projeto e arquitetura de software, com identificação de problemas e code smells, além da documentação da refatoração.
-- **`docs/A5_report/`** — relatório da Atividade 5 (LaTeX e PDF): testes funcionais por classes de equivalência e análise de valor limite, cobertura estrutural e teste de mutação.
-- **`.github/workflows/`** — pipelines de CI (`ci.yml`) e de análise estática de qualidade (`sonar.yml`). 
+### Site publicado
 
-Na Atividade 5, foram especificadas e testadas 30 classes de equivalência nos módulos
-do CACo, da eleição australiana e do Blood on the Clocktower. A entrega também aplica
-análise de valor limite ao ranking partidário australiano, amplia a cobertura de
-testes estruturais e usa `mutmut` para identificar e eliminar um mutante sobrevivente.
-O relatório registra cobertura total de 97%, acima do limiar de 80% definido para a
-atividade. Consulte o [relatório em PDF](docs/A5_report/Atividade_5___Teste_de_Software.pdf)
-ou sua [fonte LaTeX](docs/A5_report/A5_teste_de_software.tex).
+A aplicação está disponível em <https://sistema-de-votacao-dypb.onrender.com/>. Na primeira visita, o site pode levar um pouco para abrir enquanto o serviço hospedado é iniciado.
 
-## Estrutura do projeto
+### Executar na máquina local
 
-```
-.
-├── requirements.txt               # dependências da aplicação, de testes e de lint
-├── sonar-project.properties       # configuração do SonarQube Cloud
-├── src/
-│   ├── main.py                    # ponto de entrada: app FastAPI, dados de demonstração e registro das rotas
-│   ├── interfaces.py              # SistemaEleitoral: interface comum aos motores (contexto do padrão State)
-│   ├── estados.py                 # estados da votação: Aguardando, Em votação, Encerrada
-│   ├── caco.py                    # motor da Assembleia do CACo
-│   ├── australia.py               # motor da Eleição Austrália (voto transferível)
-│   ├── botc.py                    # motor do Blood on the Clocktower (votos com modificadores)
-│   ├── autenticacao/              # usuários, perfis (escopos), cadastro (factory) e controle de acesso
-│   ├── routers/                   # rotas web: auth, caco, australia e botc
-│   ├── templates/                 # telas HTML (Jinja2): login, cadastro, dashboard, admin e uma por contexto
-│   └── static/                    # estilos (CSS)
-├── tests/                         # testes automatizados (pytest): motores, autenticação, estados e rotas web
-├── docs/
-│   ├── A1_report/                 # Atividade 1: processo de desenvolvimento
-│   ├── A3_report/                 # Atividade 3: requisitos
-│   ├── A4_report/                 # Atividade 4: projeto e arquitetura de software
-│   └── A5_report/                 # Atividade 5: testes funcionais, estruturais e de mutação
-└── .github/workflows/             # CI: build, lint (ruff) e testes (pytest + cobertura)
-```
-
-## Requisitos
-
-- Python 3.10 ou superior.
-- Dependências listadas em `requirements.txt`: FastAPI (`fastapi[standard]`) e
-  Jinja2 para a aplicação, e pytest, pytest-cov e ruff para testes e lint.
-
-## Como rodar
-
-A partir da raiz do repositório, crie um ambiente virtual e instale as dependências:
+Pré-requisitos: Python 3.10 ou superior, `uv`, Node.js e npm. Na raiz do repositório, crie e ative o ambiente virtual e instale as dependências:
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate      # no Windows: .venv\Scripts\activate
+source .venv/bin/activate      # Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
 ```
 
-Suba o servidor:
+Inicie o backend no primeiro terminal:
 
 ```bash
-fastapi dev src/main.py
+uv run uvicorn src.main:app --reload --port 8000
 ```
 
-Também é possível usar `uvicorn src.main:app --reload`. Depois, acesse
-<http://127.0.0.1:8000>, que abre a tela de login. A documentação interativa da
-API fica em <http://127.0.0.1:8000/docs>.
+No segundo terminal, inicie o frontend:
 
-Os dados ficam **em memória**: ao reiniciar o servidor, usuários cadastrados e
-votos são perdidos.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Na tela inicial é possível **criar uma conta nova** (escolhendo o perfil) ou
-**entrar** com um dos usuários de demonstração pré-cadastrados em `src/main.py`:
+Abra o endereço indicado pelo Vite, normalmente <http://localhost:5173>. O Vite encaminha as chamadas do frontend para o backend local na porta 8000. A documentação interativa da API fica em <http://127.0.0.1:8000/docs>.
 
-| Usuário | Senha     | Perfil                          |
-|---------|-----------|---------------------------------|
-| `caio`  | `senha123`| Eleitor (Eleição Austrália)     |
-| `julia` | `admin`   | Gestão do CACo                  |
-| `leo`   | `botc123` | Jogador (BotC)                  |
+## Acessos de demonstração
 
-Para cada contexto também já existem dados iniciais de demonstração.
+O sistema inicializa contas de demonstração quando o banco ainda não possui estado salvo:
 
-## Como rodar os testes
+| Usuário | Senha | Perfil |
+|---|---|---|
+| `caio` | `senha123` | Eleitor da Eleição da Austrália |
+| `julia` | `admin` | Gestão do CACo |
+| `leo` | `botc123` | Jogador do BotC |
 
-Também a partir da raiz do repositório, com as dependências instaladas:
+Também são criados dados iniciais de demonstração para os contextos eleitorais. Cadastros e estado de votação são persistidos no banco configurado; no SQLite padrão, os dados ficam no arquivo `votacao.db` na raiz. Para começar com estado limpo, remova esse arquivo antes de iniciar a aplicação.
+
+## Testes e estilo
+
+Na raiz do repositório, com o ambiente virtual ativado:
 
 ```bash
 pytest
 ```
 
-Para ver a cobertura de testes (como na CI):
+Para gerar um resumo local da cobertura e verificar o estilo:
 
 ```bash
 pytest --cov=src --cov-report=term
-```
-
-Para checar o estilo do código:
-
-```bash
 ruff check src/ tests/
 ```
 
-## Status do projeto e próximos passos
+O workflow de CI em `.github/workflows/ci.yml` automatiza verificações do projeto. A análise estática de qualidade está configurada em `.github/workflows/sonar.yml` e `sonar-project.properties`.
 
-Os próximos passos estão organizados no quadro do GitHub Projects: 
+## Estrutura do repositório
 
-**[Projeto MC656 no GitHub Projects](https://github.com/users/GiizAzul/projects/1)**
+```text
+.
+├── src/
+│   ├── main.py                  # aplicação FastAPI, inicialização e integração do frontend
+│   ├── database.py              # conexão SQL e persistência do estado
+│   ├── caco.py                  # regras da Assembleia do CACo
+│   ├── australia.py             # regras da eleição australiana
+│   ├── botc.py                  # regras de votação do BotC
+│   ├── autenticacao/            # usuários, perfis e autorização
+│   ├── routers/                 # endpoints de autenticação e votação
+│   ├── templates/               # páginas auxiliares servidas pelo backend
+│   └── static/                  # recursos estáticos do backend
+├── frontend/
+│   ├── src/pages/               # páginas React por área do sistema
+│   └── src/styles/              # estilos da interface
+├── tests/                       # testes automatizados do backend
+├── docs/                        # relatórios e artefatos das atividades
+└── .github/workflows/           # CI e análise estática
+```
+
+## Documentação da disciplina
+
+- [Atividade 1 — Processo de desenvolvimento (PDF)](docs/A1_report/A1_Definição_do_Processo_de_Desenvolvimento.pdf)
+- [Atividade 3 — Requisitos (PDF)](docs/A3_report/Atividade_3___Requisitos.pdf)
+- [Atividade 4 — Projeto e arquitetura (PDF)](docs/A4_report/Atividade_4___Projeto_e_Arquitetura_de_Software.pdf)
+- [Atividade 5 — Testes de software (PDF)](docs/A5_report/Atividade_5___Teste_de_Software.pdf)
+
+Os relatórios documentam o desenvolvimento do projeto ao longo da disciplina, incluindo processo de trabalho, requisitos, arquitetura e testes. Em conjunto, registram as decisões e práticas adotadas pela equipe na construção e avaliação do sistema.
+
+## Quadro do projeto
+
+O quadro reúne o planejamento e o acompanhamento do trabalho da equipe, com tarefas e atividades relacionadas ao desenvolvimento do sistema.
+
+[Projeto MC656 no GitHub Projects](https://github.com/users/GiizAzul/projects/1)
