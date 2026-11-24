@@ -404,8 +404,10 @@ async def excluir_sala_storyteller(
         raise HTTPException(status_code=404, detail="Sala não encontrada.")
 
     sala = _obter_sala_segura(salas, partida_id)
-    if sala["storyteller_id"] != usuario.id and "BOTC_STORYTELLER" not in usuario.escopo:
+    if sala["storyteller_id"] is not None and sala["storyteller_id"] != usuario.id:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller titular desta sala pode excluí-la.")
+    if sala["storyteller_id"] is None and "BOTC_STORYTELLER" not in usuario.escopo:
+        raise HTTPException(status_code=403, detail="Apenas um Storyteller pode excluir esta sala.")
 
     salas.pop(partida_id, None)
     proxima = next(iter(salas.keys()), "")
