@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from src.autenticacao.botc import JogadorBOTC
 from src.autenticacao.caco import EstudanteCACo
 from src.main import app
+from src.routers.dependencias import gerar_token_sessao
 
 
 @pytest.fixture
@@ -17,6 +18,8 @@ def client():
 def app_state_mock():
     return app.state
 
+def logar_cookie(client: TestClient, username: str) -> None:
+    client.cookies.set("sessao_usuario", gerar_token_sessao(username))
 
 @patch("src.routers.auth_router.UsuarioFactory.criar")
 def test_rota_cadastro_delega_para_factory(mock_criar, client, app_state_mock):
@@ -41,7 +44,7 @@ def test_rota_cadastro_delega_para_factory(mock_criar, client, app_state_mock):
         "CACO_ESTUDANTE", "giovana", "password123", "Giovana", "123456"
     )
     assert response.status_code == 302
-    assert response.headers["location"] == "/dashboard"
+    assert response.headers["location"] == "/caco/assembleia"
     client.cookies.clear()
 
 
@@ -57,7 +60,7 @@ def test_australia_rejeita_float_com_mensagem_correta(client):
             "senha_confirma": "123",
         },
     )
-    client.cookies.set("sessao_usuario", "eleitor_float")
+    logar_cookie(client, "eleitor_float")
 
     dados_voto = {
         "posicao_Candidato A": "1",
@@ -97,7 +100,7 @@ def test_mesmo_username_pode_cadastrar_novo_escopo_ou_adicionar_escopo(client):
     assert res2.status_code == 302
 
     # Usa também a rota /adicionar-escopo logado para adicionar CACO_ESTUDANTE
-    client.cookies.set("sessao_usuario", "multi_user")
+    logar_cookie(client, "multi_user")
     res3 = client.post(
         "/adicionar-escopo",
         data={"tipo_conta": "CACO_ESTUDANTE", "ra": "777888"},
@@ -114,7 +117,7 @@ def test_mesmo_username_pode_cadastrar_novo_escopo_ou_adicionar_escopo(client):
 
 def test_botc_alternar_mao_json_sem_tela_sucesso(client):
     """Testa levantar e abaixar a mão via JSON sem redirecionar para sucesso.html."""
-    client.cookies.set("sessao_usuario", "leo")
+    logar_cookie(client, "leo")
     res_up = client.post(
         "/botc/votar",
         data={"acao": "levantar_mao"},
@@ -134,7 +137,7 @@ def test_botc_alternar_mao_json_sem_tela_sucesso(client):
 
 def test_adicionar_escopo_erro_e_cedula_em_branco_australia(client):
     # 1. Cobre except de /adicionar-escopo
-    client.cookies.set("sessao_usuario", "caio")
+    logar_cookie(client, "caio")
     res_err = client.post("/adicionar-escopo", data={"tipo_conta": "CACO_ESTUDANTE", "ra": "invalido"})
     assert res_err.status_code == 200
 
@@ -146,7 +149,7 @@ def test_adicionar_escopo_erro_e_cedula_em_branco_australia(client):
     assert res_ra_dup.status_code == 200
 
     # 3. Cobre linhas 125 (campo vazio) e 138 (incompleto) de australia_router com eleitor virgem
-    client.cookies.set("sessao_usuario", "u_ra2")
+    logar_cookie(client, "u_ra2")
     res_aus = client.post("/australia/votar", data={"posicao_Candidato A": "", "posicao_Candidato B": "1"})
     assert res_aus.status_code == 200
     assert "Você ranqueou" in res_aus.text
@@ -155,7 +158,7 @@ def test_adicionar_escopo_erro_e_cedula_em_branco_australia(client):
 def test_fluxo_completo_salas_botc_e_estado_australia(client):
     """Cobre todas as rotas JSON de salas do BoTC, giro e estado da Austrália para o SonarCloud."""
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "caio")
+    logar_cookie(client, "caio")
     assert client.get("/australia/api/estado").status_code == 200
 
     # Cadastra um Storyteller e um Jogador explícitos para o teste
@@ -182,7 +185,7 @@ def test_fluxo_completo_salas_botc_e_estado_australia(client):
     client.cookies.clear()
 
     # Loga com storyteller (st_teste) e cria sala com senha
-    client.cookies.set("sessao_usuario", "st_teste")
+    logar_cookie(client, "st_teste")
     assert client.get("/botc/api/estado?apenas_lobby=true").status_code == 200
     res_criar = client.post(
         "/botc/api/criar-partida",
@@ -193,7 +196,7 @@ def test_fluxo_completo_salas_botc_e_estado_australia(client):
 
     # Jog2 tenta ações não autorizadas (403/404) e depois entra com a senha certa (200)
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "jog2")
+    logar_cookie(client, "jog2")
     assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid}).status_code == 403
     assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid, "nomeado_id": "Jog2"}).status_code == 403
     assert client.post("/botc/api/encerrar-partida", data={"partida_id": pid}).status_code == 403
@@ -211,7 +214,7 @@ def test_fluxo_completo_salas_botc_e_estado_australia(client):
 
     # Storyteller (st_teste) assume o centro da roda
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "st_teste")
+    logar_cookie(client, "st_teste")
     assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid}).status_code == 200
     assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
 
@@ -238,12 +241,12 @@ def test_fluxo_completo_salas_botc_e_estado_australia(client):
     assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
 
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "jog2")
+    logar_cookie(client, "jog2")
     assert client.get(f"/botc/api/estado?partida_id={pid}").status_code == 200
 
     # Storyteller apura o dia, encerra a partida inteira e exclui a sala
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "st_teste")
+    logar_cookie(client, "st_teste")
     assert client.post("/botc/apurar", data={"partida_id": pid}).status_code == 200
     assert client.post("/botc/api/encerrar-partida", data={"partida_id": "inexistente"}).status_code == 404
     assert client.post("/botc/api/encerrar-partida", data={"partida_id": pid}).status_code == 200
@@ -280,7 +283,7 @@ def test_casos_borda_salas_e_giro_botc(client):
     client.cookies.clear()
 
     # 1. Jogador cria sala pública e sai (testa linhas 301-315 e auto-exclusão da sala vazia)
-    client.cookies.set("sessao_usuario", "jog_borda")
+    logar_cookie(client, "jog_borda")
     pid_temp = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Temp"}).json()["partida_id"]
     assert client.post("/botc/api/sair-sala", data={"partida_id": pid_temp}).status_code == 200
     assert pid_temp not in app.state.salas_botc
@@ -288,12 +291,12 @@ def test_casos_borda_salas_e_giro_botc(client):
     # 2. Cria nova sala com jog_borda; st_teste inicia giro assumindo automaticamente a sala vazia de ST (linhas 580-585)
     pid2 = client.post("/botc/api/criar-partida", data={"nome_sala": "Sala Giro"}).json()["partida_id"]
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "st_teste")
+    logar_cookie(client, "st_teste")
     assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid2, "nomeado_id": "jog_borda"}).status_code == 200
 
     # 3. Outro Storyteller (st2) tenta assumir ou iniciar giro na sala que já pertence a st_teste (linhas 367 e 586)
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "st2")
+    logar_cookie(client, "st2")
     assert client.post("/botc/api/assumir-storyteller", data={"partida_id": pid2}).status_code == 400
     assert client.post("/botc/api/iniciar-giro", data={"partida_id": pid2, "nomeado_id": "jog_borda"}).status_code == 403
 
@@ -301,7 +304,7 @@ def test_casos_borda_salas_e_giro_botc(client):
     app.state.salas_botc[pid2]["giro"]["trancados"]["jog_borda"] = True
     app.state.salas_botc[pid2]["giro"]["trancados_nomes"].add("Jog Borda")
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "jog_borda")
+    logar_cookie(client, "jog_borda")
     res_trancado = client.post(
         "/botc/votar",
         data={"acao": "abaixar_mao", "partida_id": pid2},
@@ -315,7 +318,7 @@ def test_casos_borda_salas_e_giro_botc(client):
 
     # 6. Encerra a partida, Storyteller sai da sala encerrada (linhas 309-311) e testa roda sem jogadores (linha 591)
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "st_teste")
+    logar_cookie(client, "st_teste")
     assert client.post("/botc/api/encerrar-partida", data={"partida_id": pid2}).status_code == 200
     assert client.post("/botc/api/sair-sala", data={"partida_id": pid2}).status_code == 200
 
@@ -334,7 +337,7 @@ def test_adicionar_escopo_bloqueia_ra_de_outro_usuario(client, app_state_mock):
     banco.registrar(vitima)
     banco.registrar(atacante)
 
-    client.cookies.set("sessao_usuario", "atacante_ra_unico")
+    logar_cookie(client, "atacante_ra_unico")
     response = client.post(
         "/adicionar-escopo",
         data={"tipo_conta": "CACO_ESTUDANTE", "ra": "111999"},
@@ -352,7 +355,7 @@ def test_adicionar_escopo_bloqueia_alteracao_de_ra_ja_vinculado(client, app_stat
     estudante = EstudanteCACo("giovana_ra_unico", "senha123", "Giovana", 555444)
     banco.registrar(estudante)
 
-    client.cookies.set("sessao_usuario", "giovana_ra_unico")
+    logar_cookie(client, "giovana_ra_unico")
     response = client.post(
         "/adicionar-escopo",
         data={"tipo_conta": "CACO_ESTUDANTE", "ra": "999888"},
@@ -367,7 +370,7 @@ def test_adicionar_escopo_bloqueia_alteracao_de_ra_ja_vinculado(client, app_stat
 def test_caco_multiplas_assembleias_pautas_concorrentes_e_falas(client):
     """Cobre criação de assembleias (com validação de data/hora), pautas concorrentes e falas."""
     client.cookies.clear()
-    client.cookies.set("sessao_usuario", "julia")  # CACO_GESTAO
+    logar_cookie(client, "julia")  # CACO_GESTAO
 
     # 1. Rejeita data/hora no passado ou inexistente (400)
     assert client.post(
@@ -423,6 +426,8 @@ def test_caco_multiplas_assembleias_pautas_concorrentes_e_falas(client):
     # 6. Encerra assembleia inteira e consulta estado
     assert client.post(f"/caco/api/assembleias/{asm_id}/encerrar").status_code == 200
     assert client.get(f"/caco/api/estado?assembleia_id={asm_id}").status_code == 200
+    from src.main import app
+    app.state.assembleias_caco = {}
     client.cookies.clear()
 
 
@@ -448,14 +453,14 @@ def test_australia_api_votar_partidos_e_vencedor(client):
             },
         )
         client.cookies.clear()
-        client.cookies.set("sessao_usuario", "gestao_aus_teste")
+        logar_cookie(client, "gestao_aus_teste")
         client.post("/australia/iniciar")
 
         # Sem escopo AUSTRALIA_ELEITOR -> 403
         assert client.post("/australia/api/votar-partidos", json={"ranking_partidos": []}).status_code == 403
 
         client.cookies.clear()
-        client.cookies.set("sessao_usuario", "caio")
+        logar_cookie(client, "caio")
         estado = client.get("/australia/api/estado").json()
         partidos = list(estado["partidos"].keys())
 
@@ -465,7 +470,7 @@ def test_australia_api_votar_partidos_e_vencedor(client):
 
         # Encerra e consulta vencedor no estado JSON
         client.cookies.clear()
-        client.cookies.set("sessao_usuario", "gestao_aus_teste")
+        logar_cookie(client, "gestao_aus_teste")
         client.post("/australia/encerrar")
         res_final = client.get("/australia/api/estado")
         assert res_final.status_code == 200
@@ -474,3 +479,72 @@ def test_australia_api_votar_partidos_e_vencedor(client):
         app.state.eleicao_australia = eleicao_original
         app.state.eleitores_australia_votaram = votaram_original
         client.cookies.clear()
+
+
+def test_dependencias_tokens_invalidos_e_formatacao_candidatos():
+    """Cobre branches de validação de token HMAC em dependencias.py e casos de borda em formatacao_candidatos.py."""
+    from src.formatacao_candidatos import formatar_nomes_candidatos
+    from src.routers.dependencias import gerar_token_sessao, ler_username_token
+
+    # Tokens inválidos / malformados / assinatura adulterada
+    assert ler_username_token("") is None
+    assert ler_username_token("sem_ponto") is None
+    assert ler_username_token(".assinatura") is None
+    assert ler_username_token("payload.assinatura_errada") is None
+
+    # Token com assinatura válida mas payload expirado
+    token_ok = gerar_token_sessao("caio")
+    assert ler_username_token(token_ok) == "caio"
+
+    # Formatação de candidatos: nome único, partícula de sobrenome ("da") e homônimos no mesmo partido
+    rotulos = formatar_nomes_candidatos(
+        ["Cher", "João da Silva", "Maria Clara Souza", "Maria Eduarda Souza"],
+        {"Partido X": ["Cher", "João da Silva", "Maria Clara Souza", "Maria Eduarda Souza"]},
+    )
+    assert rotulos["Cher"] == "Cher, Partido X"
+    assert rotulos["João da Silva"] == "DA SILVA, João, Partido X"
+    assert rotulos["Maria Clara Souza"] == "SOUZA, Maria Clara, Partido X"
+    assert rotulos["Maria Eduarda Souza"] == "SOUZA, Maria Eduarda, Partido X"
+
+
+def test_caco_api_erros_permissao_e_not_found(client):
+    """Cobre branches de erro (403, 404, 400) nas rotas JSON do caco_router.py."""
+    # Estudante comum (sem CACO_GESTAO) não pode criar assembleia, pauta, encerrar nem chamar orador
+    client.cookies.clear()
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "CACO_ESTUDANTE",
+            "nome_real": "Estudante Teste Erro",
+            "username": "samuel",
+            "ra": "998877",
+            "senha": "1",
+            "senha_confirma": "1",
+        },
+    )
+    client.cookies.clear()
+    logar_cookie(client, "samuel")  # CACO_ESTUDANTE
+    assert client.post(
+        "/caco/api/assembleias",
+        data={"titulo": "T", "descricao": "D", "local": "L", "data": "2027-05-20", "horario": "14:00"},
+    ).status_code == 403
+    assert client.post("/caco/api/assembleias/principal/encerrar").status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas", data={"titulo": "P", "descricao": "D"}).status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas/pauta_principal/iniciar").status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas/pauta_principal/encerrar").status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas/pauta_principal/falas/proximo").status_code == 403
+
+    # Gestão testando 404 e campos vazios (400)
+    client.cookies.clear()
+    logar_cookie(client, "julia")  # CACO_GESTAO
+    assert client.post(
+        "/caco/api/assembleias",
+        data={"titulo": " ", "descricao": "D", "local": "L", "data": "2027-05-20", "horario": "14:00"},
+    ).status_code == 400
+    assert client.post("/caco/api/assembleias/inexistente/encerrar").status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas", data={"titulo": "P", "descricao": "D"}).status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/iniciar").status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/encerrar").status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/votar", data={"opcao": "APROVAR"}).status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/falas/proximo").status_code == 404
+    client.cookies.clear()

@@ -2,8 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/AustraliaPage.css';
 
-export default function AustraliaPage() {
-  const [modoVotacao, setModoVotacao] = useState('candidatos');
+export default function AustraliaPage({ usuario }) {
+  const chaveRascunho = `mc656_rascunho_australia_${usuario?.id || 'anon'}`;
+
+  const [modoVotacao, setModoVotacao] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(chaveRascunho))?.modoVotacao || 'candidatos';
+    } catch {
+      return 'candidatos';
+    }
+  });
   const [podeVotar, setPodeVotar] = useState(true);
   const [partidosMap, setPartidosMap] = useState({});
   const [ordemPartidos, setOrdemPartidos] = useState([]);
@@ -17,31 +25,66 @@ export default function AustraliaPage() {
   const [resultados, setResultados] = useState(null);
 
   const [draggedIdx, setDraggedIdx] = useState(null);
-  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const dragStartYRef = React.useRef(0);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
   const [erro, setErro] = useState('');
 
   const carregarEstadoAustralia = useCallback(async () => {
     try {
-      const res = await fetch('/australia/api/estado');
+      const res = await fetch('/australia/api/estado', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setPartidosMap(data.partidos || {});
         const nomesPartidos = Object.keys(data.partidos || {});
         setPodeVotar(data.pode_votar !== undefined ? data.pode_votar : true);
-        setOrdemPartidos((prev) => (prev.length === 0 ? nomesPartidos : prev));
-        setCandidatos((prev) => (prev.length === 0 ? data.candidatos : prev));
         setNomesFormatados(data.nomes_formatados || {});
         setEstadoEleicao(data.estado_eleicao);
         setIsGestao(data.is_gestao);
         setJaVotou(data.ja_votou);
         setTotalVotos(data.total_votos);
         setResultados(data.resultados || null);
+
+        let rascunho = null;
+        try {
+          rascunho = JSON.parse(localStorage.getItem(chaveRascunho));
+        } catch {
+          rascunho = null;
+        }
+
+        if (data.ja_votou) {
+          localStorage.removeItem(chaveRascunho);
+        }
+
+        setOrdemPartidos((prev) => {
+          if (prev.length > 0) return prev;
+          if (!data.ja_votou && rascunho?.ordemPartidos?.length === nomesPartidos.length) {
+            return rascunho.ordemPartidos;
+          }
+          return nomesPartidos;
+        });
+
+        setCandidatos((prev) => {
+          if (prev.length > 0) return prev;
+          if (!data.ja_votou && rascunho?.candidatos?.length === data.candidatos.length) {
+            return rascunho.candidatos;
+          }
+          return data.candidatos;
+        });
       }
     } catch {
       // ignora erro temporário
     }
-  }, []);
+  }, [chaveRascunho]);
+
+  useEffect(() => {
+    if (!jaVotou && estadoEleicao === 'VOTACAO' && (candidatos.length > 0 || ordemPartidos.length > 0)) {
+      localStorage.setItem(
+        chaveRascunho,
+        JSON.stringify({ modoVotacao, candidatos, ordemPartidos })
+      );
+    }
+  }, [chaveRascunho, modoVotacao, candidatos, ordemPartidos, jaVotou, estadoEleicao]);
 
   useEffect(() => {
     carregarEstadoAustralia();
@@ -59,6 +102,7 @@ export default function AustraliaPage() {
     const data = await res.json();
     if (res.ok) {
       setMensagemSucesso(`🎉 ${data.mensagem}`);
+      localStorage.removeItem(chaveRascunho)
       await carregarEstadoAustralia();
     } else {
       setErro(data.erro || 'Não foi possível registrar o voto por partidos.');
@@ -84,29 +128,41 @@ export default function AustraliaPage() {
     await carregarEstadoAustralia();
   };
 
-  const handleDragStart = (index) => setDraggedIdx(index);
-
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-    if (index !== dragOverIdx) setDragOverIdx(index);
-  };
-
   const listaAtiva = modoVotacao === 'partidos' ? ordemPartidos : candidatos;
   const setListaAtiva = modoVotacao === 'partidos' ? setOrdemPartidos : setCandidatos;
 
-  const handleDrop = (indexDestino) => {
-    if (draggedIdx === null || draggedIdx === indexDestino) {
-      setDraggedIdx(null);
-      setDragOverIdx(null);
-      return;
-    }
-    const novaLista = [...listaAtiva];
-    const [itemMovido] = novaLista.splice(draggedIdx, 1);
-    novaLista.splice(indexDestino, 0, itemMovido);
+  const handlePointerDown = (e, index) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDraggedIdx(index);
+    setDragOffsetY(0);
+    dragStartYRef.current = e.clientY;
+  };
 
-    setListaAtiva(novaLista);
+  const handlePointerMove = (e) => {
+    if (draggedIdx === null) return;
+    const deltaY = e.clientY - dragStartYRef.current;
+    setDragOffsetY(deltaY);
+
+    // Descobre qual card está sob o dedo/mouse e reordena em tempo real
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const li = el?.closest('li[data-dnd-index]');
+    if (li) {
+      const targetIdx = Number(li.getAttribute('data-dnd-index'));
+      if (!Number.isNaN(targetIdx) && targetIdx !== draggedIdx) {
+        const novaLista = [...listaAtiva];
+        const [movido] = novaLista.splice(draggedIdx, 1);
+        novaLista.splice(targetIdx, 0, movido);
+        setListaAtiva(novaLista);
+        setDraggedIdx(targetIdx);
+        dragStartYRef.current = e.clientY;
+        setDragOffsetY(0);
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
     setDraggedIdx(null);
-    setDragOverIdx(null);
+    setDragOffsetY(0);
   };
 
   const moverItemLista = (index, direcao) => {
@@ -133,9 +189,11 @@ export default function AustraliaPage() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),
     });
-
+    
+    
     const html = await response.text();
     if (html.toLowerCase().includes('voto registrado com sucesso')) {
+      localStorage.removeItem(chaveRascunho)
       setMensagemSucesso('🎉 Voto preferencial registrado com sucesso na Eleição Federal!');
       await carregarEstadoAustralia();
     } else {
@@ -267,23 +325,22 @@ export default function AustraliaPage() {
         <ul className="dnd-list">
           {listaAtiva.map((itemNome, index) => {
             const isDragging = draggedIdx === index;
-            const isDragOver = dragOverIdx === index;
             const isPartido = modoVotacao === 'partidos';
             const filiados = isPartido ? partidosMap[itemNome] || [] : [];
 
             return (
               <li
                 key={itemNome}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={() => handleDrop(index)}
-                onDragEnd={() => {
-                  setDraggedIdx(null);
-                  setDragOverIdx(null);
+                data-dnd-index={index}
+                style={{
+                  borderLeft: isPartido ? '6px solid var(--caco-purple)' : '6px solid var(--aus-green)',
+                  transform: isDragging ? `translateY(${dragOffsetY}px) scale(1.02)` : undefined,
+                  zIndex: isDragging ? 50 : 1,
+                  position: 'relative',
+                  boxShadow: isDragging ? '0 12px 24px rgba(0, 0, 0, 0.35)' : undefined,
+                  transition: isDragging ? 'none' : 'transform 0.15s ease',
                 }}
-                style={isPartido ? { borderLeft: '6px solid var(--caco-purple)' } : { borderLeft: '6px solid var(--aus-green)' }}
-                className={`dnd-item ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                className={`dnd-item ${isDragging ? 'dragging' : ''}`}
               >
                 <div className="dnd-left">
                   <span
@@ -329,7 +386,14 @@ export default function AustraliaPage() {
                   >
                     ▼
                   </button>
-                  <span className="drag-handle" title="Arraste para reordenar">
+                  <span
+                    className="drag-handle"
+                    title="Segure e arraste para reordenar"
+                    onPointerDown={(e) => handlePointerDown(e, index)}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                  >
                     ⠿
                   </span>
                 </div>

@@ -10,12 +10,12 @@ from src.autenticacao.base import Usuario
 from src.database import salvar_estado_sql
 from src.formatacao_candidatos import formatar_nomes_candidatos
 
-from .dependencias import obter_usuario_logado
+from .dependencias import exigir_autorizacao_rota, obter_usuario_logado
 
 # Pega o diretório absoluto onde o main.py está (a pasta src/)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-router = APIRouter(prefix="/australia", tags=["Australia"])
+router = APIRouter(prefix="/australia", tags=["Austrália"], dependencies=[Depends(exigir_autorizacao_rota)])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 def _contexto_cedula(eleicao, usuario: Usuario, **extra) -> dict:
@@ -224,6 +224,8 @@ async def processar_voto_partidos_api(
     try:
         eleicao.apurar_voto_partidos(usuario.id, ranking_partidos)
         request.app.state.eleitores_australia_votaram.add(usuario.id)
+        salvar_estado_sql("eleicao_australia", eleicao)
+        salvar_estado_sql("eleitores_australia_votaram", request.app.state.eleitores_australia_votaram)
         return JSONResponse({
             "status": "ok",
             "mensagem": "Voto por ranking de partidos registrado com sucesso!",

@@ -116,3 +116,26 @@ body {
   text-decoration: none;
   display: inline-block;
 }
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 1rem 0.75rem;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+}
