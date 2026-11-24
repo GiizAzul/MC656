@@ -252,6 +252,12 @@ export default function AustraliaPage() {
             ▲/▼) para definir sua ordem de preferência (de 1º a {candidatos.length}º lugar).
           </>
         )}
+        <p className="australia-valid-ballot">
+          <strong>Para que o voto seja válido:</strong> ordene todos os {modoVotacao === 'partidos' ? 'partidos' : 'candidatos'},
+          atribuindo uma posição única e consecutiva de 1 a {modoVotacao === 'partidos' ? ordemPartidos.length : candidatos.length}.
+          Não deixe itens sem posição nem repita posições. A posição 1 é sua primeira preferência; as seguintes são usadas
+          se as opções anteriores forem eliminadas.
+        </p>
       </div>
 
       {erro && <div className="alert-banner alert-error">{erro}</div>}
