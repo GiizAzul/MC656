@@ -35,8 +35,9 @@ class EleicaoAustralia(SistemaEleitoral):
         if partidos_candidatos and set(candidatos_com_partido) != self.candidatos_oficiais:
             raise ValueError("Todos os candidatos devem pertencer a um partido para habilitar o ranking por partidos.")
 
-        # Registro de quem já votou (cédulas carregadas no construtor são anônimas)
-        self.votantes: set[str] = set()
+        # Registro de quem já votou (cédulas carregadas no construtor são anônimas).
+        # `votantes` permanece como alias por compatibilidade com clientes antigos.
+        self.eleitores_votantes: set[str] = set()
 
         # Validação que os dados são íntegros com os candidatos registrados
         for i, cedula in enumerate(cedulas):
@@ -228,5 +229,14 @@ class EleicaoAustralia(SistemaEleitoral):
 
     def _validar_voto_unico(self, eleitor_id: str) -> None:
         """Impede que um eleitor já registrado envie outra cédula."""
-        if eleitor_id in self.votantes:
+        if eleitor_id in self.eleitores_votantes:
             raise ValueError("Você já registrou seu voto nesta eleição.")
+
+    @property
+    def votantes(self) -> set[str]:
+        """Alias legado para o conjunto de eleitores que já votaram."""
+        return self.eleitores_votantes
+
+    @votantes.setter
+    def votantes(self, eleitores: set[str]) -> None:
+        self.eleitores_votantes = eleitores
