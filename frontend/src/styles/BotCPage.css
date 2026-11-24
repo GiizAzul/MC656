@@ -18,7 +18,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 1.2rem;
   margin-bottom: 1.5rem;
 }
@@ -221,6 +221,14 @@
   color: #94a3b8;
   filter: grayscale(65%);
   opacity: 0.78;
+}
+
+.seat-node.dead-player.hand-up {
+  background: radial-gradient(circle, #15803d 0%, #14532d 100%);
+  border-color: #4ade80;
+  color: #ffffff;
+  filter: none;
+  opacity: 1;
 }
 
 .ghost-vote-indicator {
