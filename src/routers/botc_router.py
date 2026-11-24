@@ -548,7 +548,7 @@ async def apurar_execucao_botc(
     sala.setdefault("nomeados_hoje", set()).clear()
     sala["giro"]["trancados"] = {}
     sala["giro"]["trancados_nomes"] = set()
-    sala["giro"]["mensagem_final"] = ""
+    sala["giro"]["mensagem_final"] = mensagem
 
 
     _persistir_botc(request)
