@@ -68,7 +68,7 @@ def _carregar_ou_inicializar(chave: str, valor_padrao: object) -> object:
     salvo = carregar_estado_sql(chave)
     if salvo is not None:
         return salvo
-    salvar_estado_sql(chave, valor_padrao)
+    salvar_estado_sql(itens={chave: valor_padrao})
     return valor_padrao
 
 
