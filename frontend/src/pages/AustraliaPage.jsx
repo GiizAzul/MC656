@@ -130,6 +130,7 @@ export default function AustraliaPage({ usuario }) {
   const setListaAtiva = modoVotacao === 'partidos' ? setOrdemPartidos : setCandidatos;
 
   const handlePointerDown = (e, index) => {
+    if (e.target.closest('button')) return; // permite clicar normalmente em ▲ e ▼
     e.currentTarget.setPointerCapture(e.pointerId);
     setDraggedIdx(index);
     setDragOffsetY(0);
@@ -141,20 +142,24 @@ export default function AustraliaPage({ usuario }) {
     const deltaY = e.clientY - dragStartYRef.current;
     setDragOffsetY(deltaY);
 
-    // Descobre qual card está sob o dedo/mouse e reordena em tempo real
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const li = el?.closest('li[data-dnd-index]');
-    if (li) {
-      const targetIdx = Number(li.getAttribute('data-dnd-index'));
-      if (!Number.isNaN(targetIdx) && targetIdx !== draggedIdx) {
-        const novaLista = [...listaAtiva];
-        const [movido] = novaLista.splice(draggedIdx, 1);
-        novaLista.splice(targetIdx, 0, movido);
-        setListaAtiva(novaLista);
-        setDraggedIdx(targetIdx);
-        dragStartYRef.current = e.clientY;
-        setDragOffsetY(0);
-      }
+    const itens = document.querySelectorAll('li[data-dnd-index]');
+    let targetIdx = draggedIdx;
+    itens.forEach((li) => {
+      const idx = Number(li.getAttribute('data-dnd-index'));
+      const rect = li.getBoundingClientRect();
+      const meio = rect.top + rect.height / 2;
+      if (idx < draggedIdx && e.clientY < meio) targetIdx = Math.min(targetIdx, idx);
+      if (idx > draggedIdx && e.clientY > meio) targetIdx = Math.max(targetIdx, idx);
+    });
+
+    if (targetIdx !== draggedIdx) {
+      const novaLista = [...listaAtiva];
+      const [movido] = novaLista.splice(draggedIdx, 1);
+      novaLista.splice(targetIdx, 0, movido);
+      setListaAtiva(novaLista);
+      setDraggedIdx(targetIdx);
+      dragStartYRef.current = e.clientY;
+      setDragOffsetY(0);
     }
   };
 
@@ -290,6 +295,10 @@ export default function AustraliaPage({ usuario }) {
                   transition: isDragging ? 'none' : 'transform 0.15s ease',
                 }}
                 className={`dnd-item ${isDragging ? 'dragging' : ''}`}
+                onPointerDown={(e) => handlePointerDown(e, index)}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
               >
                 <div className="dnd-left">
                   <span
@@ -338,10 +347,6 @@ export default function AustraliaPage({ usuario }) {
                   <span
                     className="drag-handle"
                     title="Segure e arraste para reordenar"
-                    onPointerDown={(e) => handlePointerDown(e, index)}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerCancel={handlePointerUp}
                   >
                     ⠿
                   </span>
