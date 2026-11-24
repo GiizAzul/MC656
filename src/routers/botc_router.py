@@ -169,54 +169,40 @@ async def processar_voto_botc(
     salas = _obter_salas_botc(request.app.state)
     sala = _obter_sala_segura(salas, partida_id)
     sistema = sala["sistema"]
+    pede_json = "application/json" in request.headers.get("accept", "")
 
     if not hasattr(request.app.state, "maos_botc"):
         request.app.state.maos_botc = sala["maos"]
 
-    # Storyteller da partida não pode votar!
-    if (
-        usuario is not None
-        and sala["storyteller_id"] == usuario.id
-        and "application/json" in request.headers.get("accept", "")
-    ):
+    # Storyteller da partida não pode votar
+    if usuario is not None and sala["storyteller_id"] == usuario.id and pede_json:
         return JSONResponse(
             {"erro": "Você é o Storyteller desta partida e não possui poder de voto."},
             status_code=403,
         )
 
+    # Jogador já trancado pelo ponteiro não pode alterar a mão
     giro = sala["giro"]
     if (
         giro.get("ativo")
         and usuario is not None
         and (usuario.id in giro.get("trancados", {}) or usuario.nome_real in giro.get("trancados_nomes", set()))
-        and "application/json" in request.headers.get("accept", "")
+        and pede_json
     ):
         return JSONResponse(
             {"erro": "O ponteiro já passou por você! Seu voto foi computado e sua mão está travada."},
             status_code=400,
         )
-    
-    mao_levantada = acao == "levantar_mao"
-    if usuario is not None:
-        sala["maos"][usuario.username] = mao_levantada
-        sala["maos"][usuario.nome_real] = mao_levantada
-        sala["maos"][usuario.id] = mao_levantada
-        request.app.state.maos_botc[usuario.username] = mao_levantada
 
+    # Morto sem voto fantasma é bloqueado antes de gravar a mão
     if usuario is not None and "BOTC" in usuario.escopo:
-        jogador = _obter_ou_criar_jogador(sistema, usuario)
-        _persistir_botc(request=request, background_tasks=background_tasks)
-
-        # Se a requisição vier via fetch/React (Accept: application/json), responde sem trocar de tela!
-        if "application/json" in request.headers.get("accept", ""):
-            total_maos = sum(1 for v in sala["maos"].values() if v)
-            return JSONResponse({
-                "status": "ok",
-                "mao_levantada": mao_levantada,
-                "total_maos": total_maos,
-                "mensagem": "Ação registrada na roda da cidade.",
-            })
+        jogador = _obter_ou_criar_jogador(sistema, usuario, sala=sala)
         if jogador and not jogador.pode_votar():
+            if pede_json:
+                return JSONResponse(
+                    {"erro": "Você está morto e já utilizou seu voto fantasma nesta partida."},
+                    status_code=400,
+                )
             jogadores_view = [
                 {"id": j.id_jogador, "nome": j.nome, "status": j.status.value, "peso": j.calcular_peso_voto()}
                 for j in sistema.jogadores.values()
@@ -234,13 +220,34 @@ async def processar_voto_botc(
                 },
             )
 
+    # Grava o estado da mão e persiste em segundo plano
+    mao_levantada = acao == "levantar_mao"
+    if usuario is not None:
+        sala["maos"][usuario.username] = mao_levantada
+        sala["maos"][usuario.nome_real] = mao_levantada
+        sala["maos"][usuario.id] = mao_levantada
+        request.app.state.maos_botc[usuario.username] = mao_levantada
+
     _persistir_botc(request=request, background_tasks=background_tasks)
+
+    if pede_json:
+        total_maos = sum(
+            1
+            for j in sistema.jogadores.values()
+            if sala["maos"].get(j.id_jogador) or sala["maos"].get(j.nome)
+        )
+        return JSONResponse({
+            "status": "ok",
+            "mao_levantada": mao_levantada,
+            "total_maos": total_maos,
+            "mensagem": "Ação registrada na roda da cidade.",
+        })
+
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
         context={"mensagem": "Ação registrada na roda da cidade."},
     )
-
 
 @router.post("/api/criar-partida")
 async def criar_nova_partida_botc(
@@ -593,6 +600,7 @@ async def apurar_execucao_botc(
     sala["giro"]["trancados"] = {}
     sala["giro"]["trancados_nomes"] = set()
     sala["giro"]["votos_computados"] = 0
+    sala["giro"]["mensagem_final"] = mensagem
 
     _persistir_botc(request=request, background_tasks=background_tasks)
     return templates.TemplateResponse(
@@ -682,7 +690,7 @@ async def iniciar_giro_storyteller(
     )
     if idx_nomeado is None:
         raise HTTPException(status_code=404, detail="Jogador nomeado não encontrado nesta sala.")
-        
+
     nomeado_obj = lista_jogadores[idx_nomeado]
 
     # Regra oficial do BoTC: um jogador só pode ser nomeado 1 vez por dia!
