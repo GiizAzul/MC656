@@ -573,17 +573,24 @@ async def apurar_execucao_botc(
     sistema = sala["sistema"]
 
     resultado = sistema.apurar_vencedor()
+    if resultado:
+        jog_exec = sistema.obter_jogador(resultado)
+        if jog_exec:
+            jog_exec.status = StatusJogador.MORTO_COM_FANTASMA
     mensagem = (
         f"⚖️ O jogador executado foi: {resultado}"
         if resultado
         else "⚖️ Ninguém foi executado. Empate ou votos insuficientes."
     )
-    # Ao encerrar o dia e apurar o executado, limpa os nomeados do dia para o próximo ciclo!
+
+    # Limpa os votos e nomeados do dia para o próximo ciclo
+    sistema.votos.clear()
+    if hasattr(sistema, "votantes_por_candidato"):
+        sistema.votantes_por_candidato.clear()
     sala.setdefault("nomeados_hoje", set()).clear()
     sala["giro"]["trancados"] = {}
     sala["giro"]["trancados_nomes"] = set()
-    sala["giro"]["mensagem_final"] = mensagem
-
+    sala["giro"]["votos_computados"] = 0
 
     _persistir_botc(request=request, background_tasks=background_tasks)
     return templates.TemplateResponse(
