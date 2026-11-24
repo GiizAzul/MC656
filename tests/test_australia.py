@@ -13,6 +13,10 @@ def test_vitoria_maioria_simples():
     ]
     eleicao = EleicaoAustralia(candidatos, cedulas)
     assert eleicao.apurar_vencedor() == 'Samuel'
+    resultados = eleicao.apurar_resultados()
+    assert resultados['vencedor'] == 'Samuel'
+    assert len(resultados['rodadas']) == 1
+    assert resultados['rodadas'][0]['eliminado'] is None
 
 def test_vitoria_por_eliminacao_com_transferencia():
     candidatos = ['Caio', 'Gi', 'Juh', 'Leo', 'Samuel']
@@ -267,3 +271,55 @@ def test_voto_por_partidos_respeita_estado_e_unicidade():
         'eleitor-posicao', {'Partido A': 2, 'Partido B': 1}
     )
     assert outra_eleicao.cedulas == [['B1', 'A1', 'A2']]
+
+
+def test_vitoria_na_contagem_inicial_sem_rodadas_adicionais():
+    """Cobre o caso em que o vencedor atinge maioria absoluta na contagem inicial,
+    garantindo que não sejam geradas rodadas subsequentes de eliminação."""
+    candidatos = ['Candidato A', 'Candidato B', 'Candidato C']
+    cedulas = [
+        ['Candidato C', 'Candidato B', 'Candidato A'],
+        ['Candidato A', 'Candidato B', 'Candidato C'],
+        ['Candidato A', 'Candidato B', 'Candidato C'],
+    ]
+    eleicao = EleicaoAustralia(candidatos, cedulas)
+    resultados = eleicao.apurar_resultados()
+    assert resultados['vencedor'] == 'Candidato A'
+    assert len(resultados['rodadas']) == 1
+    assert resultados['rodadas'][0]['eliminado'] is None
+    assert resultados['rodadas'][0]['contagem'] == {
+        'Candidato A': 2,
+        'Candidato B': 0,
+        'Candidato C': 1,
+    }
+    assert resultados['rodadas'][0]['total'] == 3
+
+
+def test_apuracao_multiplas_rodadas_quando_sem_maioria_inicial():
+    """Garante que quando não há maioria na 1ª rodada, o candidato menos votado é
+    eliminado e a contagem continua na rodada seguinte até a maioria ser atingida."""
+    candidatos = ['Caio', 'Gi', 'Samuel']
+    cedulas = [
+        ['Caio', 'Samuel', 'Gi'],
+        ['Caio', 'Samuel', 'Gi'],
+        ['Samuel', 'Gi', 'Caio'],
+        ['Gi', 'Samuel', 'Caio'],
+        ['Gi', 'Samuel', 'Caio'],
+    ]
+    eleicao = EleicaoAustralia(candidatos, cedulas)
+    resultados = eleicao.apurar_resultados()
+    assert resultados['vencedor'] == 'Gi'
+    assert len(resultados['rodadas']) == 2
+    assert resultados['rodadas'][0]['eliminado'] == 'Samuel'
+    assert resultados['rodadas'][0]['contagem'] == {'Caio': 2, 'Gi': 2, 'Samuel': 1}
+    assert resultados['rodadas'][1]['eliminado'] is None
+    assert resultados['rodadas'][1]['contagem'] == {'Caio': 2, 'Gi': 3}
+
+
+def test_apuracao_um_candidato():
+    eleicao = EleicaoAustralia(['Samuel'], [['Samuel']])
+    resultados = eleicao.apurar_resultados()
+    assert resultados['vencedor'] == 'Samuel'
+    assert len(resultados['rodadas']) == 1
+    assert resultados['rodadas'][0]['contagem'] == {'Samuel': 1}
+
