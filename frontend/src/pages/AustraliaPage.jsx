@@ -17,6 +17,8 @@ export default function AustraliaPage() {
 
   const [draggedIdx, setDraggedIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const dragStartYRef = React.useRef(0);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
   const [erro, setErro] = useState('');
 
@@ -82,51 +84,41 @@ export default function AustraliaPage() {
     await carregarEstadoAustralia();
   };
 
-  const handleDragStart = (index) => setDraggedIdx(index);
-
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-    if (index !== dragOverIdx) setDragOverIdx(index);
-  };
-
   const listaAtiva = modoVotacao === 'partidos' ? ordemPartidos : candidatos;
   const setListaAtiva = modoVotacao === 'partidos' ? setOrdemPartidos : setCandidatos;
 
-  const handleDrop = (indexDestino) => {
-    if (draggedIdx === null || draggedIdx === indexDestino) {
-      setDraggedIdx(null);
-      setDragOverIdx(null);
-      return;
-    }
-    const novaLista = [...listaAtiva];
-    const [itemMovido] = novaLista.splice(draggedIdx, 1);
-    novaLista.splice(indexDestino, 0, itemMovido);
-
-    setListaAtiva(novaLista);
-    setDraggedIdx(null);
-    setDragOverIdx(null);
+  const handlePointerDown = (e, index) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDraggedIdx(index);
+    setDragOffsetY(0);
+    dragStartYRef.current = e.clientY;
   };
 
-  const handleTouchMove = (e) => {
+  const handlePointerMove = (e) => {
     if (draggedIdx === null) return;
-    const touch = e.touches[0];
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const deltaY = e.clientY - dragStartYRef.current;
+    setDragOffsetY(deltaY);
+
+    // Descobre qual card está sob o dedo/mouse e reordena em tempo real
+    const el = document.elementFromPoint(e.clientX, e.clientY);
     const li = el?.closest('li[data-dnd-index]');
     if (li) {
-      const idx = Number(li.getAttribute('data-dnd-index'));
-      if (!Number.isNaN(idx) && idx !== dragOverIdx) {
-        setDragOverIdx(idx);
+      const targetIdx = Number(li.getAttribute('data-dnd-index'));
+      if (!Number.isNaN(targetIdx) && targetIdx !== draggedIdx) {
+        const novaLista = [...listaAtiva];
+        const [movido] = novaLista.splice(draggedIdx, 1);
+        novaLista.splice(targetIdx, 0, movido);
+        setListaAtiva(novaLista);
+        setDraggedIdx(targetIdx);
+        dragStartYRef.current = e.clientY;
+        setDragOffsetY(0);
       }
     }
   };
 
-  const handleTouchEnd = () => {
-    if (draggedIdx !== null && dragOverIdx !== null) {
-      handleDrop(dragOverIdx);
-    } else {
-      setDraggedIdx(null);
-      setDragOverIdx(null);
-    }
+  const handlePointerUp = () => {
+    setDraggedIdx(null);
+    setDragOffsetY(0);
   };
 
   const moverItemLista = (index, direcao) => {
@@ -246,16 +238,15 @@ export default function AustraliaPage() {
               <li
                 key={itemNome}
                 data-dnd-index={index}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={() => handleDrop(index)}
-                onDragEnd={() => {
-                  setDraggedIdx(null);
-                  setDragOverIdx(null);
+                style={{
+                  borderLeft: isPartido ? '6px solid var(--caco-purple)' : '6px solid var(--aus-green)',
+                  transform: isDragging ? `translateY(${dragOffsetY}px) scale(1.02)` : undefined,
+                  zIndex: isDragging ? 50 : 1,
+                  position: 'relative',
+                  boxShadow: isDragging ? '0 12px 24px rgba(0, 0, 0, 0.35)' : undefined,
+                  transition: isDragging ? 'none' : 'transform 0.15s ease',
                 }}
-                style={isPartido ? { borderLeft: '6px solid var(--caco-purple)' } : { borderLeft: '6px solid var(--aus-green)' }}
-                className={`dnd-item ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                className={`dnd-item ${isDragging ? 'dragging' : ''}`}
               >
                 <div className="dnd-left">
                   <span
@@ -301,12 +292,13 @@ export default function AustraliaPage() {
                   >
                     ▼
                   </button>
-                  <span 
-                    className="drag-handle" 
-                    title="Arraste para reordenar"
-                    onTouchStart={() => handleDragStart(index)}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
+                  <span
+                    className="drag-handle"
+                    title="Segure e arraste para reordenar"
+                    onPointerDown={(e) => handlePointerDown(e, index)}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
                   >
                     ⠿
                   </span>
