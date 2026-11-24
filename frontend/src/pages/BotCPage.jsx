@@ -795,7 +795,7 @@ export default function BotCPage() {
                     </div>
                   </form>
 
-                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
                     {!partidaAtualInfo.encerrada && (
                       <button
                         type="button"
