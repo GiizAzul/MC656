@@ -187,6 +187,13 @@ class EleicaoAustralia(SistemaEleitoral):
         ativos = list(self.candidatos)
         rodadas = []
         vencedor = None
+        if len(ativos) == 1:
+            total = len(self.cedulas)
+            if total:
+                vencedor = ativos[0]
+                rodadas.append({"contagem": {ativos[0]: total}, "total": total, "eliminado": None})
+            return {"vencedor": vencedor, "rodadas": rodadas}
+
         while len(ativos) >= 2:
             contagem = {cid: 0 for cid in ativos}
             for cedula in self.cedulas:
@@ -199,10 +206,12 @@ class EleicaoAustralia(SistemaEleitoral):
             rodadas.append(rodada)
             if total == 0:
                 break
-            if vencedor is None and total:
+            if total:
                 vencedor = next((cid for cid, votos in contagem.items() if votos > total / 2), None)
+            if vencedor is not None:
+                break
             if len(ativos) == 2:
-                if vencedor is None and total:
+                if total:
                     ordenados = sorted(contagem.items(), key=lambda item: item[1], reverse=True)
                     vencedor = ordenados[0][0]
                 break
