@@ -37,12 +37,22 @@ class ControleDeAcesso:
 
     @classmethod
     def extrair_macro_scopes(cls, usuario: Usuario) -> set[str]:
-        """Converte todos os escopos nativos do usuário para seus macro-escopos."""
-        escopos_brutos = getattr(usuario, "escopos", None) or {usuario.escopo}
-        return {
-            cls.MAPA_SCOPES.get(escopo.split("_")[0], "SCOPE_GLOBAL")
-            for escopo in escopos_brutos
-        }
+        escopo_raw = getattr(usuario, "escopo", "") or ""
+        partes = [parte.strip().upper() for parte in escopo_raw.split(",") if parte.strip()]
+        macro_scopes: set[str] = set()
+
+        for parte in partes:
+            if parte == "ADMIN" or parte.startswith("GLOBAL"):
+                macro_scopes.add("SCOPE_GLOBAL")
+            elif parte.startswith(("BCT", "BOTC")):
+                macro_scopes.add("SCOPE_BCT")
+            elif parte.startswith("CACO"):
+                macro_scopes.add("SCOPE_CACO")
+            elif parte.startswith("AUSTRALIA"):
+                macro_scopes.add("SCOPE_AUSTRALIA")
+            # Escopos não reconhecidos são ignorados (nunca viram SCOPE_GLOBAL por padrão)
+
+        return macro_scopes
 
     @classmethod
     def extrair_macro_scope(cls, usuario: Usuario) -> str:

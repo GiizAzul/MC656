@@ -23,21 +23,22 @@ def gerar_token_sessao(username: str) -> str:
 
 
 def ler_username_token(token: str) -> str | None:
-    if "." in token:
-        payload_b64, assinatura = token.split(".", 1)
-        esperada = hmac.new(_SECRET_KEY, payload_b64.encode("ascii"), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(assinatura, esperada):
+    if not token or "." not in token:
+        return None
+    payload_b64, assinatura = token.split(".", 1)
+    if not payload_b64 or not assinatura:
+        return None
+    esperada = hmac.new(_SECRET_KEY, payload_b64.encode("ascii"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(assinatura, esperada):
+        return None
+    try:
+        payload = base64.urlsafe_b64decode(payload_b64.encode("ascii")).decode("utf-8")
+        username, expira_str = payload.rsplit(":", 1)
+        if int(time.time()) > int(expira_str):
             return None
-        try:
-            payload = base64.urlsafe_b64decode(payload_b64.encode("ascii")).decode("utf-8")
-            username, expira_str = payload.rsplit(":", 1)
-            if int(time.time()) > int(expira_str):
-                return None
-            return username
-        except (ValueError, TypeError):
-            return None
-    # Compatibilidade com cookies simples injetados diretamente em testes automatizados
-    return token
+        return username
+    except (ValueError, TypeError):
+        return None
 
 class RequerRedirecionamentoException(Exception):
     """Exceção customizada para sessão ausente, inválida ou expirada."""

@@ -153,8 +153,9 @@ export default function CACoPage({ usuario }) {
     setErro('');
     setMsg('');
     const form = new URLSearchParams({ opcao });
-    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/votar`, { credentials: 'include' }, {
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/votar`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form.toString(),
     });
