@@ -457,11 +457,14 @@ async def registrar_votos_botc(
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
     nomeado: str = Form(...),
     num_votos: int = Form(...),
+    partida_id: str = Form("principal"),
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode registrar votos.")
 
-    sistema = request.app.state.sistema_botc
+    salas = _obter_salas_botc(request.app.state)
+    sala = _obter_sala_segura(salas, partida_id)
+    sistema = sala["sistema"]
     try:
         sistema.registrar_votacao(nomeado, num_votos)
     except ValueError as e:
@@ -498,12 +501,15 @@ async def aplicar_modificador_botc(
     id_jogador: str = Form(...),
     tipo_modificador: str = Form(...),
     fator: int = Form(3),
+    partida_id: str = Form("principal"),
 ):
     """Permite ao Storyteller configurar modificadores ocultos em jogadores"""
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode configurar modificadores.")
 
-    sistema = request.app.state.sistema_botc
+    salas = _obter_salas_botc(request.app.state)
+    sala = _obter_sala_segura(salas, partida_id)
+    sistema = sala["sistema"]
     jogador = sistema.obter_jogador(id_jogador)
     if not jogador:
         raise HTTPException(status_code=404, detail="Jogador não encontrado.")
