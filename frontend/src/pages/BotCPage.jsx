@@ -98,8 +98,17 @@ export default function BotCPage({ usuario }) {
         if (data.partida_atual?.id && data.partida_atual.id !== partidaId) {
           setPartidaId(data.partida_atual.id);
         }
-        setNomeadoSelecionado((prev) => prev || data.giro?.nomeado_id || data.jogadores?.[0]?.id || '');
-        setJogadorAlvoStatus((prev) => prev || data.jogadores?.[0]?.id || '');
+        const lista = data.jogadores || [];
+        setNomeadoSelecionado((prev) => {
+          const aindaValido = lista.some((j) => j.id === prev && !j.ja_nomeado_hoje);
+          if (aindaValido) return prev;
+          const primeiroLivre = lista.find((j) => !j.ja_nomeado_hoje);
+          return primeiroLivre?.id || lista[0]?.id || '';
+        });
+        setJogadorAlvoStatus((prev) => {
+          const existe = lista.some((j) => j.id === prev);
+          return existe ? prev : lista[0]?.id || '';
+        });
       }
     } catch {
       // ignora oscilação temporária
@@ -263,6 +272,21 @@ export default function BotCPage({ usuario }) {
       setEmPartida(false);
     }
   };
+
+  const trocarDeSala = async (novaPartidaId) => {
+  if (novaPartidaId === partidaId) return;
+  const form = new URLSearchParams({ partida_id: partidaId });
+  await fetch('/botc/api/sair-sala', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  }).catch(() => {});
+  setNomeadoSelecionado('');
+  setJogadorAlvoStatus('');
+  setErro('');
+  setPartidaId(novaPartidaId);
+};
 
   const excluirSalaAtual = async () => {
     if (giro.ativo) return;
@@ -537,6 +561,7 @@ export default function BotCPage({ usuario }) {
                 setNomeadoSelecionado('');
                 setErro('');
                 setPartidaId(e.target.value);
+                trocarDeSala(e.target.value);
               }}
             >
               {partidasDisponiveis.map((p) => (
