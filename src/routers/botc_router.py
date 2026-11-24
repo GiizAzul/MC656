@@ -638,10 +638,7 @@ def _atualizar_progresso_giro(sala: dict) -> dict:
         giro["ativo"] = False
         giro["passo_atual"] = -1
         nome_alvo = giro["nomeado_nome"] or giro["nomeado_id"]
-        try:
-            sistema.registrar_votacao(nome_alvo, giro["votos_computados"])
-        except ValueError:
-            pass
+        sistema.votos[nome_alvo] = giro["votos_computados"]
         giro["mensagem_final"] = (
             f"Contagem concluída! {giro['votos_computados']} voto(s) computado(s) para {nome_alvo}."
         )
