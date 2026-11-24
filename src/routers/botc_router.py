@@ -101,7 +101,8 @@ def _obter_ou_criar_jogador(
 @router.get("/partida", response_class=HTMLResponse)
 async def tela_partida(
     request: Request, 
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    partida_id: str = "principal"
 ):
     if "BOTC" not in usuario.escopo:
         return RedirectResponse(url="/", status_code=302)
