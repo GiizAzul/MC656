@@ -26,6 +26,7 @@ __pycache__/
 
 # Dependências do Frontend
 node_modules/
+dist/
 
 #Mutmut
 .mutmut-cache

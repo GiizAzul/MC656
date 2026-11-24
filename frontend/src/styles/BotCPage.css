@@ -1,9 +1,15 @@
 .botc-page {
-  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-  color: #f8fafc;
+  background: var(--surface);
+  color: var(--text-primary);
   padding: 2rem;
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='dark'] .botc-page {
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  color: #f8fafc;
 }
 
 .botc-header {
@@ -35,16 +41,6 @@
   }
 }
 
-.wheel-wrapper {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
 .town-wheel {
   position: relative;
   width: 480px;
@@ -63,8 +59,8 @@
   width: 146px;
   height: 146px;
   border-radius: 50%;
-  background: #0f172a;
-  border: 3px solid #ef4444;
+  background: var(--surface-alt);
+  border: 3px solid var(--border-color);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -98,7 +94,16 @@
   font-size: 1.25rem;
 }
 
-/* === BOLAS (CÍRCULOS PERFEITOS) PARA CADA JOGADOR NA RODA === */
+.wheel-wrapper {
+  background: var(--surface-alt);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .seat-node {
   position: absolute;
   width: 86px;
@@ -106,7 +111,8 @@
   margin-left: -43px;
   margin-top: -43px;
   border-radius: 50%;
-  background: #1e293b;
+  background: var(--surface-alt);
+  color: var(--text-primary);
   border: 3px solid #475569;
   display: flex;
   flex-direction: column;
@@ -116,7 +122,7 @@
   text-align: center;
   z-index: 4;
   transition: all 0.3s ease;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
 .seat-node.nominated {
@@ -169,10 +175,16 @@
 }
 
 .botc-panel-box {
-  background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-alt);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 1.35rem;
+}
+
+[data-theme='dark'] .botc-panel-box {
+  background: rgba(30, 41, 59, 0.9);
+  color: #f8fafc;
 }
 
 .btn-hand-toggle {
@@ -226,4 +238,72 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+}
+
+@media (max-width: 900px) {
+  .botc-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .botc-layout > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .botc-page {
+    padding: 0.9rem;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .botc-panel-box {
+    padding: 1rem;
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+}
+
+@media (max-width: 560px) {
+  .botc-header > div {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .botc-header select.form-control {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+  }
+
+  .wheel-wrapper {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.75rem 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    height: 330px;
+  }
+
+  .town-wheel {
+    flex-shrink: 0;
+    margin: 0;
+    transform: scale(0.64);
+    transform-origin: top center;
+  }
+}
+
+@media (max-width: 390px) {
+  .wheel-wrapper {
+    height: 285px;
+  }
+
+  .town-wheel {
+    transform: scale(0.55);
+    transform-origin: top center;
+  }
 }

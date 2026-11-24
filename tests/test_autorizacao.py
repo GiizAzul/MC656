@@ -34,17 +34,17 @@ def testa_extracao_macro_scope(controle: ControleDeAcesso, jogador, estudante, e
 
 def testa_despacho_apos_login(controle: ControleDeAcesso, jogador, estudante, eleitor) -> None:
     """Critério 2: Verifica se o login direciona para o painel nativo correto."""
-    assert controle.despachar_apos_login(jogador) == "painel_jogador_bct"
-    assert controle.despachar_apos_login(estudante) == "painel_estudante_caco"
-    assert controle.despachar_apos_login(eleitor) == "painel_eleitor_australia"
+    assert controle.despachar_apos_login(jogador) == "/botc/partida"
+    assert controle.despachar_apos_login(estudante) == "/caco/assembleia"
+    assert controle.despachar_apos_login(eleitor) == "/australia/votar"
 
 
 def testa_acesso_recurso_autorizado(controle: ControleDeAcesso, jogador, estudante) -> None:
     """Verifica se usuários conseguem acessar os recursos do próprio escopo."""
-    resposta_botc = controle.acessar_recurso(jogador, "painel_jogador_bct")
+    resposta_botc = controle.acessar_recurso(jogador, "/botc/partida")
     assert "Acesso concedido" in resposta_botc
 
-    resposta_caco = controle.acessar_recurso(estudante, "painel_estudante_caco")
+    resposta_caco = controle.acessar_recurso(estudante, "/caco/assembleia")
     assert "Acesso concedido" in resposta_caco
 
 
@@ -55,16 +55,16 @@ def testa_acesso_recurso_nao_autorizado(controle: ControleDeAcesso, estudante) -
     """
     # Um estudante tenta acessar o painel de BOTC
     with pytest.raises(ErroAcessoNaoAutorizado) as excinfo:
-        controle.acessar_recurso(estudante, "painel_jogador_bct")
+        controle.acessar_recurso(estudante, "/botc/partida")
 
     # Verifica se a mensagem possui a punição correta
     assert "HTTP 403" in str(excinfo.value)
     
     # Verifica se o sistema informou para onde o estudante deve ser mandado de volta
-    assert excinfo.value.painel_redirecionamento == "painel_estudante_caco"
+    assert excinfo.value.painel_redirecionamento == "/caco/assembleia"
 
 
 def testa_acesso_recurso_nao_protegido(controle: ControleDeAcesso, eleitor) -> None:
     """Garante que recursos não listados fiquem abertos por padrão."""
-    resposta = controle.acessar_recurso(eleitor, "pagina_inicial_publica")
+    resposta = controle.acessar_recurso(eleitor, "/dashboard")
     assert "Acesso liberado" in resposta

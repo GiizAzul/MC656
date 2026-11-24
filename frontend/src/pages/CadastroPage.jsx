@@ -4,6 +4,7 @@ import '../styles/AuthPage.css';
 
 export default function CadastroPage({ onAuthSuccess }) {
   const navigate = useNavigate();
+
   const [tipoConta, setTipoConta] = useState('AUSTRALIA_ELEITOR');
   const [nomeReal, setNomeReal] = useState('');
   const [username, setUsername] = useState('');
@@ -15,7 +16,6 @@ export default function CadastroPage({ onAuthSuccess }) {
   const exigeRa = tipoConta === 'CACO_ESTUDANTE';
 
   const handleRaChange = (e) => {
-    // Permite apenas dígitos inteiros positivos (impede sinal negativo, ponto ou 'e')
     const apenasDigitos = e.target.value.replace(/\D/g, '');
     setRa(apenasDigitos);
   };
@@ -54,12 +54,13 @@ export default function CadastroPage({ onAuthSuccess }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),
+      credentials: 'include',
       redirect: 'manual',
     });
 
     if (response.status === 302 || response.type === 'opaqueredirect' || response.redirected) {
       if (onAuthSuccess) await onAuthSuccess();
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } else {
       const html = await response.text();
       const match = html.match(/Erro:[^<]+|Senhas não conferem[^<]+|RA inválido[^<]+/);

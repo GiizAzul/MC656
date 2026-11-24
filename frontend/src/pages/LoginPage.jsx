@@ -20,12 +20,13 @@ export default function LoginPage({ onLoginSuccess }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),
+      credentials: 'include',
       redirect: 'manual',
     });
 
     if (res.status === 302 || res.type === 'opaqueredirect' || res.redirected) {
       if (onLoginSuccess) await onLoginSuccess();
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } else {
       setErro('Erro: Usuário/RA não encontrado ou senha incorreta.');
     }

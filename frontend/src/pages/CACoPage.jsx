@@ -1,140 +1,526 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams} from 'react-router-dom';
 import '../styles/CACoPage.css';
 
 export default function CACoPage({ usuario }) {
-  const [opcao, setOpcao] = useState('APROVAR');
-  const [feedback, setFeedback] = useState('');
+  const [searchParams] = useSearchParams();
+  const chaveRascunho = `mc656_rascunho_caco_${usuario?.id || 'anon'}`;
+
+  const [assembleiaId, setAssembleiaId] = useState(() => {
+    const daUrl = searchParams.get('assembleia_id');
+    if (daUrl) return daUrl;
+    try {
+      return JSON.parse(localStorage.getItem(chaveRascunho))?.assembleiaId || 'principal';
+    } catch {
+      return 'principal';
+    }
+  });
+  const [assembleiasDisponiveis, setAssembleiasDisponiveis] = useState([]);
+  const [assembleiaAtual, setAssembleiaAtual] = useState({});
+  const [pautas, setPautas] = useState([]);
+  const [pautaAtivaId, setPautaAtivaId] = useState(null);  
+  const [isGestaoApi, setIsGestaoApi] = useState(false);
+  const [opcao, setOpcao] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(chaveRascunho))?.opcao || 'APROVAR';
+    } catch {
+      return 'APROVAR';
+    }
+  });
+  const isEncerrada = (e) => e === 'ENCERRADO' || e === 'ENCERRADA'
+  const isGestao = Boolean(usuario?.escopo?.includes('CACO_GESTAO') || isGestaoApi);
+  
+  // Form Nova Assembleia
+  const [novaAsmTitulo, setNovaAsmTitulo] = useState('');
+  const [novaAsmDesc, setNovaAsmDesc] = useState('');
+  const [novaAsmLocal, setNovaAsmLocal] = useState('');
+  const [novaAsmData, setNovaAsmData] = useState('');
+  const [novaAsmHora, setNovaAsmHora] = useState('');
+  
+  // Form Nova Pauta
+  const [novaPautaTitulo, setNovaPautaTitulo] = useState('');
+  const [novaPautaDesc, setNovaPautaDesc] = useState('');
+  
+  // Falas
+  const [tipoFala, setTipoFala] = useState('Fala Ordinária');
+  
+  const [msg, setMsg] = useState('');
   const [erro, setErro] = useState('');
-  const [resultados, setResultados] = useState(null);
-  const isGestao = usuario?.escopo?.includes('GESTAO');
 
-  const carregarResultados = async () => {
-    const res = await fetch('/caco/resultados', { headers: { Accept: 'application/html' } });
-    const html = await res.text();
-    const extrair = (label) => {
-      const regex = new RegExp(`${label}[\\s\\S]*?(\\d+)\\s*votos`, 'i');
-      const m = html.match(regex);
-      return m ? parseInt(m[1], 10) : 0;
-    };
-    const aprovar = extrair('Aprovar');
-    const rejeitar = extrair('Rejeitar');
-    const abster = extrair('Absten');
-    const total = aprovar + rejeitar + abster;
-    setResultados({ aprovar, rejeitar, abster, total });
-  };
+  const carregarEstado = useCallback(async () => {
+    try {
+      const res = await fetch(`/caco/api/estado?assembleia_id=${encodeURIComponent(assembleiaId)}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setIsGestaoApi(Boolean(data.is_gestao));
+        setAssembleiaAtual(data.assembleia_atual || {});
+        setAssembleiasDisponiveis(data.assembleias_disponiveis || []);
+        setPautas(data.pautas || []);
+        setPautaAtivaId(data.pauta_ativa_id);
+        if (data.assembleia_atual?.id && data.assembleia_atual.id !== assembleiaId) {
+          setAssembleiaId(data.assembleia_atual.id);
+        }
+      }
+    } catch {
+      // ignora falha momentânea
+    }
+  }, [assembleiaId]);
 
-  const enviarVoto = async (e) => {
+  useEffect(() => {
+    carregarEstado();
+    const poll = setInterval(carregarEstado, 1500);
+    return () => clearInterval(poll);
+  }, [carregarEstado]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      chaveRascunho,
+      JSON.stringify({ assembleiaId, pautaAtivaId, opcao })
+    );
+  }, [chaveRascunho, assembleiaId, pautaAtivaId, opcao]);
+
+  const criarAssembleia = async (e) => {
     e.preventDefault();
     setErro('');
-    setFeedback('');
+    setMsg('');
+    const form = new URLSearchParams({
+      titulo: novaAsmTitulo,
+      descricao: novaAsmDesc,
+      local: novaAsmLocal,
+      data: novaAsmData,
+      horario: novaAsmHora,
+    });
 
-    const formData = new URLSearchParams();
-    formData.append('opcao', opcao);
-
-    const res = await fetch('/caco/votar', {
+    const res = await fetch('/caco/api/assembleias', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString(),
+      body: form.toString(),
     });
-    const html = await res.text();
-    if (html.includes('VOTO NEGADO')) {
-      setErro('VOTO NEGADO: Você já registrou seu voto nesta pauta.');
-    } else if (html.includes('contabilizado') || html.includes('Voto:')) {
-      setFeedback(`Seu voto na assembleia foi contabilizado com sucesso: ${opcao}`);
-      await carregarResultados();
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || 'Erro ao criar assembleia.');
     } else {
-      setErro('A votação ainda não foi iniciada pela Gestão ou já foi encerrada.');
+      setMsg('✅ Nova assembleia criada com sucesso!');
+      setNovaAsmTitulo('');
+      setNovaAsmDesc('');
+      setNovaAsmLocal('');
+      setNovaAsmData('');
+      setNovaAsmHora('');
+      setAssembleiaId(d.assembleia_id);
     }
   };
 
-  const acaoGestao = async (rota, msg) => {
-    await fetch(rota, { method: 'POST' });
-    setFeedback(msg);
+  const encerrarAssembleia = async () => {
     setErro('');
-    await carregarResultados();
+    setMsg('');
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/encerrar`, {
+      method: 'POST',
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || 'Erro ao encerrar assembleia.');
+    } else {
+      setMsg('🔒 Assembleia encerrada com sucesso!');
+      await carregarEstado();
+    }
+  };
+  
+  const criarPauta = async (e) => {
+    e.preventDefault();
+    setErro('');
+    setMsg('');
+    const form = new URLSearchParams({
+      titulo: novaPautaTitulo,
+      descricao: novaPautaDesc,
+    });
+
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || 'Erro ao criar pauta.');
+    } else {
+      setMsg('📌 Pauta adicionada à fila da assembleia!');
+      setNovaPautaTitulo('');
+      setNovaPautaDesc('');
+      await carregarEstado();
+    }
+  };
+
+  const acaoPauta = async (pautaId, acao) => {
+    setErro('');
+    setMsg('');
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/${acao}`, {
+      method: 'POST',
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || `Não foi possível ${acao} a pauta.`);
+    } else {
+      setMsg(acao === 'iniciar' ? '▶ Pauta aberta para votação!' : '⏹ Pauta encerrada e apurada!');
+      await carregarEstado();
+    }
+  };
+
+  const enviarVoto = async (e, pautaId) => {
+    e.preventDefault();
+    setErro('');
+    setMsg('');
+    const form = new URLSearchParams({ opcao });
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/votar`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || 'Não foi possível registrar seu voto.');
+    } else {
+      localStorage.removeItem(chaveRascunho);
+      setMsg(`🗳️ ${d.mensagem}`);
+      await carregarEstado();
+    }
+  };
+
+  const inscreverFala = async (pautaId) => {
+    setErro('');
+    setMsg('');
+    const form = new URLSearchParams({ 
+      tipo_fala: tipoFala 
+    });
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/falas/inscrever`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || 'Não foi possível entrar na fila de falas.');
+    } else {
+      setMsg('🎙️ Você entrou na fila de falas!');
+      await carregarEstado();
+    }
+  };
+
+  const proximoOrador = async (pautaId) => {
+    setErro('');
+    setMsg('');
+    const res = await fetch(
+      `/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/falas/proximo`,
+      { method: 'POST', credentials: 'include' }
+    );
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErro(d.detail || 'Não foi possível avançar a fila de falas.');
+    } else {
+      setMsg(
+        d.orador_atual
+          ? `🎙️ Agora com a palavra: ${d.orador_atual.nome} (${d.orador_atual.tipo})`
+          : '🔒 Fila de falas encerrada.'
+      );
+      await carregarEstado();
+    }
   };
 
   const pct = (val, tot) => (tot > 0 ? Math.round((val / tot) * 100) : 0);
+  const pautaEmVotacao = pautas.find((p) => p.id === pautaAtivaId);
 
   return (
-    <div className="caco-container">
+    <div 
+      className="caco-container"
+      onClickCapture={(e) => {
+        if (e.target.closest('button')) {
+          setMsg('');
+          setErro('');
+        }
+      }}
+    >
       <div className="caco-header">
-        <h1>🏛️ Assembleia Geral do CACo</h1>
-        <p>Pauta: Aprovação do novo estatuto de representação discente.</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1>🐸 {assembleiaAtual.titulo || 'Assembleia Geral do CACo'}</h1>
+            <p>{assembleiaAtual.descricao}</p>
+            <p style={{ fontSize: '0.88rem', marginTop: '0.35rem', opacity: 0.9 }}>
+              📍 {assembleiaAtual.local} | 📅 {assembleiaAtual.data} às {assembleiaAtual.horario}
+            </p>
+          </div>
+          <div style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>            
+            <select
+              aria-label="Selecionar Assembleia"
+              className="form-control"
+              value={assembleiaId}
+              onChange={(e) => {
+                setErro('');
+                setMsg('');
+                setAssembleiaId(e.target.value);
+              }}
+            >
+              {assembleiasDisponiveis.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.encerrada ? '🔒 ' : '🐸 '}
+                  {a.titulo} ({a.data} {a.horario})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {erro && <div className="alert-banner alert-error">{erro}</div>}
-      {feedback && <div className="alert-banner alert-success">{feedback}</div>}
+      {msg && <div className="alert-banner alert-success">{msg}</div>}
 
-      <div className="caco-card">
-        <h2>Cédula de Deliberação</h2>
-        <form onSubmit={enviarVoto}>
-          <div className="vote-options-grid">
-            {['APROVAR', 'REJEITAR', 'ABSTER'].map((item) => (
-              <button
-                type="button"
-                key={item}
-                onClick={() => setOpcao(item)}
-                className={`vote-option-btn ${opcao === item ? 'selected' : ''}`}
-              >
-                {item}
+      {pautaEmVotacao ? (
+        <div className="caco-card" style={{ borderLeft: '5px solid var(--aus-green)'}}>
+          <h2>🟢 Em Votação: {pautaEmVotacao.titulo}</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>{pautaEmVotacao.descricao}</p>
+          <form onSubmit={(e) => enviarVoto(e, pautaEmVotacao.id)}>
+            <div className="vote-options-grid">
+              {['APROVAR', 'REJEITAR', 'ABSTER'].map((item) => (
+                <button
+                  type="button"
+                  key={item}
+                  disabled={pautaEmVotacao.ja_votou}
+                  onClick={() => setOpcao(item)}
+                  className={`vote-option-btn ${opcao === item ? 'selected' : ''}`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button type="submit" className="btn-primary" disabled={pautaEmVotacao.ja_votou}>
+                {pautaEmVotacao.ja_votou ? '✓ Voto Já Registrado' : 'Confirmar Voto Anônimo'}
               </button>
-            ))}
-          </div>
-          <button type="submit" className="btn-primary">
-            Confirmar Voto Anônimo
-          </button>
-        </form>
-      </div>
-
-      {isGestao && (
+              {isGestao && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => acaoPauta(pautaEmVotacao.id, 'encerrar')}
+                >
+                  ⏹ Encerrar Votação desta Pauta
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      ) : (
         <div className="caco-card">
-          <h3>⚙️ Controles da Gestão CACo</h3>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => acaoGestao('/caco/iniciar', 'Votação da Assembleia iniciada com sucesso!')}
-            >
-              ▶ Iniciar Votação
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => acaoGestao('/caco/encerrar', 'Votação da Assembleia encerrada.')}
-            >
-              ⏹ Encerrar Votação
-            </button>
-            <button type="button" className="btn-secondary" onClick={carregarResultados}>
-              📊 Exibir / Atualizar Resultados
-            </button>
-          </div>
+          <h3>⏸️ Nenhuma pauta em votação no momento</h3>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+            Aguarde a Gestão abrir uma pauta da ordem do dia abaixo.
+          </p>
         </div>
       )}
 
-      {resultados && (
-        <div className="caco-card">
-          <h3>📊 Resultados Parciais / Finais (Total: {resultados.total} votos)</h3>
-          <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-            <div>
-              <strong>A Favor (Aprovar): {resultados.aprovar} voto(s) ({pct(resultados.aprovar, resultados.total)}%)</strong>
-              <div className="progress-bar-track">
-                <div className="progress-bar-fill" style={{ width: `${pct(resultados.aprovar, resultados.total)}%` }} />
+      <div className="caco-card">
+        <h3>📋 Pautas desta Assembleia ({pautas.length})</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+          {pautas.map((p) => {
+            const aprovar = p.contadores?.APROVAR || 0;
+            const rejeitar = p.contadores?.REJEITAR || 0;
+            const abster = p.contadores?.ABSTER || 0;
+            return (
+              <div key={p.id} className="caco-pauta-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <strong>{p.titulo}</strong>{' '}
+                    <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>[{p.estado}]</span>
+                    <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>{p.descricao}</p>
+                  </div>
+                  {isGestao && p.estado === 'AGUARDANDO' && !p.ja_iniciada && !assembleiaAtual.encerrada && (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={Boolean(pautaAtivaId)}
+                      onClick={() => acaoPauta(p.id, 'iniciar')}
+                    >
+                      ▶ Iniciar Votação
+                    </button>
+                  )}
+                </div>
+
+                {(isEncerrada(p.estado) || (isGestao && p.estado === 'VOTACAO')) && (
+                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <strong
+                        style={{
+                          color:
+                            p.resultado === 'APROVADA'
+                              ? '#10b981'
+                              : p.resultado
+                              ? '#ef4444'
+                              : 'var(--text-primary)',
+                        }}
+                      >
+                        {p.resultado ? `Resultado: ${p.resultado}` : 'Apuração Parcial'}
+                      </strong>
+                      <small style={{ color: 'var(--text-secondary)' }}>{p.total_votos} voto(s) computado(s)</small>
+                    </div>
+
+                    <div className="caco-result-row">
+                      <span>Aprovar</span>
+                      <div className="progress-bar-track">
+                        <div className="progress-bar-fill aprovar" style={{ width: `${pct(aprovar, p.total_votos)}%` }} />
+                      </div>
+                      <strong style={{ textAlign: 'right' }}>{aprovar} ({pct(aprovar, p.total_votos)}%)</strong>
+                    </div>
+
+                    <div className="caco-result-row">
+                      <span>Rejeitar</span>
+                      <div className="progress-bar-track">
+                        <div className="progress-bar-fill rejeitar" style={{ width: `${pct(rejeitar, p.total_votos)}%` }} />
+                      </div>
+                      <strong style={{ textAlign: 'right' }}>{rejeitar} ({pct(rejeitar, p.total_votos)}%)</strong>
+                    </div>
+
+                    <div className="caco-result-row">
+                      <span>Abster</span>
+                      <div className="progress-bar-track">
+                        <div className="progress-bar-fill abster" style={{ width: `${pct(abster, p.total_votos)}%` }} />
+                      </div>
+                      <strong style={{ textAlign: 'right' }}>{abster} ({pct(abster, p.total_votos)}%)</strong>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ marginTop: '0.85rem', paddingTop: '0.7rem', borderTop: '1px dashed var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem' }}>
+                    🎙️ <strong>Com a palavra:</strong> {p.orador_atual ? `${p.orador_atual.nome} (${p.orador_atual.tipo})` : 'Ninguém'} |{' '}
+                    <strong>Fila:</strong> {p.fila_falas.length}
+                  </span>
+                  {p.fila_falas.length > 0 && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      <strong>Próximos na fila:</strong>{' '}
+                      {p.fila_falas.map((f, i) => `${i + 1}º ${f.nome} (${f.tipo})`).join(' → ')}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    {!isEncerrada(p.estado) && !assembleiaAtual.encerrada && (
+                      <>
+                        <select
+                          aria-label="Tipo de Fala"
+                          className="form-control"
+                          style={{ padding: '0.3rem 0.5rem', fontSize: '0.82rem' }}
+                          value={tipoFala}
+                          onChange={(e) => setTipoFala(e.target.value)}
+                        >
+                          <option value="Fala Ordinária">Fala Ordinária</option>
+                          <option value="Questão de Ordem">Questão de Ordem</option>
+                          <option value="Esclarecimento">Esclarecimento</option>
+                        </select>
+                        <button 
+                          type="button" 
+                          className="btn-secondary" 
+                          disabled={isEncerrada(p.estado)}
+                          style={{ padding: '0.3rem 0.65rem', fontSize: '0.82rem' }} 
+                          onClick={() => inscreverFala(p.id)}
+                        >
+                          ✋ Pedir Fala
+                        </button>
+                      </>
+                    )}
+                    {isGestao && (p.fila_falas.length > 0 || p.orador_atual) && (
+                      <button type="button" className="btn-primary" style={{ padding: '0.3rem 0.65rem', fontSize: '0.82rem' }} onClick={() => proximoOrador(p.id)}>
+                        ⏭ Próximo Orador
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <strong>Contra (Rejeitar): {resultados.rejeitar} voto(s) ({pct(resultados.rejeitar, resultados.total)}%)</strong>
-              <div className="progress-bar-track">
-                <div className="progress-bar-fill" style={{ width: `${pct(resultados.rejeitar, resultados.total)}%` }} />
+            );
+          })}
+        </div>
+      </div>
+
+      {isGestao && (
+        <div className="caco-gestao-grid">
+          <div className="caco-card">
+            <h3>➕ Nova Pauta nesta Assembleia</h3>
+            <form onSubmit={criarPauta} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Título da Pauta"
+                value={novaPautaTitulo}
+                onChange={(e) => setNovaPautaTitulo(e.target.value)}
+                required
+              />
+              <textarea
+                className="form-control"
+                rows={2}
+                placeholder="Breve descrição da pauta"
+                value={novaPautaDesc}
+                onChange={(e) => setNovaPautaDesc(e.target.value)}
+                required
+              />
+              <button type="submit" className="btn-primary" disabled={assembleiaAtual.encerrada}>
+                Adicionar Pauta
+              </button>
+            </form>
+
+            {!assembleiaAtual.encerrada && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ width: '100%', marginTop: '0.75rem' }}
+                onClick={encerrarAssembleia}
+              >
+                🔒 Encerrar Esta Assembleia
+              </button>
+            )}
+          </div>
+
+          <div className="caco-card">
+            <h3>🗓️ Convocar Nova Assembleia</h3>
+            <form onSubmit={criarAssembleia} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Título da Assembleia"
+                value={novaAsmTitulo}
+                onChange={(e) => setNovaAsmTitulo(e.target.value)}
+                required
+              />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Breve descrição geral"
+                value={novaAsmDesc}
+                onChange={(e) => setNovaAsmDesc(e.target.value)}
+                required
+              />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Local (ex: Auditório IC-3)"
+                value={novaAsmLocal}
+                onChange={(e) => setNovaAsmLocal(e.target.value)}
+                required
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={novaAsmData}
+                  onChange={(e) => setNovaAsmData(e.target.value)}
+                  required
+                />
+                <input
+                  type="time"
+                  className="form-control"
+                  value={novaAsmHora}
+                  onChange={(e) => setNovaAsmHora(e.target.value)}
+                  required
+                />
               </div>
-            </div>
-            <div>
-              <strong>Abstenções: {resultados.abster} voto(s) ({pct(resultados.abster, resultados.total)}%)</strong>
-              <div className="progress-bar-track">
-                <div className="progress-bar-fill" style={{ width: `${pct(resultados.abster, resultados.total)}%` }} />
-              </div>
-            </div>
+              <button type="submit" className="btn-secondary">
+                Criar Nova Assembleia
+              </button>
+            </form>
           </div>
         </div>
       )}

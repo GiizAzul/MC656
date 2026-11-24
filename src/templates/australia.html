@@ -37,7 +37,7 @@
             <li class="candidato-item dnd-card" draggable="true" data-candidato="{{ candidato }}">
                 <div class="dnd-info">
                     <span class="rank-badge" id="badge_{{ loop.index }}">{{ loop.index }}º</span>
-                    <label for="posicao_{{ loop.index }}"><strong>{{ candidato }}</strong></label>
+                    <label for="posicao_{{ loop.index }}"><strong>{{ nomes_formatados.get(candidato, candidato) }}</strong></label>
                 </div>
 
                 <div class="dnd-actions">

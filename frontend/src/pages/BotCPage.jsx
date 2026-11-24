@@ -1,17 +1,30 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/BotCPage.css';
 
-export default function BotCPage() {
+export default function BotCPage({ usuario }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const chaveSala = `mc656_botc_sessao_${usuario?.id || 'anon'}`;
+
+  const sessaoSalva = (() => {
+    const daUrl = searchParams.get('partida_id');
+    if (daUrl) return { partidaId: daUrl, emPartida: true };
+    try {
+      return JSON.parse(localStorage.getItem(chaveSala)) || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const [emPartida, setEmPartida] = useState(Boolean(sessaoSalva?.emPartida));
+  const [partidaId, setPartidaId] = useState(sessaoSalva?.partidaId || 'principal');
   const [novaSenhaSala, setNovaSenhaSala] = useState('');
   const [semSalas, setSemSalas] = useState(false);
   const [requerSenha, setRequerSenha] = useState(false);
   const [senhaDigitadaSala, setSenhaDigitadaSala] = useState('');
   const [jogadorAlvoStatus, setJogadorAlvoStatus] = useState('');
-  const [emPartida, setEmPartida] = useState(false);
   const [novoStatusEscolhido, setNovoStatusEscolhido] = useState('Vivo');
-  const [partidaId, setPartidaId] = useState('principal');
   const [partidasDisponiveis, setPartidasDisponiveis] = useState([]);
   const [partidaAtualInfo, setPartidaAtualInfo] = useState({
     id: 'principal',
@@ -41,7 +54,6 @@ export default function BotCPage() {
 
   const [nomeadoSelecionado, setNomeadoSelecionado] = useState('');
   const [erro, setErro] = useState('');
-  const [veredito, setVeredito] = useState('');
 
   // Ângulo cumulativo contínuo para o ponteiro nunca girar para trás ao cruzar o topo da roda
   const anguloAcumuladoRef = useRef(null);
@@ -49,7 +61,7 @@ export default function BotCPage() {
   const carregarRoda = useCallback(async () => {
     try {
       const url = `/botc/api/estado?partida_id=${encodeURIComponent(partidaId)}&apenas_lobby=${!emPartida}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { credentials: 'include' });
       if (res.status === 403) {
         const data = await res.json();
         setRequerSenha(true);
@@ -85,9 +97,10 @@ export default function BotCPage() {
 
   useEffect(() => {
     carregarRoda();
-    const poll = setInterval(carregarRoda, 400);
+    const intervaloMs = giro.ativo ? 500 : 2000;
+    const poll = setInterval(carregarRoda, intervaloMs);
     return () => clearInterval(poll);
-  }, [carregarRoda]);
+  }, [carregarRoda, giro.ativo]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -113,6 +126,12 @@ export default function BotCPage() {
     window.addEventListener('popstate', impedirBotaoVoltarBrowser);
     return () => window.removeEventListener('popstate', impedirBotaoVoltarBrowser);
   }, [emPartida, giro.ativo, meuStatus.preso_como_storyteller]);
+
+  useEffect(() => {
+    if (emPartida && partidaId && !semSalas) {
+      localStorage.setItem(chaveSala, JSON.stringify({ partidaId, emPartida: true }));
+    }
+  }, [chaveSala, emPartida, partidaId, semSalas]);
 
   // Calcula o ângulo sempre avançando em sentido horário (delta >= 0)
   const idxPonteiro = jogadores.findIndex((j) => j.id === giro.id_ponteiro_atual);
@@ -226,7 +245,7 @@ export default function BotCPage() {
       setErro(d.detail || 'Não foi possível sair da sala.');
       return;
     }
-
+    localStorage.removeItem(chaveSala);
     if (irParaDashboard) {
       navigate('/dashboard');
     } else {
@@ -250,6 +269,7 @@ export default function BotCPage() {
       body: form.toString(),
     });
     if (res.ok) {
+      localStorage.removeItem(chaveSala);
       const d = await res.json();
       setPartidaId(d.partida_destino || '');
       setEmPartida(false);
@@ -269,6 +289,7 @@ export default function BotCPage() {
       body: form.toString(),
     });
     if (res.ok) {
+      localStorage.removeItem(chaveSala);
       await carregarRoda();
     }
   };
@@ -296,7 +317,6 @@ export default function BotCPage() {
   const iniciarGiroStoryteller = async () => {
     if (!nomeadoSelecionado) return;
     setErro('');
-    setVeredito('');
 
     const form = new URLSearchParams();
     form.append('nomeado_id', nomeadoSelecionado);
@@ -361,9 +381,6 @@ export default function BotCPage() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form.toString(),
     });
-    const html = await res.text();
-    const match = html.match(/O jogador executado foi:[^<]+|Ninguém foi executado[^<]+/);
-    setVeredito(match ? match[0] : 'Apuração concluída.');
     await carregarRoda();
   };
 
@@ -386,7 +403,7 @@ export default function BotCPage() {
           <div className="botc-panel-box">
             <h3>🎲 Salas Disponíveis ({partidasDisponiveis.length})</h3>
             {partidasDisponiveis.length === 0 ? (
-              <p style={{ color: '#94a3b8', marginTop: '1rem' }}>
+              <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>
                 Nenhuma partida ativa no momento. Crie uma nova sala ao lado!
               </p>
             ) : (
@@ -399,17 +416,17 @@ export default function BotCPage() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '0.9rem 1.1rem',
-                      background: 'rgba(15, 23, 42, 0.75)',
+                      background: 'var(--surface)',
                       border: '1px solid rgba(255,255,255,0.12)',
                       borderRadius: '10px',
                     }}
                   >
                     <div>
-                      <strong style={{ fontSize: '1.05rem', color: '#f8fafc' }}>
+                      <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>
                         {p.tem_senha ? '🔒 ' : '🎲 '}
                         {p.nome}
                       </strong>
-                      <span style={{ display: 'block', fontSize: '0.82rem', color: '#94a3b8' }}>
+                      <span style={{ display: 'block', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                         Storyteller: {p.storyteller_nome || 'Livre'}
                       </span>
                     </div>
@@ -531,12 +548,11 @@ export default function BotCPage() {
       {giro.mensagem_final && !giro.ativo && (
         <div className="alert-banner alert-success">✅ {giro.mensagem_final}</div>
       )}
-      {veredito && <div className="alert-banner alert-success">⚖️ {veredito}</div>}
 
       {semSalas ? (
         <div className="botc-panel-box" style={{ maxWidth: '480px', margin: '2rem auto', textAlign: 'center' }}>
           <h3>🎲 Nenhuma Sala Ativa no Momento</h3>
-          <p style={{ fontSize: '0.9rem', color: '#cbd5e1', margin: '0.6rem 0 1.2rem' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: '0.6rem 0 1.2rem' }}>
             Todas as salas foram encerradas ou excluídas. Crie uma nova sala abaixo para iniciar uma partida!
           </p>
           <form onSubmit={criarNovaPartida} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -563,7 +579,7 @@ export default function BotCPage() {
       ) : requerSenha ? (
         <div className="botc-panel-box" style={{ maxWidth: '440px', margin: '2rem auto' }}>
           <h3>🔒 Sala Privada: {partidaAtualInfo.nome}</h3>
-          <p style={{ fontSize: '0.9rem', color: '#cbd5e1', margin: '0.5rem 0 1rem' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: '0.5rem 0 1rem' }}>
             Digite a senha definida pelo criador para entrar nesta roda:
           </p>
           <form onSubmit={entrarComSenha} style={{ display: 'flex', gap: '0.5rem' }}>
@@ -597,10 +613,10 @@ export default function BotCPage() {
                 <span style={{ fontSize: '0.72rem', color: '#fbbf24', fontWeight: 700 }}>
                   🎩 STORYTELLER
                 </span>
-                <strong style={{ fontSize: '0.82rem', color: '#f8fafc', marginBottom: '0.2rem' }}>
+                <strong style={{ fontSize: '0.82rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
                   {partidaAtualInfo.storyteller_nome}
                 </strong>
-                <small style={{ color: '#94a3b8', fontSize: '0.65rem' }}>VOTOS NA FORCA</small>
+                <small style={{ color: 'var(--text-secondary)', fontSize: '0.65rem' }}>VOTOS NA FORCA</small>
                 <strong style={{ fontSize: '1.65rem', color: '#f87171', lineHeight: 1.1 }}>
                   {giro.votos_computados || 0}
                 </strong>
@@ -660,7 +676,7 @@ export default function BotCPage() {
             {!meuStatus.is_storyteller_desta_partida ? (
               <div className="botc-panel-box">
                 <h3>Seu Assento de Jogador ({meuStatus.nome})</h3>
-                <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.3rem' }}>
+                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
                   {meuStatus.trancado
                     ? '🔒 O ponteiro já passou pela sua bola! Seu voto foi computado e sua mão está travada.'
                     : 'Enquanto o ponteiro não passar por você, alterne sua mão livremente:'}
@@ -682,7 +698,7 @@ export default function BotCPage() {
             ) : (
               <div className="botc-panel-box">
                 <h3>🎩 Você está no Centro da Roda (Storyteller)</h3>
-                <p style={{ fontSize: '0.88rem', color: '#cbd5e1', marginTop: '0.35rem' }}>
+                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
                   Como Storyteller titular desta partida, você conduz a execução no centro da roda e{' '}
                   <strong>não possui poder de voto</strong> nesta sala.
                 </p>
@@ -692,7 +708,7 @@ export default function BotCPage() {
             {meuStatus.tem_escopo_storyteller && !partidaAtualInfo.storyteller_id && (
               <div className="botc-panel-box">
                 <h3>🎩 Assumir Centro da Roda</h3>
-                <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.75rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
                   Esta partida ainda não possui Storyteller. Deseja assumir o centro da roda (máx. 1 por partida)?
                 </p>
                 <button type="button" className="btn-primary" onClick={assumirCentroDaRoda}>
@@ -705,7 +721,7 @@ export default function BotCPage() {
               <div className="botc-panel-box">
                 <h3>📜 Grimório do Storyteller (Condução da Roda)</h3>
                 <div className="form-group" style={{ marginTop: '0.85rem' }}>
-                  <label htmlFor="select-nomeado" style={{ color: '#e2e8f0' }}>
+                  <label htmlFor="select-nomeado" style={{ color: 'var(--text-primary)' }}>
                     Indicar Jogador Nomeado para a Forca
                   </label>
                   
@@ -748,12 +764,12 @@ export default function BotCPage() {
                   >
                     ⚖️ Encerrar Dia e Apurar Executado na Forca
                   </button>
-                  <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1.1rem 0' }} />
+                  <hr style={{ borderColor: 'var(--shadow-card)', margin: '1.1rem 0' }} />
 
                   <form onSubmit={alterarStatusVidaJogador}>
                     <label 
                       htmlFor="select-status-jog" 
-                      style={{ color: '#e2e8f0', fontSize: '0.88rem', fontWeight: 600 }}
+                      style={{ color: 'var(--text-primary)', fontSize: '0.88rem', fontWeight: 600 }}
                     >
                       Alterar Status de Vida / Voto Fantasma
                     </label>
@@ -799,7 +815,7 @@ export default function BotCPage() {
                     </div>
                   </form>
 
-                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
                     {!partidaAtualInfo.encerrada && (
                       <button
                         type="button"

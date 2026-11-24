@@ -41,7 +41,7 @@ def testa_login_varios_escopos(auth: ServicoAutenticacao) -> None:
     assert logado_jogador.escopo == "BOTC_JOGADOR"
 
     logado_gestor = auth.login("Admin_aus", "123")
-    assert logado_gestor.escopo == "AUSTRALIA_GESTAO,AUSTRALIA_ELEITOR"
+    assert logado_gestor.escopo == "AUSTRALIA_GESTAO"
 
 def testa_adicionar_multiplos_escopos_com_sujeira() -> None:
     """Verifica se o método adicionar_escopo aplica split, strip, remove duplicatas e ordena."""
@@ -207,3 +207,17 @@ def testa_mesclar_escopos_falha_ra_duplicado_ou_senha_errada(auth: ServicoAutent
     conflito_ra = EstudanteCACo("user1", "senha1", "User 1", 111111)
     with pytest.raises(ValueError, match="RA 111111 já existente"):
         auth.registrar(conflito_ra)
+
+def testa_mesclar_escopos_falha_alterar_ra_existente(auth: ServicoAutenticacao) -> None:
+    """Garante que uma conta que já possui RA não consiga vincular um segundo RA diferente ao mesclar escopos."""
+    # 1. Cria um estudante que já nasce com o RA 123456
+    estudante = EstudanteCACo("giovana_caco", "senha123", "Giovana", 123456)
+    auth.registrar(estudante)
+    
+    # 2. Cria uma instância simulando outro escopo, mas tentando injetar um RA diferente (987654) na mesma conta
+    tentativa_novo_ra = JogadorBOTC("giovana_caco", "senha123", "Giovana")
+    tentativa_novo_ra.ra = 987654 
+    
+    # 3. O sistema deve bloquear a tentativa de sobrescrever/alterar o RA original da conta
+    with pytest.raises(ValueError, match="Esta conta já possui um RA vinculado"):
+        auth.registrar(tentativa_novo_ra)

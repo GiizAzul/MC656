@@ -16,4 +16,4 @@ class EleitorAustralia(Usuario):
 class GestaoAustralia(Usuario):
     @property
     def escopo(self) -> str:
-        return "AUSTRALIA_GESTAO,AUSTRALIA_ELEITOR"
+        return "AUSTRALIA_GESTAO"
