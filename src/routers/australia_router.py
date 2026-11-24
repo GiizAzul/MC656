@@ -1,4 +1,5 @@
 from pathlib import Path
+from copy import deepcopy
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -182,12 +183,13 @@ async def estado_australia_json(
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
 ):
     eleicao = request.app.state.eleicao_australia
-    vencedor = None
+    resultados = None
     if eleicao.estado.nome in ("ENCERRADO", "ENCERRADA") and eleicao.cedulas:
-        try:
-            vencedor = eleicao.apurar_vencedor()
-        except ValueError:
-            vencedor = None
+        # O vencedor vem da apuração oficial do motor. Usamos uma cópia porque
+        # apurar_vencedor atualiza os candidatos eliminados durante o cálculo.
+        resultados = eleicao.apurar_resultados()
+        eleicao_para_apurar = deepcopy(eleicao)
+        resultados["vencedor"] = eleicao_para_apurar.apurar_vencedor()
             
     return JSONResponse({
         "candidatos": list(eleicao.candidatos),
@@ -200,7 +202,7 @@ async def estado_australia_json(
         "pode_votar": "AUSTRALIA_ELEITOR" in usuario.escopo,
         "ja_votou": usuario.id in request.app.state.eleitores_australia_votaram,
         "total_votos": len(eleicao.cedulas),
-        "vencedor": vencedor,
+        "resultados": resultados,
     })
 
 @router.post("/api/votar-partidos")
