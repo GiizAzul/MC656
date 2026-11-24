@@ -511,6 +511,18 @@ def test_caco_api_erros_permissao_e_not_found(client):
     """Cobre branches de erro (403, 404, 400) nas rotas JSON do caco_router.py."""
     # Estudante comum (sem CACO_GESTAO) não pode criar assembleia, pauta, encerrar nem chamar orador
     client.cookies.clear()
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "CACO_ESTUDANTE",
+            "nome_real": "Estudante Teste Erro",
+            "username": "samuel",
+            "ra": "998877",
+            "senha": "1",
+            "senha_confirma": "1",
+        },
+    )
+    client.cookies.clear()
     logar_cookie(client, "samuel")  # CACO_ESTUDANTE
     assert client.post(
         "/caco/api/assembleias",
