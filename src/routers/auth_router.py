@@ -78,14 +78,18 @@ async def processar_cadastro(
 
         usuario_registrado = banco.registrar(novo_usuario)
         id_final = usuario_registrado.id if usuario_registrado else novo_usuario.id
-        salvar_estado_sql("banco_auth", request.app.state.banco_auth)
+        itens = {
+            "banco_auth" : request.app.state.banco_auth
+        }
 
         # Adiciona alunos e gestores novos na lista de eleitores da assembleia ativa 
         if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
             eleicao_caco = request.app.state.eleicao_caco
             eleicao_caco.alunos_cadastrados.add(id_final)
             eleicao_caco.eleitores.add(id_final)
-            salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+            itens["eleicao_caco"] = request.app.state.eleicao_caco
+            
+        salvar_estado_sql(itens=itens)
 
         # Faz o login automático após cadastro
         rota_destino = controle_acesso.despachar_apos_login(novo_usuario)
@@ -125,13 +129,16 @@ async def adicionar_escopo_usuario(
         
         banco = request.app.state.banco_auth
         banco.vincular_escopo(usuario, temp_user.escopo, ra=ra_int)
-        salvar_estado_sql("banco_auth", request.app.state.banco_auth)
+        itens = {
+            "banco_auth" : request.app.state.banco_auth
+        }
 
         if tipo_conta in ("CACO_ESTUDANTE", "CACO_GESTAO"):
             eleicao_caco = request.app.state.eleicao_caco
             eleicao_caco.alunos_cadastrados.add(usuario.id)
             eleicao_caco.eleitores.add(usuario.id)
-            salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
+            itens["eleicao_caco"] = request.app.state.eleicao_caco
+        salvar_estado_sql(itens=itens)
         if pede_json:
             return JSONResponse({"ok": True, "escopo": usuario.escopo})
         rota_destino = controle_acesso.despachar_apos_login(usuario)

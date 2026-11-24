@@ -19,7 +19,12 @@ if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    connect_args=connect_args,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -38,18 +43,19 @@ def inicializar_banco() -> None:
     """Cria as tabelas no banco SQL caso ainda não existam."""
     Base.metadata.create_all(bind=engine)
 
-
-def salvar_estado_sql(chave: str, valor: object) -> None:
-    """Executa query de upsert (INSERT ou UPDATE) no banco de dados."""
+def salvar_estado_sql(itens: dict[str, object]) -> None:
+    """Executa query de upsert (INSERT ou UPDATE) no banco de dados, persistindo múltiplas chaves em uma única transação SQL."""
     inicializar_banco()
-    dados_binarios = pickle.dumps(valor)
     with SessionLocal() as db:
-        registro = db.execute(select(EstadoSistema).where(EstadoSistema.chave == chave)).scalar_one_or_none()
-        if registro is None:
-            registro = EstadoSistema(chave=chave, payload=dados_binarios)
-            db.add(registro)
-        else:
-            registro.payload = dados_binarios
+        for chave, valor in itens.items():
+            dados_binarios = pickle.dumps(valor)
+            registro = db.execute(
+                select(EstadoSistema).where(EstadoSistema.chave == chave)
+            ).scalar_one_or_none()
+            if registro is None:
+                db.add(EstadoSistema(chave=chave, payload=dados_binarios))
+            else:
+                registro.payload = dados_binarios
         db.commit()
 
 

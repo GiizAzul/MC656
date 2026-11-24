@@ -89,11 +89,12 @@ async def iniciar_votacao_caco(
         return RedirectResponse(url="/", status_code=302)
 
     eleicao = request.app.state.eleicao_caco
-
+    itens = {}
     try:
         eleicao.iniciar_votacao()
-        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
-        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
+        itens["eleicao_caco"] = request.app.state.eleicao_caco
+        itens["eleitores_caco_votaram"] = request.app.state.eleitores_caco_votaram
+        salvar_estado_sql(itens=itens)
         
         return templates.TemplateResponse(
             request=request,
@@ -160,6 +161,8 @@ async def processar_voto_caco(
             }
         )
 
+    itens = {}
+    
     try:
         opcao_enum = OpcaoVoto[opcao]
         
@@ -167,8 +170,9 @@ async def processar_voto_caco(
         
         # Assina a lista de presença marcando que o ID já votou
         request.app.state.eleitores_caco_votaram.add(usuario.id)
-        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
-        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
+        itens["eleicao_caco"] = request.app.state.eleicao_caco
+        itens["eleitores_caco_votaram"] = request.app.state.eleitores_caco_votaram
+        salvar_estado_sql(itens=itens)
         return templates.TemplateResponse(
             request=request, 
             name="sucesso.html", 
@@ -192,11 +196,13 @@ async def encerrar_votacao_caco(request: Request, usuario: Annotated [Usuario, D
 
     eleicao = request.app.state.eleicao_caco
 
+    itens = {}
     try:
         # Garante que a votação será fechada
         eleicao.encerrar_votacao()
-        salvar_estado_sql("eleicao_caco", request.app.state.eleicao_caco)
-        salvar_estado_sql("eleitores_caco_votaram", request.app.state.eleitores_caco_votaram)
+        itens["eleicao_caco"] = request.app.state.eleicao_caco
+        itens["eleitores_caco_votaram"] = request.app.state.eleitores_caco_votaram
+        salvar_estado_sql(itens=itens)
         return templates.TemplateResponse(
             request=request,
             name="sucesso.html",
@@ -282,7 +288,7 @@ async def estado_caco_json(
             "historico_falas": list(p["historico_falas"]),
         })
 
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({
         "is_gestao": "CACO_GESTAO" in usuario.escopo,
         "assembleia_atual": {
@@ -344,7 +350,7 @@ async def criar_nova_assembleia(
         "encerrada": False,
         "pautas": [],
     }
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "criada", "assembleia_id": novo_id})
 
 
@@ -368,7 +374,7 @@ async def encerrar_assembleia_completa(
                 p["motor"].encerrar_votacao()
         asm["encerrada"] = True
 
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "encerrada"})
 
 
@@ -408,7 +414,7 @@ async def criar_pauta_na_assembleia(
         "historico_falas": [],
     }
     asm["pautas"].append(nova_pauta)
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "criada", "pauta_id": nova_pauta["id"]})
 
 
@@ -457,7 +463,7 @@ async def iniciar_pauta_concorrente(
             alvo["ja_iniciada"] = True
         except RuntimeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "iniciada", "pauta_id": pauta_id})
 
 
@@ -485,7 +491,7 @@ async def encerrar_pauta_especifica(
         alvo["motor"].encerrar_votacao()
 
     res = alvo["motor"].apurar_vencedor()
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "encerrada", "resultado": getattr(res, "name", str(res)) if res else None})
 
 @router.post("/api/assembleias/{assembleia_id}/pautas/{pauta_id}/votar")
@@ -521,7 +527,7 @@ async def votar_na_pauta_caco(
     except (RuntimeError, KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
         
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "ok", "mensagem": f"Voto '{opcao}' registrado na pauta '{alvo['titulo']}'!"})
 
 @router.post("/api/assembleias/{assembleia_id}/pautas/{pauta_id}/falas/inscrever")
@@ -556,7 +562,7 @@ async def inscrever_fala_pauta(
         "tipo": tipo_fala.strip() or "Fala Ordinária",
         "inscrito_em": datetime.now(_TZ_BRASIL).strftime("%H:%M:%S"),
     })
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "inscrito"})
 
 
@@ -588,5 +594,5 @@ async def chamar_proximo_orador(
         proximo["inicio_fala"] = datetime.now(_TZ_BRASIL).strftime("%H:%M:%S")
         alvo["orador_atual"] = proximo
 
-    salvar_estado_sql("assembleias_caco", assembleias)
+    salvar_estado_sql(itens={"assembleias_caco": assembleias})
     return JSONResponse({"status": "ok", "orador_atual": alvo["orador_atual"]})
