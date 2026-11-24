@@ -207,10 +207,23 @@ export default function CACoPage({ usuario }) {
   };
 
   const proximoOrador = async (pautaId) => {
-    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/falas/proximo`, {
-      method: 'POST',
-    });
-    if (res.ok) await carregarEstado();
+    setErro('');
+    setMsg('');
+    const res = await fetch(
+      `/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/falas/proximo`,
+      { method: 'POST', credentials: 'include' }
+    );
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErro(d.detail || 'Não foi possível avançar a fila de falas.');
+    } else {
+      setMsg(
+        d.orador_atual
+          ? `🎙️ Agora com a palavra: ${d.orador_atual.nome} (${d.orador_atual.tipo})`
+          : '🔒 Fila de falas encerrada.'
+      );
+      await carregarEstado();
+    }
   };
 
   const pct = (val, tot) => (tot > 0 ? Math.round((val / tot) * 100) : 0);
@@ -330,26 +343,46 @@ export default function CACoPage({ usuario }) {
                   )}
                 </div>
 
-                {(p.estado === 'ENCERRADO' || (isGestao && p.estado === 'VOTACAO')) && (
-                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <strong>Resultado: {p.resultado} (Total: {p.total_votos} votos)</strong>
-                    <div>
-                      <small>Aprovar: {aprovar} ({pct(aprovar, p.total_votos)}%)</small>
-                      <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{ width: `${pct(aprovar, p.total_votos)}%` }} />
-                      </div>
+                {(isEncerrada(p.estado) || (isGestao && p.estado === 'VOTACAO')) && (
+                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <strong
+                        style={{
+                          color:
+                            p.resultado === 'APROVADA'
+                              ? '#10b981'
+                              : p.resultado
+                              ? '#ef4444'
+                              : 'var(--text-primary)',
+                        }}
+                      >
+                        {p.resultado ? `Resultado: ${p.resultado}` : 'Apuração Parcial'}
+                      </strong>
+                      <small style={{ color: 'var(--text-secondary)' }}>{p.total_votos} voto(s) computado(s)</small>
                     </div>
-                    <div>
-                      <small>Rejeitar: {rejeitar} ({pct(rejeitar, p.total_votos)}%)</small>
+
+                    <div className="caco-result-row">
+                      <span>Aprovar</span>
                       <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{ width: `${pct(rejeitar, p.total_votos)}%` }} />
+                        <div className="progress-bar-fill aprovar" style={{ width: `${pct(aprovar, p.total_votos)}%` }} />
                       </div>
+                      <strong style={{ textAlign: 'right' }}>{aprovar} ({pct(aprovar, p.total_votos)}%)</strong>
                     </div>
-                    <div>
-                      <small>Abster: {abster} ({pct(abster, p.total_votos)}%)</small>
+
+                    <div className="caco-result-row">
+                      <span>Rejeitar</span>
                       <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{ width: `${pct(abster, p.total_votos)}%` }} />
+                        <div className="progress-bar-fill rejeitar" style={{ width: `${pct(rejeitar, p.total_votos)}%` }} />
                       </div>
+                      <strong style={{ textAlign: 'right' }}>{rejeitar} ({pct(rejeitar, p.total_votos)}%)</strong>
+                    </div>
+
+                    <div className="caco-result-row">
+                      <span>Abster</span>
+                      <div className="progress-bar-track">
+                        <div className="progress-bar-fill abster" style={{ width: `${pct(abster, p.total_votos)}%` }} />
+                      </div>
+                      <strong style={{ textAlign: 'right' }}>{abster} ({pct(abster, p.total_votos)}%)</strong>
                     </div>
                   </div>
                 )}
@@ -359,8 +392,14 @@ export default function CACoPage({ usuario }) {
                     🎙️ <strong>Com a palavra:</strong> {p.orador_atual ? `${p.orador_atual.nome} (${p.orador_atual.tipo})` : 'Ninguém'} |{' '}
                     <strong>Fila:</strong> {p.fila_falas.length}
                   </span>
+                  {p.fila_falas.length > 0 && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      <strong>Próximos na fila:</strong>{' '}
+                      {p.fila_falas.map((f, i) => `${i + 1}º ${f.nome} (${f.tipo})`).join(' → ')}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {p.estado !== 'ENCERRADO' && !assembleiaAtual.encerrada && (
+                    {!isEncerrada(p.estado) && !assembleiaAtual.encerrada && (
                       <>
                         <select
                           aria-label="Tipo de Fala"
