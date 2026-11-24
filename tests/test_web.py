@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -6,10 +8,7 @@ from src.autenticacao.base import Usuario
 from src.botc import JogadorBotC, StatusJogador
 from src.estados import AguardandoVotacao, EmVotacao, Encerrada
 from src.main import app
-
 from src.routers.dependencias import gerar_token_sessao
-
-from types import SimpleNamespace
 
 # Inicializa o cliente de testes simulando um navegador
 client = TestClient(app, base_url="https://testserver")
@@ -1420,7 +1419,6 @@ def test_auth_router_votacao_ativa_botc_caco_e_australia():
         },
         follow_redirects=False,
     )
-    user_caco_id = app.state.banco_auth._mapa_usernames["est_votacao_caco"]
     asm_orig = getattr(app.state, "assembleias_caco", None)
     app.state.assembleias_caco = {
         "asm_1": {

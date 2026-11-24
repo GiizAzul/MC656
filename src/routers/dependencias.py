@@ -16,7 +16,7 @@ _SECRET_KEY = os.getenv("SESSION_SECRET_KEY", "mc656-chave-sessao-segura").encod
 
 def gerar_token_sessao(username: str) -> str:
     expira_em = int(time.time()) + SESSION_TTL_SECONDS
-    payload = f"{username}:{expira_em}".encode("utf-8")
+    payload = f"{username}:{expira_em}".encode()
     payload_b64 = base64.urlsafe_b64encode(payload).decode("ascii")
     assinatura = hmac.new(_SECRET_KEY, payload_b64.encode("ascii"), hashlib.sha256).hexdigest()
     return f"{payload_b64}.{assinatura}"
@@ -34,7 +34,7 @@ def ler_username_token(token: str) -> str | None:
             if int(time.time()) > int(expira_str):
                 return None
             return username
-        except Exception:
+        except (ValueError, TypeError):
             return None
     # Compatibilidade com cookies simples injetados diretamente em testes automatizados
     return token
