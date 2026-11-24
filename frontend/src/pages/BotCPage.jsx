@@ -558,9 +558,6 @@ export default function BotCPage({ usuario }) {
               }
               value={partidaId}
               onChange={(e) => {
-                setNomeadoSelecionado('');
-                setErro('');
-                setPartidaId(e.target.value);
                 trocarDeSala(e.target.value);
               }}
             >
