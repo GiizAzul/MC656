@@ -75,3 +75,33 @@
   background: rgba(255, 255, 255, 0.22);
   transform: translateY(-1px);
 }
+
+@media (max-width: 768px) {
+  .top-navbar {
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .navbar-brand {
+    font-size: 1rem;
+  }
+
+  .navbar-scopes {
+    order: 3;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .navbar-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .navbar-user {
+    font-size: 0.82rem;
+  }
+}

@@ -97,9 +97,10 @@ export default function BotCPage({ usuario }) {
 
   useEffect(() => {
     carregarRoda();
-    const poll = setInterval(carregarRoda, 400);
+    const intervaloMs = giro.ativo ? 500 : 2000;
+    const poll = setInterval(carregarRoda, intervaloMs);
     return () => clearInterval(poll);
-  }, [carregarRoda]);
+  }, [carregarRoda, giro.ativo]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -380,7 +381,6 @@ export default function BotCPage({ usuario }) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form.toString(),
     });
-    const html = await res.text();
     await carregarRoda();
   };
 
@@ -815,7 +815,7 @@ export default function BotCPage({ usuario }) {
                     </div>
                   </form>
 
-                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
                     {!partidaAtualInfo.encerrada && (
                       <button
                         type="button"

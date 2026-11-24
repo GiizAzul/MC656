@@ -265,7 +265,7 @@ async def estado_caco_json(
             pauta_ativa_id = p["id"]
 
         contadores = _serializar_contadores(motor)
-        res_vencedor = motor.apurar_vencedor() if estado_nome == "ENCERRADO" else None
+        res_vencedor = motor.apurar_vencedor() if estado_nome in ("ENCERRADO", "ENCERRADA") else None
 
         pautas_serializadas.append({
             "id": p["id"],
@@ -445,7 +445,7 @@ async def iniciar_pauta_concorrente(
             raise HTTPException(status_code=404, detail="Pauta não encontrada.")
 
         # 2. Impede reabrir pauta já encerrada ou já iniciada anteriormente
-        if alvo["motor"].estado.nome == "ENCERRADO" or alvo.get("ja_iniciada", False):
+        if alvo["motor"].estado.nome in ("ENCERRADO", "ENCERRADA") or alvo.get("ja_iniciada", False):
             raise HTTPException(
                 status_code=400,
                 detail="Esta pauta já foi votada e encerrada! Crie uma nova pauta se precisar deliberar novamente.",
@@ -543,7 +543,7 @@ async def inscrever_fala_pauta(
     alvo = next((p for p in asm["pautas"] if p["id"] == pauta_id), None)
     if not alvo:
         raise HTTPException(status_code=404, detail="Pauta não encontrada.")
-    if alvo["motor"].estado.nome == "ENCERRADO":
+    if alvo["motor"].estado.nome in ("ENCERRADO", "ENCERRADA"):
         raise HTTPException(status_code=400, detail="Não é possível se inscrever para falar em pauta já encerrada.")
 
     if any(f["user_id"] == usuario.id for f in alvo["fila_falas"]):

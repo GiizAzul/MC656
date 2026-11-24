@@ -217,15 +217,15 @@ async def obter_votacao_ativa(
             if _ler_campo(sala, "encerrada", False):
                 continue
             st_id = _ler_campo(sala, "storyteller_id", None)
-            jogadores = _ler_campo(sala, "jogadores", []) or []
-            if isinstance(jogadores, dict):
-                ids_jogadores = set(jogadores.keys())
+            sistema = _ler_campo(sala, "sistema", None)
+            jogadores_raw = _ler_campo(sistema, "jogadores", None) or _ler_campo(sala, "jogadores", []) or []
+            if isinstance(jogadores_raw, dict):
+                ids_jogadores = set(jogadores_raw.keys())
             else:
-                ids_jogadores = {_ler_campo(j, "id", j) for j in jogadores}
-
+                ids_jogadores = {_ler_campo(j, "id", j) for j in jogadores_raw}
+                
             if usuario.id == st_id or usuario.id in ids_jogadores:
                 giro = _ler_campo(sala, "giro", None)
-                sistema = _ler_campo(sala, "sistema", None)
                 giro_ativo = bool(
                     _ler_campo(giro, "ativo", False)
                     or _ler_campo(sistema, "giro_ativo", False)
@@ -252,7 +252,9 @@ async def obter_votacao_ativa(
                         or _ler_campo(pauta, "votantes", set())
                         or set()
                     )
-                    if _ler_campo(pauta, "estado", "") == "VOTACAO" and usuario.id not in votaram:
+                    motor_pauta = _ler_campo(pauta, "motor", None)
+                    estado_pauta = getattr(_ler_campo(motor_pauta, "estado", None), "name", "") or _ler_campo(pauta, "estado", "")
+                    if estado_pauta == "VOTACAO" and usuario.id not in votaram:
                         return JSONResponse({
                             "rota": f"/caco/assembleia?assembleia_id={asm_id}",
                             "contexto": "CACO",

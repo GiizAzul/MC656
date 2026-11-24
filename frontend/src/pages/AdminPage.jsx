@@ -9,6 +9,7 @@ export default function AdminPage({ usuario }) {
   const escopos = usuario?.escopo || '';
   const isAusGestao = escopos.includes('AUSTRALIA_GESTAO');
   const isCacoGestao = escopos.includes('CACO_GESTAO');
+  const isStoryteller = escopos.includes('BOTC_STORYTELLER');
 
   const disparar = async (url, textoSucesso) => {
     setMsg('');
@@ -48,7 +49,7 @@ export default function AdminPage({ usuario }) {
       {isAusGestao && (
         <div className="caco-card">
           <h3>🪃 Comissão Eleitoral Australiana</h3>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn-primary"
@@ -69,22 +70,28 @@ export default function AdminPage({ usuario }) {
 
       {isCacoGestao && (
         <div className="caco-card">
-          <h3>🐸 Gestão da Assembleia CACo</h3>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => disparar('/caco/iniciar', 'Votação do CACo iniciada!')}
-            >
-              ▶ Iniciar Assembleia CACo
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => disparar('/caco/encerrar', 'Votação do CACo encerrada!')}
-            >
-              ⏹ Encerrar Assembleia CACo
-            </button>
+          <h3>🐸 Gestão de Assembleias e Pautas do CACo</h3>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
+            Crie novas assembleias, cadastre pautas, controle a votação única ativa e conduza a fila de falas.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+            <Link to="/caco/assembleia" className="btn-primary">
+              🏛️ Gerenciar Assembleias e Pautas do CACo
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {isStoryteller && (
+        <div className="caco-card">
+          <h3>🩸 Condução de Partidas de Blood on the Clocktower</h3>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
+            Acesse o lobby para criar salas privadas, assumir o centro da roda e conduzir partidas.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+            <Link to="/botc/partida" className="btn-primary">
+              🎲 Abrir Lobby de Partidas BoTC
+            </Link>
           </div>
         </div>
       )}

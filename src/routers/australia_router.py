@@ -221,6 +221,8 @@ async def processar_voto_partidos_api(
     try:
         eleicao.apurar_voto_partidos(usuario.id, ranking_partidos)
         request.app.state.eleitores_australia_votaram.add(usuario.id)
+        salvar_estado_sql("eleicao_australia", eleicao)
+        salvar_estado_sql("eleitores_australia_votaram", request.app.state.eleitores_australia_votaram)
         return JSONResponse({
             "status": "ok",
             "mensagem": "Voto por ranking de partidos registrado com sucesso!",

@@ -19,6 +19,7 @@ export default function CACoPage({ usuario }) {
   const [assembleiaAtual, setAssembleiaAtual] = useState({});
   const [pautas, setPautas] = useState([]);
   const [pautaAtivaId, setPautaAtivaId] = useState(null);  
+  const [isGestaoApi, setIsGestaoApi] = useState(false);
   const [opcao, setOpcao] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(chaveRascunho))?.opcao || 'APROVAR';
@@ -26,8 +27,8 @@ export default function CACoPage({ usuario }) {
       return 'APROVAR';
     }
   });
-  const [resultados, setResultados] = useState(null);
-  const isGestao = usuario?.escopo?.includes('CACO_GESTAO');
+  const isEncerrada = (e) => e === 'ENCERRADO' || e === 'ENCERRADA'
+  const isGestao = Boolean(usuario?.escopo?.includes('CACO_GESTAO') || isGestaoApi);
   
   // Form Nova Assembleia
   const [novaAsmTitulo, setNovaAsmTitulo] = useState('');
@@ -51,6 +52,7 @@ export default function CACoPage({ usuario }) {
       const res = await fetch(`/caco/api/estado?assembleia_id=${encodeURIComponent(assembleiaId)}`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
+        setIsGestaoApi(Boolean(data.is_gestao));
         setAssembleiaAtual(data.assembleia_atual || {});
         setAssembleiasDisponiveis(data.assembleias_disponiveis || []);
         setPautas(data.pautas || []);
@@ -108,6 +110,21 @@ export default function CACoPage({ usuario }) {
     }
   };
 
+  const encerrarAssembleia = async () => {
+    setErro('');
+    setMsg('');
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/encerrar`, {
+      method: 'POST',
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || 'Erro ao encerrar assembleia.');
+    } else {
+      setMsg('🔒 Assembleia encerrada com sucesso!');
+      await carregarEstado();
+    }
+  };
+  
   const criarPauta = async (e) => {
     e.preventDefault();
     setErro('');
@@ -190,32 +207,38 @@ export default function CACoPage({ usuario }) {
   };
 
   const proximoOrador = async (pautaId) => {
-    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/falas/proximo`, {
-      method: 'POST',
-    });
-    if (res.ok) await carregarEstado();
-  };
-  
-  const carregarResultados = async () => {
-    const res = await fetch('/caco/resultados', { headers: { Accept: 'application/html' } });
-    const html = await res.text();
-    const extrair = (label) => {
-      const regex = new RegExp(`${label}[\\s\\S]*?(\\d+)\\s*votos`, 'i');
-      const m = html.match(regex);
-      return m ? parseInt(m[1], 10) : 0;
-    };
-    const aprovar = extrair('Aprovar');
-    const rejeitar = extrair('Rejeitar');
-    const abster = extrair('Absten');
-    const total = aprovar + rejeitar + abster;
-    setResultados({ aprovar, rejeitar, abster, total });
+    setErro('');
+    setMsg('');
+    const res = await fetch(
+      `/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/falas/proximo`,
+      { method: 'POST', credentials: 'include' }
+    );
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErro(d.detail || 'Não foi possível avançar a fila de falas.');
+    } else {
+      setMsg(
+        d.orador_atual
+          ? `🎙️ Agora com a palavra: ${d.orador_atual.nome} (${d.orador_atual.tipo})`
+          : '🔒 Fila de falas encerrada.'
+      );
+      await carregarEstado();
+    }
   };
 
   const pct = (val, tot) => (tot > 0 ? Math.round((val / tot) * 100) : 0);
   const pautaEmVotacao = pautas.find((p) => p.id === pautaAtivaId);
 
   return (
-    <div className="caco-container">
+    <div 
+      className="caco-container"
+      onClickCapture={(e) => {
+        if (e.target.closest('button')) {
+          setMsg('');
+          setErro('');
+        }
+      }}
+    >
       <div className="caco-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
@@ -225,7 +248,7 @@ export default function CACoPage({ usuario }) {
               📍 {assembleiaAtual.local} | 📅 {assembleiaAtual.data} às {assembleiaAtual.horario}
             </p>
           </div>
-          <div style={{minWidth: '250px'}}>
+          <div style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>            
             <select
               aria-label="Selecionar Assembleia"
               className="form-control"
@@ -320,26 +343,46 @@ export default function CACoPage({ usuario }) {
                   )}
                 </div>
 
-                {(p.estado === 'ENCERRADO' || (isGestao && p.estado === 'VOTACAO')) && (
-                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <strong>Resultado: {p.resultado} (Total: {p.total_votos} votos)</strong>
-                    <div>
-                      <small>Aprovar: {aprovar} ({pct(aprovar, p.total_votos)}%)</small>
-                      <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{ width: `${pct(aprovar, p.total_votos)}%` }} />
-                      </div>
+                {(isEncerrada(p.estado) || (isGestao && p.estado === 'VOTACAO')) && (
+                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <strong
+                        style={{
+                          color:
+                            p.resultado === 'APROVADA'
+                              ? '#10b981'
+                              : p.resultado
+                              ? '#ef4444'
+                              : 'var(--text-primary)',
+                        }}
+                      >
+                        {p.resultado ? `Resultado: ${p.resultado}` : 'Apuração Parcial'}
+                      </strong>
+                      <small style={{ color: 'var(--text-secondary)' }}>{p.total_votos} voto(s) computado(s)</small>
                     </div>
-                    <div>
-                      <small>Rejeitar: {rejeitar} ({pct(rejeitar, p.total_votos)}%)</small>
+
+                    <div className="caco-result-row">
+                      <span>Aprovar</span>
                       <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{ width: `${pct(rejeitar, p.total_votos)}%` }} />
+                        <div className="progress-bar-fill aprovar" style={{ width: `${pct(aprovar, p.total_votos)}%` }} />
                       </div>
+                      <strong style={{ textAlign: 'right' }}>{aprovar} ({pct(aprovar, p.total_votos)}%)</strong>
                     </div>
-                    <div>
-                      <small>Abster: {abster} ({pct(abster, p.total_votos)}%)</small>
+
+                    <div className="caco-result-row">
+                      <span>Rejeitar</span>
                       <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{ width: `${pct(abster, p.total_votos)}%` }} />
+                        <div className="progress-bar-fill rejeitar" style={{ width: `${pct(rejeitar, p.total_votos)}%` }} />
                       </div>
+                      <strong style={{ textAlign: 'right' }}>{rejeitar} ({pct(rejeitar, p.total_votos)}%)</strong>
+                    </div>
+
+                    <div className="caco-result-row">
+                      <span>Abster</span>
+                      <div className="progress-bar-track">
+                        <div className="progress-bar-fill abster" style={{ width: `${pct(abster, p.total_votos)}%` }} />
+                      </div>
+                      <strong style={{ textAlign: 'right' }}>{abster} ({pct(abster, p.total_votos)}%)</strong>
                     </div>
                   </div>
                 )}
@@ -349,8 +392,14 @@ export default function CACoPage({ usuario }) {
                     🎙️ <strong>Com a palavra:</strong> {p.orador_atual ? `${p.orador_atual.nome} (${p.orador_atual.tipo})` : 'Ninguém'} |{' '}
                     <strong>Fila:</strong> {p.fila_falas.length}
                   </span>
+                  {p.fila_falas.length > 0 && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      <strong>Próximos na fila:</strong>{' '}
+                      {p.fila_falas.map((f, i) => `${i + 1}º ${f.nome} (${f.tipo})`).join(' → ')}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {p.estado !== 'ENCERRADO' && !assembleiaAtual.encerrada && (
+                    {!isEncerrada(p.estado) && !assembleiaAtual.encerrada && (
                       <>
                         <select
                           aria-label="Tipo de Fala"
@@ -363,7 +412,13 @@ export default function CACoPage({ usuario }) {
                           <option value="Questão de Ordem">Questão de Ordem</option>
                           <option value="Esclarecimento">Esclarecimento</option>
                         </select>
-                        <button type="button" className="btn-secondary" style={{ padding: '0.3rem 0.65rem', fontSize: '0.82rem' }} onClick={() => inscreverFala(p.id)}>
+                        <button 
+                          type="button" 
+                          className="btn-secondary" 
+                          disabled={isEncerrada(p.estado)}
+                          style={{ padding: '0.3rem 0.65rem', fontSize: '0.82rem' }} 
+                          onClick={() => inscreverFala(p.id)}
+                        >
                           ✋ Pedir Fala
                         </button>
                       </>
@@ -380,6 +435,96 @@ export default function CACoPage({ usuario }) {
           })}
         </div>
       </div>
+
+      {isGestao && (
+        <div className="caco-gestao-grid">
+          <div className="caco-card">
+            <h3>➕ Nova Pauta nesta Assembleia</h3>
+            <form onSubmit={criarPauta} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Título da Pauta"
+                value={novaPautaTitulo}
+                onChange={(e) => setNovaPautaTitulo(e.target.value)}
+                required
+              />
+              <textarea
+                className="form-control"
+                rows={2}
+                placeholder="Breve descrição da pauta"
+                value={novaPautaDesc}
+                onChange={(e) => setNovaPautaDesc(e.target.value)}
+                required
+              />
+              <button type="submit" className="btn-primary" disabled={assembleiaAtual.encerrada}>
+                Adicionar Pauta
+              </button>
+            </form>
+
+            {!assembleiaAtual.encerrada && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ width: '100%', marginTop: '0.75rem' }}
+                onClick={encerrarAssembleia}
+              >
+                🔒 Encerrar Esta Assembleia
+              </button>
+            )}
+          </div>
+
+          <div className="caco-card">
+            <h3>🗓️ Convocar Nova Assembleia</h3>
+            <form onSubmit={criarAssembleia} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Título da Assembleia"
+                value={novaAsmTitulo}
+                onChange={(e) => setNovaAsmTitulo(e.target.value)}
+                required
+              />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Breve descrição geral"
+                value={novaAsmDesc}
+                onChange={(e) => setNovaAsmDesc(e.target.value)}
+                required
+              />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Local (ex: Auditório IC-3)"
+                value={novaAsmLocal}
+                onChange={(e) => setNovaAsmLocal(e.target.value)}
+                required
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={novaAsmData}
+                  onChange={(e) => setNovaAsmData(e.target.value)}
+                  required
+                />
+                <input
+                  type="time"
+                  className="form-control"
+                  value={novaAsmHora}
+                  onChange={(e) => setNovaAsmHora(e.target.value)}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn-secondary">
+                Criar Nova Assembleia
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <Link to="/dashboard" className="btn-secondary">
         Voltar ao Painel
       </Link>
