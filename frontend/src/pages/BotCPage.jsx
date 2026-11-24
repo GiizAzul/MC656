@@ -57,6 +57,7 @@ export default function BotCPage({ usuario }) {
 
   // Ângulo cumulativo contínuo para o ponteiro nunca girar para trás ao cruzar o topo da roda
   const anguloAcumuladoRef = useRef(null);
+  const maoOtimistaRef = useRef({ pendente: false, valor: false });
 
   const carregarRoda = useCallback(async () => {
     try {
@@ -70,6 +71,10 @@ export default function BotCPage({ usuario }) {
         return;
       }
       if (res.ok) {
+        const meuStatusServidor = data.usuario_atual || {};
+        if (maoOtimistaRef.current.pendente) {
+          meuStatusServidor.mao_levantada = maoOtimistaRef.current.valor;
+        }
         const data = await res.json();
         if (data.sem_salas) {
           setSemSalas(true);
@@ -79,8 +84,14 @@ export default function BotCPage({ usuario }) {
         }
         setSemSalas(false);
         setRequerSenha(false);
-        setJogadores(data.jogadores || []);
-        setMeuStatus(data.usuario_atual || {});
+        setMeuStatus(meuStatusServidor);
+        setJogadores(
+          (data.jogadores || []).map((j) =>
+            maoOtimistaRef.current.pendente && j.id === meuStatusServidor.id
+          ? { ...j, mao_levantada: maoOtimistaRef.current.valor }
+          : j
+        )
+        );        
         setGiro(data.giro || {});
         setPartidaAtualInfo(data.partida_atual || {});
         setPartidasDisponiveis(data.partidas_disponiveis || []);
@@ -337,27 +348,39 @@ export default function BotCPage({ usuario }) {
   };
 
   const alternarMinhaMao = async () => {
-    if (meuStatus.is_storyteller_desta_partida) {
-      setErro('O Storyteller fica no centro da roda e não vota na partida que conduz!');
-      return;
-    }
-    if (meuStatus.trancado) {
-      setErro('🔒 O ponteiro já passou por você! Seu voto foi computado e sua mão está travada.');
-      return;
-    }
-    if (!meuStatus.pode_votar) {
-      setErro('Você está morto e já utilizou seu voto fantasma.');
-      return;
-    }
+  if (meuStatus.is_storyteller_desta_partida) {
+    setErro('O Storyteller fica no centro da roda e não vota na partida que conduz!');
+    return;
+  }
+  if (meuStatus.trancado) {
+    setErro('🔒 O ponteiro já passou por você! Seu voto foi computado e sua mão está travada.');
+    return;
+  }
+  if (!meuStatus.pode_votar) {
+    setErro('Você está morto e já utilizou seu voto fantasma.');
+    return;
+  }
 
-    setErro('');
-    const novaAcao = !meuStatus.mao_levantada ? 'levantar_mao' : 'abaixar_mao';
+  setErro('');
+  const estadoAnterior = Boolean(meuStatus.mao_levantada);
+  const novoEstado = !estadoAnterior;
+  const novaAcao = novoEstado ? 'levantar_mao' : 'abaixar_mao';
+
+  // 1. Atualiza o botão e a bolinha na roda imediatamente (0ms)
+  maoOtimistaRef.current = { pendente: true, valor: novoEstado };
+  setMeuStatus((prev) => ({ ...prev, mao_levantada: novoEstado }));
+  setJogadores((prev) =>
+    prev.map((j) => (j.id === meuStatus.id ? { ...j, mao_levantada: novoEstado } : j))
+  );
+
+  try {
     const formData = new URLSearchParams();
     formData.append('acao', novaAcao);
     formData.append('partida_id', partidaId);
 
     const res = await fetch('/botc/votar', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
@@ -367,11 +390,19 @@ export default function BotCPage({ usuario }) {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setErro(data.erro || 'Não foi possível alterar a mão.');
-    } else {
-      await carregarRoda();
+      throw new Error(data.erro || 'Não foi possível alterar a mão.');
     }
-  };
+  } catch (err) {
+    // 2. Reverte visualmente se o servidor bloqueou (ex: ponteiro já passou)
+    setMeuStatus((prev) => ({ ...prev, mao_levantada: estadoAnterior }));
+    setJogadores((prev) =>
+      prev.map((j) => (j.id === meuStatus.id ? { ...j, mao_levantada: estadoAnterior } : j))
+    );
+    setErro(err.message || 'Erro de conexão ao alterar a mão.');
+  } finally {
+    maoOtimistaRef.current = { pendente: false, valor: novoEstado };
+  }
+};
 
   const apurarExecucaoDia = async () => {
     const form = new URLSearchParams();

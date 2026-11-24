@@ -1,8 +1,9 @@
+import threading
 import time
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -21,12 +22,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 router = APIRouter(prefix="/botc", tags=["BOTC"], dependencies=[Depends(exigir_autorizacao_rota)])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+_BOTC_PERSIST_LOCK = threading.Lock()
 
-def _persistir_botc(request: Request) -> None:
-    salvar_estado_sql("sistema_botc", request.app.state.sistema_botc)
-    salvar_estado_sql("maos_botc", request.app.state.maos_botc)
-    if hasattr(request.app.state, "salas_botc"):
-        salvar_estado_sql("salas_botc", request.app.state.salas_botc)
+def _persistir_botc_state(app_state) -> None:
+    with _BOTC_PERSIST_LOCK:
+        itens = {
+            "sistema_botc": app_state.sistema_botc,
+            "maos_botc": app_state.maos_botc,
+        }
+        if hasattr(app_state, "salas_botc"):
+            pacote["salas_botc"] = app_state.salas_botc
+        salvar_estados_sql(itens=itens)
+
+def _persistir_botc(request: Request, background_tasks: BackgroundTasks | None = None) -> None:
+    if background_tasks is not None:
+        background_tasks.add_task(_persistir_botc_state, request.app.state)
+    else:
+        _persistir_botc_state(request.app.state)
 
 
 def _obter_salas_botc(app_state) -> dict:
@@ -148,10 +160,11 @@ async def tela_partida(
 
 @router.post("/votar")
 async def processar_voto_botc(
-    request: Request,
     acao: str = Form(...),
+    background_tasks: BackgroundTasks,
     partida_id: str = Form("principal"),
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)] = None,
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)] = None
 ):
     salas = _obter_salas_botc(request.app.state)
     sala = _obter_sala_segura(salas, partida_id)
@@ -192,7 +205,7 @@ async def processar_voto_botc(
 
     if usuario is not None and "BOTC" in usuario.escopo:
         jogador = _obter_ou_criar_jogador(sistema, usuario)
-        _persistir_botc(request)
+        _persistir_botc(request=request, background_tasks=background_tasks)
 
         # Se a requisição vier via fetch/React (Accept: application/json), responde sem trocar de tela!
         if "application/json" in request.headers.get("accept", ""):
@@ -221,7 +234,7 @@ async def processar_voto_botc(
                 },
             )
 
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -231,10 +244,11 @@ async def processar_voto_botc(
 
 @router.post("/api/criar-partida")
 async def criar_nova_partida_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     nome_sala: str = Form(...),
+    request: Request,
     senha_sala: str = Form(""),
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     salas = _obter_salas_botc(request.app.state)
     # Impede que um Storyteller com partida ativa crie outra sala antes de encerrar ou excluir a atual
@@ -281,15 +295,16 @@ async def criar_nova_partida_botc(
             "mensagem_final": "",
         },
     }
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return JSONResponse({"status": "criada", "partida_id": novo_id})
 
 @router.post("/api/entrar-sala")
 async def entrar_sala_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     partida_id: str = Form(...),
+    request: Request,
     senha_sala: str = Form(""),
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     salas = _obter_salas_botc(request.app.state)
     if partida_id not in salas:
@@ -305,15 +320,16 @@ async def entrar_sala_botc(
         raise HTTPException(status_code=403, detail="Senha da sala incorreta!")
 
     sala["autorizados"].add(usuario.id)
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return JSONResponse({"status": "ok", "partida_id": partida_id})
 
 
 @router.post("/api/sair-sala")
 async def sair_da_sala_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     partida_id: str = Form(...),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     salas = _obter_salas_botc(request.app.state)
     if partida_id not in salas:
@@ -352,15 +368,16 @@ async def sair_da_sala_botc(
     if len(sistema.jogadores) == 0 and sala["storyteller_id"] is None:
         salas.pop(partida_id, None)
 
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return JSONResponse({"status": "saiu"})
 
 
 @router.post("/api/encerrar-partida")
 async def encerrar_partida_inteira_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     partida_id: str = Form(...),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     salas = _obter_salas_botc(request.app.state)
     if partida_id not in salas:
@@ -372,14 +389,15 @@ async def encerrar_partida_inteira_botc(
     sala["encerrada"] = True
     sala["giro"]["ativo"] = False
     sala["giro"]["mensagem_final"] = "🏁 Partida encerrada pelo Storyteller! Todos estão liberados para sair ou criar nova sala."
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return JSONResponse({"status": "encerrada"})
 
 @router.post("/api/excluir-sala")
 async def excluir_sala_storyteller(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     partida_id: str = Form(...),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     salas = _obter_salas_botc(request.app.state)
     if partida_id not in salas:
@@ -391,14 +409,15 @@ async def excluir_sala_storyteller(
 
     salas.pop(partida_id, None)
     proxima = next(iter(salas.keys()), "")
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return JSONResponse({"status": "excluida", "partida_destino": proxima})
     
 @router.post("/api/assumir-storyteller")
 async def assumir_storyteller_partida(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     partida_id: str = Form("principal"),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Você não possui o escopo BOTC_STORYTELLER.")
@@ -419,15 +438,16 @@ async def assumir_storyteller_partida(
     sala["sistema"].jogadores.pop(usuario.username, None)
     sala["sistema"].jogadores.pop(usuario.nome_real, None)
 
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return JSONResponse({"status": "ok", "storyteller_nome": sala["storyteller_nome"]})
 
 @router.post("/registrar")
 async def registrar_votos_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     nomeado: str = Form(...),
     num_votos: int = Form(...),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode registrar votos.")
@@ -453,7 +473,7 @@ async def registrar_votos_botc(
             },
         )
 
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -495,7 +515,7 @@ async def aplicar_modificador_botc(
         raise HTTPException(status_code=400, detail="Tipo de modificador desconhecido.")
 
     peso_final = jogador.calcular_peso_voto()
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -506,11 +526,12 @@ async def aplicar_modificador_botc(
 
 @router.post("/status-jogador")
 async def alterar_status_jogador_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     id_jogador: str = Form(...),
     novo_status: str = Form(...),
     partida_id: str = Form("principal"),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     """Permite ao Storyteller alterar o status de vida / voto fantasma de um jogador."""
     if "BOTC_STORYTELLER" not in usuario.escopo:
@@ -526,7 +547,7 @@ async def alterar_status_jogador_botc(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -535,9 +556,10 @@ async def alterar_status_jogador_botc(
 
 @router.post("/apurar")
 async def apurar_execucao_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     partida_id: str = Form("principal"),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(
@@ -562,7 +584,7 @@ async def apurar_execucao_botc(
     sala["giro"]["mensagem_final"] = mensagem
 
 
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return templates.TemplateResponse(
         name="sucesso.html",
         request=request,
@@ -612,10 +634,11 @@ def _atualizar_progresso_giro(sala: dict) -> dict:
 
 @router.post("/api/iniciar-giro")
 async def iniciar_giro_storyteller(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
+    background_tasks: BackgroundTasks,
     nomeado_id: str = Form(...),
     partida_id: str = Form("principal"),
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     if "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode iniciar o ponteiro.")
@@ -671,16 +694,17 @@ async def iniciar_giro_storyteller(
         "votos_computados": 0,
         "mensagem_final": "",
     }
-    _persistir_botc(request)
+    _persistir_botc(request=request, background_tasks=background_tasks)
     return JSONResponse({"status": "iniciado", "nomeado": nomeado_obj.nome})
 
 
 @router.get("/api/estado")
 async def estado_roda_botc(
-    request: Request,
-    usuario: Annotated[Usuario, Depends(obter_usuario_logado)],
-    partida_id: str = "principal",
     apenas_lobby: bool = False,
+    background_tasks: BackgroundTasks,
+    partida_id: str = "principal",
+    request: Request,
+    usuario: Annotated[Usuario, Depends(obter_usuario_logado)]
 ):
     salas = _obter_salas_botc(request.app.state)
     # Se o usuário é Storyteller de uma partida ainda não encerrada, força ele a permanecer nela!
@@ -759,7 +783,7 @@ async def estado_roda_botc(
     giro_estava_ativo = bool(sala["giro"].get("ativo"))
     giro = _atualizar_progresso_giro(sala)
     if giro_estava_ativo and not giro.get("ativo"):
-        _persistir_botc(request)
+        _persistir_botc(request=request, background_tasks=background_tasks)
 
     jogadores_roda = []
     for jog in sistema.jogadores.values():
