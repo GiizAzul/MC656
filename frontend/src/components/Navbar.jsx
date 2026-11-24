@@ -36,9 +36,9 @@ export default function Navbar({ usuario, onLogout, tema, onToggleTema }) {
             <span className="navbar-user">
               Olá, <strong>{usuario.nome_real}</strong> ({usuario.username})
             </span>
-            <a href="/logout" onClick={onLogout} className="btn-logout">
+            <button type="button" onClick={onLogout} className="btn-logout">
               Sair
-            </a>
+            </button>
           </>
         )}
       </div>

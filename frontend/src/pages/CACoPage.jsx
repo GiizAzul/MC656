@@ -1,14 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams} from 'react-router-dom';
 import '../styles/CACoPage.css';
 
 export default function CACoPage({ usuario }) {
-  const [assembleiaId, setAssembleiaId] = useState('principal');
+  const [searchParams] = useSearchParams();
+  const chaveRascunho = `mc656_rascunho_caco_${usuario?.id || 'anon'}`;
+
+  const [assembleiaId, setAssembleiaId] = useState(() => {
+    const daUrl = searchParams.get('assembleia_id');
+    if (daUrl) return daUrl;
+    try {
+      return JSON.parse(localStorage.getItem(chaveRascunho))?.assembleiaId || 'principal';
+    } catch {
+      return 'principal';
+    }
+  });
   const [assembleiasDisponiveis, setAssembleiasDisponiveis] = useState([]);
   const [assembleiaAtual, setAssembleiaAtual] = useState({});
   const [pautas, setPautas] = useState([]);
   const [pautaAtivaId, setPautaAtivaId] = useState(null);  
-  const [opcao, setOpcao] = useState('APROVAR');
+  const [opcao, setOpcao] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(chaveRascunho))?.opcao || 'APROVAR';
+    } catch {
+      return 'APROVAR';
+    }
+  });
   const [resultados, setResultados] = useState(null);
   const isGestao = usuario?.escopo?.includes('CACO_GESTAO');
   
@@ -31,7 +48,7 @@ export default function CACoPage({ usuario }) {
 
   const carregarEstado = useCallback(async () => {
     try {
-      const res = await fetch(`/caco/api/estado?assembleia_id=${encodeURIComponent(assembleiaId)}`);
+      const res = await fetch(`/caco/api/estado?assembleia_id=${encodeURIComponent(assembleiaId)}`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setAssembleiaAtual(data.assembleia_atual || {});
@@ -52,6 +69,13 @@ export default function CACoPage({ usuario }) {
     const poll = setInterval(carregarEstado, 1500);
     return () => clearInterval(poll);
   }, [carregarEstado]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      chaveRascunho,
+      JSON.stringify({ assembleiaId, pautaAtivaId, opcao })
+    );
+  }, [chaveRascunho, assembleiaId, pautaAtivaId, opcao]);
 
   const criarAssembleia = async (e) => {
     e.preventDefault();
@@ -131,6 +155,7 @@ export default function CACoPage({ usuario }) {
     const form = new URLSearchParams({ opcao });
     const res = await fetch(`/caco/api/assembleias/${assembleiaId}/pautas/${pautaId}/votar`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form.toString(),
     });
@@ -138,6 +163,7 @@ export default function CACoPage({ usuario }) {
     if (!res.ok) {
       setErro(d.detail || 'Não foi possível registrar seu voto.');
     } else {
+      localStorage.removeItem(chaveRascunho);
       setMsg(`🗳️ ${d.mensagem}`);
       await carregarEstado();
     }
