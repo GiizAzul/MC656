@@ -14,17 +14,25 @@ export default function AdminPage({ usuario }) {
   const disparar = async (url, textoSucesso) => {
     setMsg('');
     setErro('');
-    const res = await fetch(url, { method: 'POST', redirect: 'manual' });
-    if (res.status === 302 || res.type === 'opaqueredirect') {
-      setErro('Você não possui permissão de gestão para realizar esta ação.');
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      redirect: 'manual',
+    });
+
+    if (res.status === 302 || res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) {
+      setErro('Você não possui permissão de gestão ou sua sessão expirou.');
       return;
     }
+
     const html = await res.text();
-    if (html.includes('alert-error')) {
+    if (!res.ok || html.includes('alert-error')) {
       const m = html.match(/<div class="alert-error"[^>]*>([\s\S]*?)<\/div>/);
       setErro(m ? m[1].trim() : 'Não foi possível alterar o estado da votação.');
-    } else {
+    } else if (html.includes('iniciada com sucesso') || html.includes('encerrada')) {
       setMsg(textoSucesso);
+    } else {
+      setErro('Resposta inesperada do servidor ao alterar o estado da votação.');
     }
   };
 

@@ -19,6 +19,11 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
     setErro('');
     setMensagem('');
 
+    if (!tipoSelecionadoEfetivo) {
+      setErro('Todos os escopos disponíveis já estão vinculados.');
+      return;
+    }
+
     const formData = new URLSearchParams();
     formData.append('tipo_conta', tipoSelecionadoEfetivo);
     if (tipoSelecionadoEfetivo === 'CACO_ESTUDANTE') {
@@ -27,15 +32,22 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
 
     const res = await fetch('/adicionar-escopo', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+      },
       body: formData.toString(),
+      credentials: 'include',
+      redirect: 'manual',
     });
 
-    if (res.ok || res.status === 302) {
+    if (res.ok || res.status === 302 || res.type === 'opaqueredirect') {
       setMensagem('Novo escopo habilitado na sua conta com sucesso!');
+      setRaExtra('');
       if (onScopeAdded) await onScopeAdded();
     } else {
-      setErro('Não foi possível vincular o escopo. Verifique o RA.');
+      const data = await res.json().catch(() => ({}));
+      setErro(data.detail || 'Não foi possível vincular o escopo. Verifique os dados.');
     }
   };
 
@@ -107,9 +119,9 @@ export default function DashboardPage({ usuario, onScopeAdded }) {
               <h2>⚙️ Painel de Gestão / Mestre</h2>
               <p>Gerenciar abertura/encerramento de votações e registro de forca.</p>
             </div>
-            <a href="/admin" className="btn-secondary">
+            <Link className="btn-secondary" to="/admin">
               Gerenciar Votações
-            </a>
+            </Link>
           </div>
         )}
       </div>

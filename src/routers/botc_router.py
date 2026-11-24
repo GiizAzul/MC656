@@ -14,11 +14,11 @@ from src.botc import (
 )
 from src.database import salvar_estado_sql
 
-from .dependencias import obter_usuario_logado
+from .dependencias import exigir_autorizacao_rota, obter_usuario_logado
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-router = APIRouter(prefix="/botc", tags=["BOTC"])
+router = APIRouter(prefix="/botc", tags=["BOTC"], dependencies=[Depends(exigir_autorizacao_rota)])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
@@ -63,6 +63,12 @@ def _obter_salas_botc(app_state) -> dict:
         app_state.salas_botc["principal"]["sistema"] = app_state.sistema_botc
     return app_state.salas_botc
 
+def _obter_sala_segura(salas: dict, partida_id: str) -> dict:
+    sala = salas.get(partida_id) or salas.get("principal") or next(iter(salas.values()), None)
+    if not sala:
+        raise HTTPException(status_code=404, detail="Nenhuma sala ativa encontrada.")
+    return sala
+
 def _is_storyteller_da_sala(sala: dict, usuario: Usuario) -> bool:
     """Verifica se o usuário já assumiu explicitamente o papel de Storyteller titular desta partida."""
     return sala["storyteller_id"] == usuario.id
@@ -101,13 +107,17 @@ async def tela_partida(
         return RedirectResponse(url="/", status_code=302)
 
     salas = _obter_salas_botc(request.app.state)
-    sala = salas["principal"]
+    sala = _obter_sala_segura(salas, partida_id)
     sistema = sala["sistema"]
     maos = sala["maos"]
     mao_levantada = maos.get(usuario.username, False)
     
     is_storyteller = "STORYTELLER" in usuario.escopo
-    jogador_atual = _obter_ou_criar_jogador(sistema, usuario)
+    jogador_atual = (
+        None
+        if is_storyteller
+        else _obter_ou_criar_jogador(sistema, usuario, sala=sala)
+    )
 
     jogadores_view = [
         {
@@ -143,7 +153,7 @@ async def processar_voto_botc(
     usuario: Annotated[Usuario, Depends(obter_usuario_logado)] = None,
 ):
     salas = _obter_salas_botc(request.app.state)
-    sala = salas.get(partida_id, salas["principal"])
+    sala = _obter_sala_segura(salas, partida_id)
     sistema = sala["sistema"]
 
     if not hasattr(request.app.state, "maos_botc"):
@@ -283,7 +293,7 @@ async def entrar_sala_botc(
     salas = _obter_salas_botc(request.app.state)
     if partida_id not in salas:
         raise HTTPException(status_code=404, detail="Sala não encontrada.")
-    sala = salas[partida_id]
+    sala = _obter_sala_segura(salas, partida_id)
     sala.setdefault("autorizados", set())
     
     if (
@@ -308,7 +318,7 @@ async def sair_da_sala_botc(
     if partida_id not in salas:
         return JSONResponse({"status": "saiu"})
 
-    sala = salas[partida_id]
+    sala = _obter_sala_segura(salas, partida_id)
     sistema = sala["sistema"]
 
     # Storyteller não pode abandonar a sala enquanto a partida inteira não acabar (ou ele excluir a sala)
@@ -354,7 +364,7 @@ async def encerrar_partida_inteira_botc(
     salas = _obter_salas_botc(request.app.state)
     if partida_id not in salas:
         raise HTTPException(status_code=404, detail="Sala não encontrada.")
-    sala = salas[partida_id]
+    sala = _obter_sala_segura(salas, partida_id)
     if sala["storyteller_id"] != usuario.id:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller desta sala pode encerrar a partida.")
 
@@ -374,7 +384,7 @@ async def excluir_sala_storyteller(
     if partida_id not in salas:
         raise HTTPException(status_code=404, detail="Sala não encontrada.")
 
-    sala = salas[partida_id]
+    sala = _obter_sala_segura(salas, partida_id)
     if sala["storyteller_id"] != usuario.id and "BOTC_STORYTELLER" not in usuario.escopo:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller titular desta sala pode excluí-la.")
 
@@ -393,7 +403,7 @@ async def assumir_storyteller_partida(
         raise HTTPException(status_code=403, detail="Você não possui o escopo BOTC_STORYTELLER.")
 
     salas = _obter_salas_botc(request.app.state)
-    sala = salas.get(partida_id, salas["principal"])
+    sala = _obter_sala_segura(salas, partida_id)
 
     if sala["storyteller_id"] is not None and sala["storyteller_id"] != usuario.id:
         raise HTTPException(
@@ -506,7 +516,7 @@ async def alterar_status_jogador_botc(
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode alterar o status de jogadores.")
 
     salas = _obter_salas_botc(request.app.state)
-    sala = salas.get(partida_id, salas["principal"])
+    sala = _obter_sala_segura(salas, partida_id)
     sistema = sala["sistema"]
 
     try:
@@ -535,7 +545,7 @@ async def apurar_execucao_botc(
         )
 
     salas = _obter_salas_botc(request.app.state)
-    sala = salas.get(partida_id, salas["principal"])
+    sala = _obter_sala_segura(salas, partida_id)
     sistema = sala["sistema"]
 
     resultado = sistema.apurar_vencedor()
@@ -610,7 +620,7 @@ async def iniciar_giro_storyteller(
         raise HTTPException(status_code=403, detail="Apenas o Storyteller pode iniciar o ponteiro.")
 
     salas = _obter_salas_botc(request.app.state)
-    sala = salas.get(partida_id, salas["principal"])
+    sala = _obter_sala_segura(salas, partida_id)
     sala.setdefault("nomeados_hoje", set())
 
     if sala["storyteller_id"] is None:
@@ -704,7 +714,7 @@ async def estado_roda_botc(
     elif partida_id not in salas:
         partida_id = next(iter(salas.keys()))
 
-    sala = salas.get(partida_id, salas["principal"])
+    sala = _obter_sala_segura(salas, partida_id)
     sala.setdefault("nomeados_hoje", set())
     sala.setdefault("autorizados", set())
     sistema = sala["sistema"]
