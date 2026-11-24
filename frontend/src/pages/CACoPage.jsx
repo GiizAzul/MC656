@@ -8,9 +8,10 @@ export default function CACoPage({ usuario }) {
   const [assembleiaAtual, setAssembleiaAtual] = useState({});
   const [pautas, setPautas] = useState([]);
   const [pautaAtivaId, setPautaAtivaId] = useState(null);  
+  const [isGestaoApi, setIsGestaoApi] = useState(false);
   const [opcao, setOpcao] = useState('APROVAR');
   const [resultados, setResultados] = useState(null);
-  const isGestao = usuario?.escopo?.includes('CACO_GESTAO');
+  const isGestao = Boolean(usuario?.escopo?.includes('CACO_GESTAO') || isGestaoApi);
   
   // Form Nova Assembleia
   const [novaAsmTitulo, setNovaAsmTitulo] = useState('');
@@ -34,6 +35,7 @@ export default function CACoPage({ usuario }) {
       const res = await fetch(`/caco/api/estado?assembleia_id=${encodeURIComponent(assembleiaId)}`);
       if (res.ok) {
         const data = await res.json();
+        setIsGestaoApi(Boolean(data.is_gestao));
         setAssembleiaAtual(data.assembleia_atual || {});
         setAssembleiasDisponiveis(data.assembleias_disponiveis || []);
         setPautas(data.pautas || []);
@@ -84,6 +86,21 @@ export default function CACoPage({ usuario }) {
     }
   };
 
+  const encerrarAssembleia = async () => {
+    setErro('');
+    setMsg('');
+    const res = await fetch(`/caco/api/assembleias/${assembleiaId}/encerrar`, {
+      method: 'POST',
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setErro(d.detail || 'Erro ao encerrar assembleia.');
+    } else {
+      setMsg('🔒 Assembleia encerrada com sucesso!');
+      await carregarEstado();
+    }
+  };
+  
   const criarPauta = async (e) => {
     e.preventDefault();
     setErro('');
@@ -362,6 +379,96 @@ export default function CACoPage({ usuario }) {
           })}
         </div>
       </div>
+
+      {isGestao && (
+        <div className="caco-gestao-grid">
+          <div className="caco-card">
+            <h3>➕ Nova Pauta nesta Assembleia</h3>
+            <form onSubmit={criarPauta} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Título da Pauta"
+                value={novaPautaTitulo}
+                onChange={(e) => setNovaPautaTitulo(e.target.value)}
+                required
+              />
+              <textarea
+                className="form-control"
+                rows={2}
+                placeholder="Breve descrição da pauta"
+                value={novaPautaDesc}
+                onChange={(e) => setNovaPautaDesc(e.target.value)}
+                required
+              />
+              <button type="submit" className="btn-primary" disabled={assembleiaAtual.encerrada}>
+                Adicionar Pauta
+              </button>
+            </form>
+
+            {!assembleiaAtual.encerrada && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ width: '100%', marginTop: '0.75rem' }}
+                onClick={encerrarAssembleia}
+              >
+                🔒 Encerrar Esta Assembleia
+              </button>
+            )}
+          </div>
+
+          <div className="caco-card">
+            <h3>🗓️ Convocar Nova Assembleia</h3>
+            <form onSubmit={criarAssembleia} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Título da Assembleia"
+                value={novaAsmTitulo}
+                onChange={(e) => setNovaAsmTitulo(e.target.value)}
+                required
+              />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Breve descrição geral"
+                value={novaAsmDesc}
+                onChange={(e) => setNovaAsmDesc(e.target.value)}
+                required
+              />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Local (ex: Auditório IC-3)"
+                value={novaAsmLocal}
+                onChange={(e) => setNovaAsmLocal(e.target.value)}
+                required
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={novaAsmData}
+                  onChange={(e) => setNovaAsmData(e.target.value)}
+                  required
+                />
+                <input
+                  type="time"
+                  className="form-control"
+                  value={novaAsmHora}
+                  onChange={(e) => setNovaAsmHora(e.target.value)}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn-secondary">
+                Criar Nova Assembleia
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <Link to="/dashboard" className="btn-secondary">
         Voltar ao Painel
       </Link>
