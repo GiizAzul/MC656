@@ -8,6 +8,9 @@ from src.estados import AguardandoVotacao, EmVotacao, Encerrada
 from src.main import app
 
 from src.routers.dependencias import gerar_token_sessao
+
+from types import SimpleNamespace
+
 # Inicializa o cliente de testes simulando um navegador
 client = TestClient(app, base_url="https://testserver")
 
@@ -1221,3 +1224,260 @@ def test_botc_api_giro_ponteiro_trava_mao_e_voto_fantasma(monkeypatch):
     assert res_apurar.status_code == 200
     assert len(sala_principal["nomeados_hoje"]) == 0
     client.cookies.clear()
+
+def test_auth_router_api_me_e_logout_post():
+    """Cobre /api/me e POST /logout."""
+    client.cookies.clear()
+    assert client.get("/api/me", follow_redirects=False).status_code in [401, 302]
+
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "CACO_ESTUDANTE",
+            "nome_real": "Marina Me",
+            "username": "marina_me",
+            "senha": "123",
+            "senha_confirma": "123",
+            "ra": "445566",
+        },
+        follow_redirects=False,
+    )
+    logar_cookie("marina_me")
+
+    res_me = client.get("/api/me")
+    assert res_me.status_code == 200
+    dados_me = res_me.json()
+    assert dados_me["username"] == "marina_me"
+    assert dados_me["nome_real"] == "Marina Me"
+    assert dados_me["escopo"] == "CACO_ESTUDANTE"
+    assert dados_me["ra"] == 445566
+
+    res_logout = client.post("/logout")
+    assert res_logout.status_code == 200
+    assert res_logout.json() == {"ok": True}
+    cookie_str = res_logout.headers.get("set-cookie", "")
+    assert "sessao_usuario" in cookie_str
+    assert "Max-Age=0" in cookie_str or "expires" in cookie_str
+    client.cookies.clear()
+
+
+def test_auth_router_login_por_ra_e_cadastro_gestao_caco():
+    """Cobre login usando RA como identificador e inclusão de CACO_GESTAO na eleição."""
+    client.cookies.clear()
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "CACO_ESTUDANTE",
+            "nome_real": "Lucas RA",
+            "username": "lucas_ra",
+            "senha": "123",
+            "senha_confirma": "123",
+            "ra": "778899",
+        },
+        follow_redirects=False,
+    )
+
+    res_login_ra = client.post(
+        "/login",
+        data={"username": "778899", "senha": "123"},
+        follow_redirects=False,
+    )
+    assert res_login_ra.status_code == 302
+    assert "sessao_usuario" in res_login_ra.cookies
+
+    client.cookies.clear()
+    res_gestao = client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "CACO_GESTAO",
+            "nome_real": "Gestor Novo",
+            "username": "gestor_caco_novo",
+            "senha": "123",
+            "senha_confirma": "123",
+        },
+        follow_redirects=False,
+    )
+    assert res_gestao.status_code == 302
+    id_gestor = app.state.banco_auth._mapa_usernames["gestor_caco_novo"]
+    assert id_gestor in app.state.eleicao_caco.eleitores
+    client.cookies.clear()
+
+
+def test_auth_router_adicionar_escopo_json_html_e_erros():
+    """Cobre POST /adicionar-escopo com sucesso (JSON e HTML), erro de validação e deslogado."""
+    client.cookies.clear()
+    assert client.post(
+        "/adicionar-escopo",
+        data={"tipo_conta": "AUSTRALIA_ELEITOR"},
+        follow_redirects=False,
+    ).status_code == 302
+
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "BOTC_JOGADOR",
+            "nome_real": "Multi Escopo",
+            "username": "user_multi_escopo",
+            "senha": "123",
+            "senha_confirma": "123",
+        },
+        follow_redirects=False,
+    )
+    logar_cookie("user_multi_escopo")
+
+    # 1. Vincula escopo via JSON (com RA para CACO_ESTUDANTE)
+    res_json_ok = client.post(
+        "/adicionar-escopo",
+        data={"tipo_conta": "CACO_ESTUDANTE", "ra": "332211"},
+        headers={"Accept": "application/json"},
+    )
+    assert res_json_ok.status_code == 200
+    assert res_json_ok.json()["ok"] is True
+    assert "CACO_ESTUDANTE" in res_json_ok.json()["escopo"]
+
+    user_id = app.state.banco_auth._mapa_usernames["user_multi_escopo"]
+    assert user_id in app.state.eleicao_caco.eleitores
+
+    # 2. Erro em JSON ao tentar adicionar escopo de estudante sem RA válido
+    res_json_err = client.post(
+        "/adicionar-escopo",
+        data={"tipo_conta": "CACO_ESTUDANTE", "ra": ""},
+        headers={"Accept": "application/json"},
+    )
+    assert res_json_err.status_code == 400
+    assert "detail" in res_json_err.json()
+
+    # 3. Vincula novo escopo via formulário HTML (redireciona para /dashboard por ter múltiplos escopos)
+    res_html_ok = client.post(
+        "/adicionar-escopo",
+        data={"tipo_conta": "AUSTRALIA_ELEITOR"},
+        follow_redirects=False,
+    )
+    assert res_html_ok.status_code == 302
+    assert res_html_ok.headers["location"] in ["/dashboard", "/australia/votar", "/caco/assembleia", "/botc/partida"]
+
+    # 4. Erro via HTML renderiza dashboard.html com mensagem de erro
+    res_html_err = client.post(
+        "/adicionar-escopo",
+        data={"tipo_conta": "TIPO_INEXISTENTE"},
+    )
+    assert res_html_err.status_code == 200
+    assert "Tipo de conta desconhecido" in res_html_err.text
+    client.cookies.clear()
+
+
+def test_auth_router_votacao_ativa_botc_caco_e_australia():
+    """Cobre os caminhos de /api/votacao-ativa para BOTC, CACo e Austrália."""
+    # 1. BOTC: usuário na sala com giro ativo
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "BOTC_JOGADOR",
+            "nome_real": "Jogador Ativo BOTC",
+            "username": "jog_ativo_botc",
+            "senha": "123",
+            "senha_confirma": "123",
+        },
+        follow_redirects=False,
+    )
+    user_botc_id = app.state.banco_auth._mapa_usernames["jog_ativo_botc"]
+    salas_orig = getattr(app.state, "salas_botc", None)
+    app.state.salas_botc = {
+        "sala_ativa_1": {
+            "encerrada": False,
+            "storyteller_id": "outro_st",
+            "jogadores": [user_botc_id],
+            "giro": {"ativo": True},
+        }
+    }
+    try:
+        logar_cookie("jog_ativo_botc")
+        res_botc = client.get("/api/votacao-ativa")
+        assert res_botc.status_code == 200
+        assert res_botc.json() == {
+            "rota": "/botc/partida?partida_id=sala_ativa_1",
+            "contexto": "BOTC",
+            "partida_id": "sala_ativa_1",
+            "em_votacao": True,
+        }
+    finally:
+        if salas_orig is None:
+            delattr(app.state, "salas_botc")
+        else:
+            app.state.salas_botc = salas_orig
+        client.cookies.clear()
+
+    # 2. CACo com assembleias_caco (pauta em VOTACAO) e fallback eleicao_caco
+    client.post(
+        "/cadastro",
+        data={
+            "tipo_conta": "CACO_ESTUDANTE",
+            "nome_real": "Estudante Votacao",
+            "username": "est_votacao_caco",
+            "senha": "123",
+            "senha_confirma": "123",
+            "ra": "556677",
+        },
+        follow_redirects=False,
+    )
+    user_caco_id = app.state.banco_auth._mapa_usernames["est_votacao_caco"]
+    asm_orig = getattr(app.state, "assembleias_caco", None)
+    app.state.assembleias_caco = {
+        "asm_1": {
+            "encerrada": False,
+            "pautas": [{"estado": "VOTACAO", "eleitores_votaram": set()}],
+        }
+    }
+    try:
+        logar_cookie("est_votacao_caco")
+        res_caco_asm = client.get("/api/votacao-ativa")
+        assert res_caco_asm.status_code == 200
+        assert res_caco_asm.json()["rota"] == "/caco/assembleia?assembleia_id=asm_1"
+        assert res_caco_asm.json()["contexto"] == "CACO"
+
+        # Fallback quando assembleias_caco não é dict e eleicao_caco está em VOTACAO
+        app.state.assembleias_caco = None
+        eleicao_caco_orig = app.state.eleicao_caco
+        votaram_caco_orig = getattr(app.state, "eleitores_caco_votaram", None)
+        app.state.eleicao_caco = SimpleNamespace(estado=SimpleNamespace(name="VOTACAO"))
+        app.state.eleitores_caco_votaram = set()
+        try:
+            res_caco_fb = client.get("/api/votacao-ativa")
+            assert res_caco_fb.status_code == 200
+            assert res_caco_fb.json() == {"rota": "/caco/assembleia", "contexto": "CACO"}
+        finally:
+            app.state.eleicao_caco = eleicao_caco_orig
+            if votaram_caco_orig is None:
+                app.state.eleitores_caco_votaram = set()
+            else:
+                app.state.eleitores_caco_votaram = votaram_caco_orig
+    finally:
+        if asm_orig is None and hasattr(app.state, "assembleias_caco"):
+            delattr(app.state, "assembleias_caco")
+        else:
+            app.state.assembleias_caco = asm_orig
+        client.cookies.clear()
+
+    # 3. Austrália: em VOTACAO retorna rota, e se já votou retorna None
+    eleicao_aus_orig = app.state.eleicao_australia
+    votaram_aus_orig = getattr(app.state, "eleitores_australia_votaram", None)
+    app.state.eleicao_australia = SimpleNamespace(estado=SimpleNamespace(name="VOTACAO"))
+    app.state.eleitores_australia_votaram = set()
+    id_caio = app.state.banco_auth._mapa_usernames["caio"]
+    try:
+        logar_cookie("caio")
+        res_aus_aberta = client.get("/api/votacao-ativa")
+        assert res_aus_aberta.status_code == 200
+        assert res_aus_aberta.json() == {"rota": "/australia/votar", "contexto": "AUSTRALIA"}
+
+        app.state.eleitores_australia_votaram.add(id_caio)
+        res_aus_votou = client.get("/api/votacao-ativa")
+        assert res_aus_votou.status_code == 200
+        assert res_aus_votou.json() == {"rota": None}
+    finally:
+        app.state.eleicao_australia = eleicao_aus_orig
+        if votaram_aus_orig is None and hasattr(app.state, "eleitores_australia_votaram"):
+            delattr(app.state, "eleitores_australia_votaram")
+        else:
+            app.state.eleitores_australia_votaram = votaram_aus_orig
+        client.cookies.clear()
