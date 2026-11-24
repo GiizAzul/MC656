@@ -657,6 +657,11 @@ async def iniciar_giro_storyteller(
     sala = _obter_sala_segura(salas, partida_id)
     sala.setdefault("nomeados_hoje", set())
 
+    if sala.get("encerrada", False):
+        raise HTTPException(status_code=400, detail="Esta partida já foi encerrada.")
+    if sala["giro"].get("ativo", False):
+        raise HTTPException(status_code=400, detail="Já existe um giro do ponteiro em andamento.")    
+
     if sala["storyteller_id"] is None:
         sala["storyteller_id"] = usuario.id
         sala["storyteller_nome"] = usuario.nome_real or usuario.username
@@ -673,8 +678,11 @@ async def iniciar_giro_storyteller(
 
     idx_nomeado = next(
         (i for i, j in enumerate(lista_jogadores) if j.id_jogador == nomeado_id or j.nome == nomeado_id),
-        0,
+        None,
     )
+    if idx_nomeado is None:
+        raise HTTPException(status_code=404, detail="Jogador nomeado não encontrado nesta sala.")
+        
     nomeado_obj = lista_jogadores[idx_nomeado]
 
     # Regra oficial do BoTC: um jogador só pode ser nomeado 1 vez por dia!
