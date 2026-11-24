@@ -71,16 +71,16 @@ export default function BotCPage({ usuario }) {
         return;
       }
       if (res.ok) {
-        const meuStatusServidor = data.usuario_atual || {};
-        if (maoOtimistaRef.current.pendente) {
-          meuStatusServidor.mao_levantada = maoOtimistaRef.current.valor;
-        }
         const data = await res.json();
         if (data.sem_salas) {
           setSemSalas(true);
           setPartidasDisponiveis([]);
           setMeuStatus(data.usuario_atual || {});
           return;
+        }
+        const meuStatusServidor = data.usuario_atual || {};
+        if (maoOtimistaRef.current.pendente) {
+          meuStatusServidor.mao_levantada = maoOtimistaRef.current.valor;
         }
         setSemSalas(false);
         setRequerSenha(false);
