@@ -668,10 +668,6 @@ async def iniciar_giro_storyteller(
     sala = _obter_sala_segura(salas, partida_id)
     sala.setdefault("nomeados_hoje", set())
 
-    if sala.get("encerrada", False):
-        raise HTTPException(status_code=400, detail="Esta partida já foi encerrada.")
-    if sala["giro"].get("ativo", False):
-        raise HTTPException(status_code=400, detail="Já existe um giro do ponteiro em andamento.")    
 
     if sala["storyteller_id"] is None:
         sala["storyteller_id"] = usuario.id
@@ -681,6 +677,11 @@ async def iniciar_giro_storyteller(
         sala["sistema"].jogadores.pop(usuario.nome_real, None)
     elif sala["storyteller_id"] != usuario.id:
         raise HTTPException(status_code=403, detail="Apenas o Storyteller titular desta partida pode girar o ponteiro.")
+        
+    if sala.get("encerrada", False):
+        raise HTTPException(status_code=400, detail="Esta partida já foi encerrada.")
+    if sala["giro"].get("ativo", False):
+        raise HTTPException(status_code=400, detail="Já existe um giro do ponteiro em andamento.")    
 
     sistema = sala["sistema"]
     lista_jogadores = [j for j in sistema.jogadores.values() if j.id_jogador != sala["storyteller_id"]]
