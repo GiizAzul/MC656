@@ -381,7 +381,6 @@ export default function BotCPage({ usuario }) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form.toString(),
     });
-    const html = await res.text();
     await carregarRoda();
   };
 

@@ -24,7 +24,6 @@ export default function AustraliaPage({ usuario }) {
   const [totalVotos, setTotalVotos] = useState(0);
 
   const [draggedIdx, setDraggedIdx] = useState(null);
-  const [dragOverIdx, setDragOverIdx] = useState(null);
   const [dragOffsetY, setDragOffsetY] = useState(0);
   const dragStartYRef = React.useRef(0);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
@@ -275,7 +274,6 @@ export default function AustraliaPage({ usuario }) {
         <ul className="dnd-list">
           {listaAtiva.map((itemNome, index) => {
             const isDragging = draggedIdx === index;
-            const isDragOver = dragOverIdx === index;
             const isPartido = modoVotacao === 'partidos';
             const filiados = isPartido ? partidosMap[itemNome] || [] : [];
 

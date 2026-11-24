@@ -27,7 +27,6 @@ export default function CACoPage({ usuario }) {
       return 'APROVAR';
     }
   });
-  const [resultados, setResultados] = useState(null);
   const isEncerrada = (e) => e === 'ENCERRADO' || e === 'ENCERRADA'
   const isGestao = Boolean(usuario?.escopo?.includes('CACO_GESTAO') || isGestaoApi);
   
@@ -212,21 +211,6 @@ export default function CACoPage({ usuario }) {
       method: 'POST',
     });
     if (res.ok) await carregarEstado();
-  };
-  
-  const carregarResultados = async () => {
-    const res = await fetch('/caco/resultados', { headers: { Accept: 'application/html' } });
-    const html = await res.text();
-    const extrair = (label) => {
-      const regex = new RegExp(`${label}[\\s\\S]*?(\\d+)\\s*votos`, 'i');
-      const m = html.match(regex);
-      return m ? parseInt(m[1], 10) : 0;
-    };
-    const aprovar = extrair('Aprovar');
-    const rejeitar = extrair('Rejeitar');
-    const abster = extrair('Absten');
-    const total = aprovar + rejeitar + abster;
-    setResultados({ aprovar, rejeitar, abster, total });
   };
 
   const pct = (val, tot) => (tot > 0 ? Math.round((val / tot) * 100) : 0);
