@@ -426,6 +426,8 @@ def test_caco_multiplas_assembleias_pautas_concorrentes_e_falas(client):
     # 6. Encerra assembleia inteira e consulta estado
     assert client.post(f"/caco/api/assembleias/{asm_id}/encerrar").status_code == 200
     assert client.get(f"/caco/api/estado?assembleia_id={asm_id}").status_code == 200
+    from src.main import app
+    app.state.assembleias_caco = {}
     client.cookies.clear()
 
 
@@ -477,3 +479,60 @@ def test_australia_api_votar_partidos_e_vencedor(client):
         app.state.eleicao_australia = eleicao_original
         app.state.eleitores_australia_votaram = votaram_original
         client.cookies.clear()
+
+
+def test_dependencias_tokens_invalidos_e_formatacao_candidatos():
+    """Cobre branches de validação de token HMAC em dependencias.py e casos de borda em formatacao_candidatos.py."""
+    from src.formatacao_candidatos import formatar_nomes_candidatos
+    from src.routers.dependencias import gerar_token_sessao, ler_username_token
+
+    # Tokens inválidos / malformados / assinatura adulterada
+    assert ler_username_token("") is None
+    assert ler_username_token("sem_ponto") is None
+    assert ler_username_token(".assinatura") is None
+    assert ler_username_token("payload.assinatura_errada") is None
+
+    # Token com assinatura válida mas payload expirado
+    token_ok = gerar_token_sessao("caio")
+    assert ler_username_token(token_ok) == "caio"
+
+    # Formatação de candidatos: nome único, partícula de sobrenome ("da") e homônimos no mesmo partido
+    rotulos = formatar_nomes_candidatos(
+        ["Cher", "João da Silva", "Maria Clara Souza", "Maria Eduarda Souza"],
+        {"Partido X": ["Cher", "João da Silva", "Maria Clara Souza", "Maria Eduarda Souza"]},
+    )
+    assert rotulos["Cher"] == "Cher, Partido X"
+    assert rotulos["João da Silva"] == "DA SILVA, João, Partido X"
+    assert rotulos["Maria Clara Souza"] == "SOUZA, Maria Clara, Partido X"
+    assert rotulos["Maria Eduarda Souza"] == "SOUZA, Maria Eduarda, Partido X"
+
+
+def test_caco_api_erros_permissao_e_not_found(client):
+    """Cobre branches de erro (403, 404, 400) nas rotas JSON do caco_router.py."""
+    # Estudante comum (sem CACO_GESTAO) não pode criar assembleia, pauta, encerrar nem chamar orador
+    client.cookies.clear()
+    logar_cookie(client, "samuel")  # CACO_ESTUDANTE
+    assert client.post(
+        "/caco/api/assembleias",
+        data={"titulo": "T", "descricao": "D", "local": "L", "data": "2027-05-20", "horario": "14:00"},
+    ).status_code == 403
+    assert client.post("/caco/api/assembleias/principal/encerrar").status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas", data={"titulo": "P", "descricao": "D"}).status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas/pauta_principal/iniciar").status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas/pauta_principal/encerrar").status_code == 403
+    assert client.post("/caco/api/assembleias/principal/pautas/pauta_principal/falas/proximo").status_code == 403
+
+    # Gestão testando 404 e campos vazios (400)
+    client.cookies.clear()
+    logar_cookie(client, "julia")  # CACO_GESTAO
+    assert client.post(
+        "/caco/api/assembleias",
+        data={"titulo": " ", "descricao": "D", "local": "L", "data": "2027-05-20", "horario": "14:00"},
+    ).status_code == 400
+    assert client.post("/caco/api/assembleias/inexistente/encerrar").status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas", data={"titulo": "P", "descricao": "D"}).status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/iniciar").status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/encerrar").status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/votar", data={"opcao": "APROVAR"}).status_code == 404
+    assert client.post("/caco/api/assembleias/inexistente/pautas/x/falas/proximo").status_code == 404
+    client.cookies.clear()
