@@ -179,34 +179,37 @@ class EleicaoAustralia(SistemaEleitoral):
         return contagem
 
     def apurar_vencedor(self) -> str | None:
-        """Executa os turnos de eliminação até encontrar o vencedor."""
-        if not self.candidatos or not self.cedulas: # Podia resumir o condicional mas assim fica mais legível
-            return None
+        """Retorna o eleito por maioria absoluta, usando a contagem do motor."""
+        return self.apurar_resultados()["vencedor"]
 
-        while True:
-            contagem = self._contar_primeiras_preferencias()
-            total_votos_validos = sum(contagem.values())
-
-            if total_votos_validos == 0:
-                return None
-
-            # Verifica se alguém atingiu maioria absoluta
-            for candidato_id, votos in contagem.items():
-                if votos > total_votos_validos / 2:
-                    return candidato_id
-
-            # Encontra o candidato com menos votos
-            candidato_menos_votado = min(contagem, key=contagem.get)
-            
-            # Elimina o candidato mudando o status para inativo
-            self.candidatos[candidato_menos_votado] = False
-
-            # Condição de parada (se sobrou apenas 1 ativo, ele vence)
-            ativos = [c for c, ativo in self.candidatos.items() if ativo]
-            if len(ativos) == 1:
-                return ativos[0]
-            elif len(ativos) == 0:
-                return None
+    def apurar_resultados(self) -> dict[str, object]:
+        """Retorna vencedor e totais por rodada sem alterar o estado dos candidatos."""
+        ativos = list(self.candidatos)
+        rodadas = []
+        vencedor = None
+        while len(ativos) >= 2:
+            contagem = {cid: 0 for cid in ativos}
+            for cedula in self.cedulas:
+                for candidato in cedula:
+                    if candidato in ativos:
+                        contagem[candidato] += 1
+                        break
+            total = sum(contagem.values())
+            rodada = {"contagem": contagem, "total": total, "eliminado": None}
+            rodadas.append(rodada)
+            if total == 0:
+                break
+            if vencedor is None and total:
+                vencedor = next((cid for cid, votos in contagem.items() if votos > total / 2), None)
+            if len(ativos) == 2:
+                if vencedor is None and total:
+                    ordenados = sorted(contagem.items(), key=lambda item: item[1], reverse=True)
+                    vencedor = ordenados[0][0]
+                break
+            eliminado = min(contagem, key=contagem.get)
+            rodada["eliminado"] = eliminado
+            ativos.remove(eliminado)
+        return {"vencedor": vencedor, "rodadas": rodadas}
             
     def registrar_voto(self, eleitor_id: str, voto: list[str]) -> None:
         """Registra a cédula de um eleitor.
