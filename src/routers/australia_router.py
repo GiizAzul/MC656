@@ -202,6 +202,7 @@ async def estado_australia_json(
         "pode_votar": "AUSTRALIA_ELEITOR" in usuario.escopo,
         "ja_votou": usuario.id in request.app.state.eleitores_australia_votaram,
         "total_votos": len(eleicao.cedulas),
+        "vencedor": resultados["vencedor"] if resultados else None,
         "resultados": resultados,
     })
 

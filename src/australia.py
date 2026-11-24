@@ -204,8 +204,7 @@ class EleicaoAustralia(SistemaEleitoral):
             if len(ativos) == 2:
                 if vencedor is None and total:
                     ordenados = sorted(contagem.items(), key=lambda item: item[1], reverse=True)
-                    if ordenados[0][1] > ordenados[1][1]:
-                        vencedor = ordenados[0][0]
+                    vencedor = ordenados[0][0]
                 break
             eliminado = min(contagem, key=contagem.get)
             rodada["eliminado"] = eliminado
