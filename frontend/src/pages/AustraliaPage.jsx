@@ -14,6 +14,7 @@ export default function AustraliaPage() {
   const [isGestao, setIsGestao] = useState(false);
   const [jaVotou, setJaVotou] = useState(false);
   const [totalVotos, setTotalVotos] = useState(0);
+  const [resultados, setResultados] = useState(null);
 
   const [draggedIdx, setDraggedIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
@@ -35,6 +36,7 @@ export default function AustraliaPage() {
         setIsGestao(data.is_gestao);
         setJaVotou(data.ja_votou);
         setTotalVotos(data.total_votos);
+        setResultados(data.resultados || null);
       }
     } catch {
       // ignora erro temporário
@@ -154,6 +156,49 @@ export default function AustraliaPage() {
           Status da Eleição: <strong>{estadoEleicao}</strong> | Cédulas computadas: <strong>{totalVotos}</strong>
         </p>
       </div>
+
+      {estadoEleicao === 'ENCERRADA' && resultados && (
+        <section className="australia-results" aria-live="polite">
+          <h2>Resultado da eleição</h2>
+          <p className="australia-winner">Vencedor: <strong>{nomesFormatados[resultados.vencedor] || resultados.vencedor || 'Sem vencedor'}</strong></p>
+          <p className="australia-chart-caption">
+            {resultados.rodadas.length === 1
+              ? 'Gráfico de primeiras preferências'
+              : 'Gráfico de preferências por rodada (com transferências)'}
+          </p>
+          {resultados.rodadas.map((rodada, indice) => (
+            <div className="australia-round" key={indice}>
+              <h3>{indice === 0 ? 'Contagem inicial' : `Rodada ${indice + 1}`} · {rodada.total} votos válidos</h3>
+              {rodada.eliminado && (
+                (() => {
+                  const votosEliminado = rodada.contagem[rodada.eliminado];
+                  const empatadosNaMenor = Object.values(rodada.contagem).filter((votos) => votos === votosEliminado).length > 1;
+                  return (
+                    <p className="australia-elimination">
+                      <strong>{nomesFormatados[rodada.eliminado] || rodada.eliminado}</strong> foi eliminado por ter
+                      {empatadosNaMenor ? ' empatado na menor votação' : ' a menor votação'}: {votosEliminado} {votosEliminado === 1 ? 'voto' : 'votos'}.
+                    </p>
+                  );
+                })()
+              )}
+              <div className="australia-chart" role="img" aria-label={`Votos por candidato na rodada ${indice + 1}`}>
+                {Object.entries(rodada.contagem).map(([id, votos]) => (
+                  <div className="australia-chart-row" key={id}>
+                    <span className="australia-chart-label">{nomesFormatados[id] || id}</span>
+                    <div className="australia-chart-track" aria-hidden="true">
+                      <div
+                        className={`australia-chart-bar${id === resultados.vencedor ? ' is-winner' : ''}${id === rodada.eliminado ? ' is-eliminated' : ''}`}
+                        style={{ width: `${rodada.total ? (votos / rodada.total) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <strong className="australia-chart-value">{votos}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {isGestao && (
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>

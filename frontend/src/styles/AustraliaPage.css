@@ -27,6 +27,26 @@
   font-size: 0.92rem;
 }
 
+.australia-results { background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; }
+.australia-results h2 { margin: 0 0 0.75rem; }
+.australia-winner { font-size: 1.1rem; color: var(--aus-green); }
+.australia-chart-caption { color: var(--text-secondary); font-size: 0.9rem; }
+.australia-elimination { margin: 0 0 0.6rem; color: #dc2626; font-size: 0.9rem; }
+.australia-round { border-top: 1px solid var(--border-color); padding-top: 0.75rem; margin-top: 0.75rem; }
+.australia-round h3 { font-size: 1rem; margin: 0 0 0.4rem; }
+.australia-chart { display: grid; gap: 0.65rem; }
+.australia-chart-row { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(100px, 2fr) 2rem; align-items: center; gap: 0.75rem; }
+.australia-chart-label { color: var(--text-primary); overflow-wrap: anywhere; }
+.australia-chart-track { height: 1rem; border-radius: 999px; background: var(--surface-alt); overflow: hidden; }
+.australia-chart-bar { height: 100%; min-width: 0; border-radius: inherit; background: var(--aus-green); transition: width 250ms ease; }
+.australia-chart-bar.is-winner { background: var(--aus-gold); }
+.australia-chart-bar.is-eliminated { background: #dc2626; }
+.australia-chart-value { text-align: right; color: var(--text-primary); }
+
+@media (max-width: 520px) {
+  .australia-chart-row { grid-template-columns: minmax(90px, 1fr) minmax(60px, 1.4fr) 1.5rem; gap: 0.45rem; font-size: 0.85rem; }
+}
+
 .dnd-list {
   list-style: none;
   display: flex;
